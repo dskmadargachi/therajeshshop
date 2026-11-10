@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>পোস্টার – ডিজিটাল সেবা কেন্দ্র</title>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@500;700;800;900&family=Figtree:wght@600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="/site-ui.js"></script>
+<style>
+:root{--brand:#3b6cff;--brand-ink:#2447c8;--brand-soft:#eef3ff;--brand-dk:#1b1f4d;--brand-md:#3a2f9a;--brand-lt:#9ec5ff;--brand-lt2:#c4b5fd;--brand-pale:#e3e9ff;--gold:#ffc83d}
+@page{size:A4;margin:0}
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;background:#cfd5dc;font-family:'Noto Sans Bengali','Hind Siliguri',system-ui,sans-serif;color:#0f1b2d}
+.bar{padding:10px;text-align:center;background:var(--brand-dk)}
+.bar button{padding:10px 22px;font:700 16px 'Noto Sans Bengali',system-ui;border:0;border-radius:10px;cursor:pointer;background:var(--gold);color:#3a2a00}
+.page{width:210mm;height:297mm;margin:12px auto;background:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column}
+/* header */
+.hero{position:relative;background:linear-gradient(150deg,var(--brand-dk),var(--brand-md) 50%,#7c4dff 80%,#ff4d9d);color:#fff;padding:13mm 12mm 22mm;text-align:center}
+.hero:before,.hero:after{content:"";position:absolute;border-radius:50%;background:color-mix(in srgb,var(--brand-lt) 16%,transparent)}
+.hero:before{width:90mm;height:90mm;right:-28mm;top:-34mm}.hero:after{width:60mm;height:60mm;left:-22mm;bottom:-30mm}
+.hero>*{position:relative;z-index:1}
+.tag{display:inline-block;background:var(--gold);color:#3a2a00;font-weight:800;font-size:4.6mm;padding:1.6mm 6mm;border-radius:99mm;letter-spacing:.2px}
+.hero h1{margin:5mm 0 2mm;font-size:21mm;line-height:1.12;font-weight:900}
+.hero h1 em{font-style:normal;color:var(--gold)}
+.hero p{margin:0;font-size:6.2mm;font-weight:600;color:var(--brand-pale)}
+.wave{position:absolute;left:0;right:0;bottom:-1px;height:12mm;z-index:2}
+/* middle */
+.mid{flex:1;display:flex;flex-direction:column;align-items:center;gap:5mm;padding:0 12mm;margin-top:-6mm;position:relative;z-index:3}
+.qrbox{background:#fff;border-radius:7mm;padding:6mm;box-shadow:0 3mm 9mm -3mm rgba(0,0,0,.35);border:1.6mm solid var(--brand);position:relative}
+.qrbox:before,.qrbox:after{content:"";position:absolute;width:11mm;height:11mm;border:2mm solid var(--gold)}
+.qrbox:before{left:-3.5mm;top:-3.5mm;border-right:0;border-bottom:0;border-radius:4mm 0 0 0}
+.qrbox:after{right:-3.5mm;bottom:-3.5mm;border-left:0;border-top:0;border-radius:0 0 4mm 0}
+#qr img,#qr canvas{display:block}
+.cta{font-size:8.6mm;font-weight:900;color:var(--brand-ink);text-align:center;line-height:1.2}
+.cta small{display:block;font-size:4.8mm;font-weight:600;color:#5b6778;margin-top:1mm}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:4mm;width:100%}
+.st{background:var(--brand-soft);border-radius:5mm;padding:4mm 2mm 4mm;text-align:center;position:relative}
+.st i{position:absolute;top:-4mm;left:50%;transform:translateX(-50%);width:8mm;height:8mm;border-radius:50%;background:var(--brand);color:#fff;font:800 4.6mm/8mm 'Noto Sans Bengali';font-style:normal}
+.st b{display:block;font-size:6mm;color:var(--brand-ink);margin-top:2mm}
+.st span{font-size:3.7mm;font-weight:600;color:#44505f}
+.rates{display:flex;gap:5mm;justify-content:center}
+.pill{display:flex;align-items:center;gap:3mm;border-radius:99mm;padding:2.4mm 7mm;font-weight:800;font-size:5.6mm}
+.pill.bw{background:#0f1b2d;color:#fff}
+.pill.cl{background:linear-gradient(90deg,#ef4444,#f59e0b,#10b981,#3b82f6,#8b5cf6);color:#fff}
+.pill b{font:900 7.4mm 'Figtree',sans-serif}
+.feat{display:flex;gap:4mm;width:100%}
+.ft{flex:1;border:.5mm dashed var(--brand);border-radius:4mm;padding:3mm 2mm;text-align:center;font-size:4.5mm;font-weight:800;color:var(--brand-ink)}
+.ft span{display:block;font-size:3.5mm;font-weight:600;color:#5b6778;margin-top:.5mm}
+.priv{width:100%;background:var(--brand-dk);color:#fff;border-radius:5mm;padding:3.6mm 6mm;text-align:center;font-size:4.9mm;font-weight:700}
+.priv b{color:var(--gold)}
+/* footer */
+.foot{background:var(--brand);color:#fff;text-align:center;padding:5mm 8mm 6mm;margin-top:5mm}
+.foot small{display:block;font-size:3.9mm;letter-spacing:.35mm;font-weight:700;color:var(--brand-pale)}
+.foot strong{display:block;font-size:9.4mm;font-weight:900;line-height:1.25}
+.foot .l2{margin-top:1.5mm;font-size:4.6mm;font-weight:700}
+.foot .l2 span{display:inline-block;margin:0 3mm;background:rgba(255,255,255,.18);border-radius:99mm;padding:.8mm 4mm}
+@media print{body{background:#fff}.bar{display:none}.page{margin:0;box-shadow:none}}
+.foot{background:linear-gradient(90deg,#3b6cff,#7c4dff,#ff4d9d)}</style>
+</head>
+<body>
+<div class="bar"><button onclick="print()">🖨️ পোস্টার প্রিন্ট করুন</button></div>
+<div class="page">
+  <div class="hero">
+    <span class="tag">⚡ লাইনে দাঁড়ানোর দিন শেষ!</span>
+    <h1>স্ক্যান করুন,<br><em>আপলোড</em> করুন,<br>প্রিন্ট নিন!</h1>
+    <p>ফোন থেকেই ফাইল পাঠান — কাউন্টারে এসে তৈরি প্রিন্ট নিয়ে যান</p>
+    <svg class="wave" viewBox="0 0 800 50" preserveAspectRatio="none" aria-hidden="true"><path d="M0 50V22C120 0 240 0 400 22s280 22 400 0v28z" fill="#fff"/></svg>
+  </div>
+  <div class="mid">
+    <div class="qrbox"><div id="qr"></div></div>
+    <div class="cta">📱 মোবাইলের ক্যামেরা খুলে QR কোডটি স্ক্যান করুন<small id="url"></small></div>
+    <div class="steps">
+      <div class="st"><i>১</i><b>স্ক্যান</b><span>QR কোড স্ক্যান করুন</span></div>
+      <div class="st"><i>২</i><b>আপলোড</b><span>আপনার ফাইল বেছে নিন</span></div>
+      <div class="st"><i>৩</i><b>পেমেন্ট</b><span>UPI বা নগদে দিন</span></div>
+      <div class="st"><i>৪</i><b>প্রিন্ট</b><span>তৈরি প্রিন্ট নিন</span></div>
+    </div>
+    <div class="rates">
+      <div class="pill bw">সাদা-কালো <b>₹5</b>/পৃষ্ঠা</div>
+      <div class="pill cl">রঙিন <b>₹10</b>/পৃষ্ঠা</div>
+    </div>
+    <div class="feat">
+      <div class="ft">দ্রুত<span>মিনিটেই প্রিন্ট</span></div>
+      <div class="ft">সহজ<span>অ্যাপ লাগে না</span></div>
+      <div class="ft">সব ফাইল<span>PDF · ছবি · Word</span></div>
+      <div class="ft">পাসপোর্ট ছবি<span>আধার · ভোটার কার্ড</span></div>
+    </div>
+    <div class="priv">🔒 আপনার ফাইল, আপনার গোপনীয়তা — <b>প্রিন্টের পরই ফাইল মুছে যায়</b></div>
+  </div>
+  <div class="foot">
+    <small>শুধুমাত্র এখানেই পাবেন</small>
+    <strong>ডিজিটাল সেবা কেন্দ্র – রাজেশ</strong>
+    <div class="l2"><span>📞 9932250689</span><span id="host"></span></div>
+  </div>
+</div>
+<script>
+  var url = location.origin + '/';
+  document.getElementById('url').textContent = location.host;
+  document.getElementById('host').textContent = '🌐 ' + location.host;
+  new QRCode(document.getElementById('qr'), { text: url, width: 250, height: 250, correctLevel: QRCode.CorrectLevel.H });
+</script>
+</body>
+</html>
