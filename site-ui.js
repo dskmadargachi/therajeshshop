@@ -7,6 +7,9 @@ var LS = {get: function (k) { try { return localStorage.getItem(k); } catch (e) 
 
 /* ---------------- Bengali ---------------- */
 var BN = {
+'Card shape': 'কার্ডের আকার',
+'Fill 85.6×53.98 mm': 'ভরান ৮৫.৬×৫৩.৯৮ মিমি',
+'Keep shape': 'অনুপাত রাখুন',
 'Visit counter': 'ভিজিট কাউন্টার',
 'To count visitors we log your IP address and approximate city. These logs are deleted after 90 days.': 'ভিজিটর গুনতে আমরা আপনার IP ঠিকানা ও আনুমানিক শহর লগ করি। এই লগ ৯০ দিন পর মুছে যায়।',
 'PRINT': 'প্রিন্ট',

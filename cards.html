@@ -425,6 +425,7 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
    <div class="ctl">
     <div class="ctl-g"><span class="lab">Adjust</span><button class="b" id="auto" type="button">Auto crop again</button><button class="b g" id="reset" type="button">Reset boxes</button></div>
     <div class="ctl-g"><span class="lab">Nudge</span><span class="nudge" id="nudge"><button data-n="l" aria-label="Left">←</button><button data-n="r" aria-label="Right">→</button><button data-n="u" aria-label="Up">↑</button><button data-n="d" aria-label="Down">↓</button><button data-n="-" aria-label="Smaller">−</button><button data-n="+" aria-label="Larger">+</button></span></div>
+    <div class="ctl-g"><span class="lab">Card shape</span><span class="seg" style="display:inline-flex;width:auto"><button data-fit="fill" type="button" title="Stretch the cropped card to exactly 85.6 x 53.98 mm">Fill 85.6×53.98 mm</button><button data-fit="keep" type="button" title="Keep the card proportion, white bars if needed">Keep shape</button></span></div>
     <div class="ctl-g"><span class="lab">Resolution</span><span class="seg" style="display:inline-flex;width:auto"><button data-dpi="300" type="button">300 DPI</button><button data-dpi="600" type="button">600 DPI</button></span></div>
    </div>
    <div class="row hidden" id="ccRow"><span class="lab">Output</span><span class="seg" style="display:inline-flex;width:auto"><button data-cc="0" class="on" type="button">Normal Aadhaar</button><button data-cc="1" type="button">Tricolour Aadhaar</button></span></div>
@@ -571,7 +572,7 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
  <div class="password-actions"><button type="button" class="cancel" id="pwCancel">Cancel</button><button type="submit" class="go">Unlock and crop</button></div></form></div>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const $=i=>document.getElementById(i),R=85.6/54,MM=25.4;
+const $=i=>document.getElementById(i),CW=85.6,CH=53.98,R=CW/CH,MM=25.4;
 const mk=(w,h)=>{const o=document.createElement('canvas');o.width=w;o.height=h;return o};
 const freeCanvas=c=>{try{c.width=0;c.height=0}catch(e){}};
 window.addEventListener('unhandledrejection',e=>{console.error(e.reason);try{st('Something went wrong on this device. Please try again with a smaller file.',1)}catch(_){}});
@@ -596,7 +597,7 @@ ayushman:{minW:.3,maxW:1,n:'Ayushman Card',bn:'আয়ুষ্মান',d:'2
 voter:{n:'Voter Card',bn:'ভোটার কার্ড',d:'e-EPIC PDF · front and back',pdf:1,F:[.03,.03,.47,.3],B:[.5,.03,.47,.3],det:'ink',inset:.004},
 abc:{minW:.4,maxW:1,n:'ABC / APAAR ID',bn:'অ্যাপার',d:'PDF, JPG or PNG · front only',img:1,pdf:1,one:1,fx:1,F:[.04,.03,.92,.4],det:'ink',inset:.002},
 abha:{n:'ABHA Card',bn:'আভা কার্ড',d:'PDF · front and back',pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'cards',inset:.004}};
-let K,Tp,pp=[],pages=[],bx={},dpi=300,cc=0,batch=[],pdfBuf=null,srcFile=null,selS='F',sheetPaper='A4';
+let fitMode=(()=>{try{return localStorage.getItem('cardFit')==='keep'?'keep':'fill'}catch(e){return 'fill'}})(),K,Tp,pp=[],pages=[],bx={},dpi=300,cc=0,batch=[],pdfBuf=null,srcFile=null,selS='F',sheetPaper='A4';
 
 const CA=(()=>{
 const ph=(x,y,w,h,c)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${c}"/><circle cx="${x+w/2}" cy="${y+h*.36}" r="${w*.2}" fill="#fff" opacity=".9"/><path d="M${x+w*.14} ${y+h}Q${x+w/2} ${y+h*.5} ${x+w*.86} ${y+h}Z" fill="#fff" opacity=".9"/>`;
@@ -844,12 +845,17 @@ function style(o){const x=o.getContext('2d');
    d[i]=cl(y+(r-y)*sa);d[i+1]=cl(y+(g-y)*sa);d[i+2]=cl(y+(b-y)*sa)}x.putImageData(im,0,0)}
  if(Tp.cc&&cc){x.globalCompositeOperation='multiply';[['#ffd9a8',0],['#ffffff',1/3],['#c9f0d0',2/3]].forEach(([col,p])=>{x.fillStyle=col;x.fillRect(0,p*o.height,o.width,o.height/3+1)});x.globalCompositeOperation='source-over'}
  return o}
-function crop(s,d){const b=bx[s],c=pages[b.p],o=mk(Math.round(85.6/MM*d),Math.round(85.6/arOf(b)/MM*d));
- const x=o.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(c,b.x*c.width,b.y*c.height,b.w*c.width,hOf(b)*c.height,0,0,o.width,o.height);return style(o)}
+/* EVERY card is delivered at exactly 85.60 x 53.98 mm. Fill = card art stretched to that size, Keep = shape kept with white bars. */
+function crop(s,d){const b=bx[s],c=pages[b.p],W=Math.round(CW/MM*d),H=Math.round(CH/MM*d),o=mk(W,H),x=o.getContext('2d');x.imageSmoothingQuality='high';
+ const sx=b.x*c.width,sy=b.y*c.height,sw=b.w*c.width,sh=hOf(b)*c.height;
+ if(fitMode=='keep'){x.fillStyle='#fff';x.fillRect(0,0,W,H);const k=Math.min(W/sw,H/sh),w=sw*k,h=sh*k;x.drawImage(c,sx,sy,sw,sh,(W-w)/2,(H-h)/2,w,h)}
+ else x.drawImage(c,sx,sy,sw,sh,0,0,W,H);
+ return style(o)}
 async function cropHQ(s,d){const b=bx[s],p=pp[b.p];if(!p)return crop(s,d);
- const W=Math.round(85.6/MM*d),H=Math.round(85.6/arOf(b)/MM*d),v1=p.getViewport({scale:1}),v=p.getViewport({scale:W/(b.w*v1.width)}),o=mk(W,H),x=o.getContext('2d');
- x.fillStyle='#fff';x.fillRect(0,0,W,H);
- await p.render({canvasContext:x,viewport:v,transform:[1,0,0,1,-b.x*v.width,-b.y*v.height]}).promise;return style(o)}
+ const W=Math.round(CW/MM*d),H=Math.round(CH/MM*d),v1=p.getViewport({scale:1}),bw=b.w*v1.width,bh=hOf(b)*v1.height,keep=fitMode=='keep',
+  sX=keep?Math.min(W/bw,H/bh):W/bw,sY=keep?sX:H/bh,v=p.getViewport({scale:sX}),k=sY/sX,rw=bw*sX,rh=bh*sY,ox=(W-rw)/2,oy=(H-rh)/2,o=mk(W,H),x=o.getContext('2d');
+ x.fillStyle='#fff';x.fillRect(0,0,W,H);x.save();x.beginPath();x.rect(ox,oy,rw,rh);x.clip();
+ await p.render({canvasContext:x,viewport:v,transform:[1,0,0,k,-b.x*v.width+ox,-b.y*v.height*k+oy]}).promise;x.restore();return style(o)}
 function update(){if(!bx.F||!pages.length)return;const f=crop('F',200),g=$('oF');g.width=f.width;g.height=f.height;g.getContext('2d').drawImage(f,0,0);
  if(!Tp.one&&bx.B){const b=crop('B',200),h=$('oB');h.width=b.width;h.height=b.height;h.getContext('2d').drawImage(b,0,0)}
  $('bn').textContent=batch.length?batch.length+' of 5 pairs in batch':''}
@@ -865,7 +871,7 @@ $('dB').onclick=()=>bx.B&&busy(async()=>save(await cropHQ('B',dpi),nm()+'_back.j
 $('dBoth').onclick=()=>busy(async()=>{await save(await cropHQ('F',dpi),nm()+'_front.jpg');if(!Tp.one){await wait(500);await save(await cropHQ('B',dpi),nm()+'_back.jpg')}});
 const LIM=(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||navigator.maxTouchPoints>1)?15e6:6e7;
 function sheet(wIn,hIn,place){let d=dpi;if(wIn*hIn*d*d>LIM)d=Math.floor(Math.sqrt(LIM/(wIn*hIn)));const c=mk(Math.round(wIn*d),Math.round(hIn*d)),x=c.getContext('2d');
- x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.imageSmoothingQuality='high';place(x,d,v=>v/MM*d,85.6/MM*d,54/MM*d);c.eff=d;return c}
+ x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.imageSmoothingQuality='high';place(x,d,v=>v/MM*d,CW/MM*d,CH/MM*d);c.eff=d;return c}
 const makeA4=items=>sheet(8.27,11.69,(x,d,mm,cw,ch)=>{let y=mm(8);items.forEach(p=>{const hf=cw*p.f.height/p.f.width,hb=p.b?cw*p.b.height/p.b.width:0;x.drawImage(p.f,mm(10),y,cw,hf);if(p.b)x.drawImage(p.b,mm(10)+cw+mm(4),y,cw,hb);y+=Math.max(hf,hb)+mm(3.5)})});
 const make46=p=>sheet(4,6,(x,d,mm,cw,ch)=>{const X=(4*d-cw)/2,gap=mm(8),hf=cw*p.f.height/p.f.width,hb=p.b?cw*p.b.height/p.b.width:0;
  if(p.b){const y=(6*d-hf-hb-gap)/2;x.drawImage(p.f,X,y,cw,hf);x.drawImage(p.b,X,y+hf+gap,cw,hb)}else x.drawImage(p.f,X,(6*d-hf)/2,cw,hf)});
@@ -876,7 +882,8 @@ $('clr').onclick=()=>{batch=[];update()};
 document.querySelectorAll('[data-dpi]').forEach(b=>b.onclick=()=>{dpi=+b.dataset.dpi;mark();batch=[];update()});
 document.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{cc=+b.dataset.cc;document.querySelectorAll('[data-cc]').forEach(x=>x.classList.toggle('on',x==b));update()});
 ['fb','fc','fs'].forEach(i=>$(i).oninput=qUp);
-function mark(){document.querySelectorAll('[data-dpi]').forEach(b=>b.classList.toggle('on',+b.dataset.dpi==dpi))}mark();
+document.querySelectorAll('[data-fit]').forEach(b=>b.onclick=()=>{fitMode=b.dataset.fit;try{localStorage.setItem('cardFit',fitMode)}catch(e){}mark();batch=[];update()});
+function mark(){document.querySelectorAll('[data-fit]').forEach(b=>b.classList.toggle('on',b.dataset.fit==fitMode));document.querySelectorAll('[data-dpi]').forEach(b=>b.classList.toggle('on',+b.dataset.dpi==dpi))}mark();
 document.querySelectorAll('#paperSeg button').forEach(b=>b.onclick=()=>{sheetPaper=b.dataset.v;document.querySelectorAll('#paperSeg button').forEach(x=>x.classList.toggle('on',x==b))});
 
 /* =====================================================================
@@ -1065,12 +1072,12 @@ function scanClean(s){const c=s.cache;if(!c)return mk(1,1);if(!s.crop)return c;
 function fitInto(src,wmm,hmm,d){const W=Math.round(wmm/25.4*d),H=Math.round(hmm/25.4*d),o=mk(W,H),x=o.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);x.imageSmoothingQuality='high';
  const pad=Math.round(Math.min(W,H)*.025),sc=Math.min((W-2*pad)/src.width,(H-2*pad)/src.height),dw=src.width*sc,dh=src.height*sc;x.drawImage(src,(W-dw)/2,(H-dh)/2,dw,dh);o.eff=d;return o}
 function scanIdA4(cards){const d=300,W=Math.round(210/25.4*d),H=Math.round(297/25.4*d),o=mk(W,H),x=o.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);x.imageSmoothingQuality='high';
- const mg=Math.round(12/25.4*d),gap=Math.round(14/25.4*d),cw=Math.round(85.6/25.4*d),ch=Math.round(54/25.4*d),tot=cards.length*ch+Math.max(0,cards.length-1)*gap;let y=Math.max(mg,Math.round((H-tot)/2));
+ const mg=Math.round(12/25.4*d),gap=Math.round(14/25.4*d),cw=Math.round(CW/25.4*d),ch=Math.round(CH/25.4*d),tot=cards.length*ch+Math.max(0,cards.length-1)*gap;let y=Math.max(mg,Math.round((H-tot)/2));
  for(const c of cards){x.drawImage(c,Math.round((W-cw)/2),y,cw,ch);y+=ch+gap}o.eff=d;return o}
 const jpgBlob=(c,q)=>new Promise(r=>c.toBlob(r,'image/jpeg',q));
 $('scanPreview').onclick=async()=>{const act=scanState.filter(s=>s.image);if(!act.length){$('scanStatus').textContent='Upload at least one image first.';return}
- const type=$('scanType').value,w=type==='id'?85.6:Math.max(10,Number($('scanW').value)||210),h=type==='id'?54:Math.max(10,Number($('scanH').value)||297);
- scanOutput=type==='id'?[scanIdA4(act.map(s=>fitInto(scanClean(s),85.6,54,300)))]:act.map(s=>fitInto(scanClean(s),w,h,type==='a4'?200:200));
+ const type=$('scanType').value,w=type==='id'?CW:Math.max(10,Number($('scanW').value)||210),h=type==='id'?CH:Math.max(10,Number($('scanH').value)||297);
+ scanOutput=type==='id'?[scanIdA4(act.map(s=>fitInto(scanClean(s),CW,CH,300)))]:act.map(s=>fitInto(scanClean(s),w,h,type==='a4'?200:200));
  const maxKB=Number($('scanMax').value)||0;let warn='';
  if(maxKB){for(let i=0;i<scanOutput.length;i++){let q=.9,b=await jpgBlob(scanOutput[i],q);while(b&&b.size>maxKB*1024&&q>.25){q-=.1;b=await jpgBlob(scanOutput[i],q)}
   if(b&&b.size>maxKB*1024)warn=' Page '+(i+1)+' is still above '+maxKB+' KB at the lowest quality.';scanOutput[i].q=q}}
