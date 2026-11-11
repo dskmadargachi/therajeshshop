@@ -592,7 +592,7 @@ const T={
 ration:{n:'Ration Card',bn:'রেশন কার্ড',d:'PDF · front and back',pdf:1,F:[.04,.5,.45,.46],B:[.51,.5,.45,.46],det:'ink',inset:.004},
 aadhaar:{n:'Aadhaar Card',bn:'আধার কার্ড',d:'Password PDF · front and back',pdf:1,pw:1,cc:1,F:[.03,.55,.46,.4],B:[.51,.55,.46,.4],det:'ink',inset:.003},
 pan:{minW:.25,maxW:1,n:'PAN / Others',bn:'প্যান',d:'PDF, JPG or PNG',img:1,pdf:1,F:[0,0,1,.5],B:[0,.5,1,.5],det:'blue',inset:0},
-ayushman:{minW:.3,maxW:1,n:'Ayushman Card',bn:'আয়ুষ্মান',d:'2-page PDF · page 1 front, page 2 back',pdf:1,pages:2,F:[0,0,1,1],B:[0,0,1,1],det:'ink',inset:0},
+ayushman:{minW:.3,maxW:1,n:'Ayushman Card',bn:'আয়ুষ্মান',d:'2-page PDF · page 1 front, page 2 back',pdf:1,pages:2,F:[0,0,1,1],B:[0,0,1,1],det:'red',inset:0},
 voter:{n:'Voter Card',bn:'ভোটার কার্ড',d:'e-EPIC PDF · front and back',pdf:1,F:[.03,.03,.47,.3],B:[.5,.03,.47,.3],det:'ink',inset:.004},
 abc:{minW:.4,maxW:1,n:'ABC / APAAR ID',bn:'অ্যাপার',d:'PDF, JPG or PNG · front only',img:1,pdf:1,one:1,fx:1,F:[.04,.03,.92,.4],det:'ink',inset:.002},
 abha:{n:'ABHA Card',bn:'আভা কার্ড',d:'PDF · front and back',pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'ink',inset:.004}};
@@ -647,7 +647,7 @@ async function load(pass){st('Reading file…');pages=[];bx={};
   if(isPw(err))return showPw(pass?'Wrong password. Check it and try again.':'');
   console.error(err);return st('Could not read this file: '+(err&&err.message||err),1)}
  st('Finding the card edges…');await autoCrop();$('work').classList.remove('hidden');
- st(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':'Cards found and cropped. Adjust the boxes if needed.',miss);layoutBoxes();update()}
+ st(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(Tp.det=='red'?(redFull?'No red border found, so the whole page is used as the card. Drag the yellow boxes if you need less.':'Red border found on both pages. Cropped exactly inside it.'):'Cards found and cropped. Adjust the boxes if needed.'),miss);layoutBoxes();update()}
 async function render(pass){pages.forEach(freeCanvas);pages=[];pp=[];
  if(!pdfBuf){const im=await new Promise((ok,no)=>{const i=new Image;i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(srcFile)});
   const k=Math.min(1,4096/Math.max(im.naturalWidth,im.naturalHeight)),c=mk(Math.round(im.naturalWidth*k),Math.round(im.naturalHeight*k));
@@ -766,24 +766,39 @@ function fit(pi,b,wOverride){const c=pages[pi],W=c.width,H=c.height;let w=b[2]*W
  if(wOverride){w=wOverride*W;h=w/R}else{const ins=Tp.inset*W;w-=2*ins;h-=2*ins}
  if(w/h>R)h=w/R;else w=h*R;w=Math.min(w,W);h=w/R;if(h>H){h=H;w=h*R}
  const x=Math.max(0,Math.min(W-w,cx-w/2)),y=Math.max(0,Math.min(H-h,cy-h/2));return{p:pi,x:x/W,y:y/H,w:w/W}}
-let miss=0;
-async function autoCrop(){miss=0;const last=Math.min(1,pages.length-1);let F,B;
- if(Tp.pages==2){const a=await candidates(pages[0]),b=await candidates(pages[last]);F=a[0]&&{pi:0,r:a[0]};B=b[0]&&{pi:last,r:b[0]}}
+let miss=0,redFull=0;
+/* Ayushman PDFs: each page has a red border. Crop exactly to the INSIDE edge of that border (any shape, not forced to card ratio). */
+function redBox(c){const W0=Math.min(1600,c.width),H0=Math.round(W0*c.height/c.width),t=mk(W0,H0),x=t.getContext('2d');x.drawImage(c,0,0,W0,H0);
+ const d=x.getImageData(0,0,W0,H0).data,rowN=new Uint16Array(H0),colN=new Uint16Array(W0);
+ for(let y=0;y<H0;y++)for(let i=0;i<W0;i++){const o=(y*W0+i)*4,r=d[o],g=d[o+1],b=d[o+2];if(r>150&&g<r*.42&&b<r*.42){rowN[y]++;colN[i]++}}
+ let mr=0,mc=0;for(let y=0;y<H0;y++)if(rowN[y]>mr)mr=rowN[y];for(let i=0;i<W0;i++)if(colN[i]>mc)mc=colN[i];
+ if(mr<W0*.25||mc<H0*.1)return null;
+ const runs=(a,th)=>{const o=[];let s0=-1;for(let i=0;i<=a.length;i++){const on=i<a.length&&a[i]>=th;if(on&&s0<0)s0=i;if(!on&&s0>=0){o.push([s0,i-1]);s0=-1}}return o};
+ const rr=runs(rowN,mr*.6),cr=runs(colN,mc*.6);if(rr.length<2||cr.length<2)return null;
+ const top=rr[0],bot=rr[rr.length-1],lf=cr[0],rt=cr[cr.length-1],m=1.5,x0=lf[1]+1+m,x1=rt[0]-1-m,y0=top[1]+1+m,y1=bot[0]-1-m;
+ if(x1-x0<W0*.2||y1-y0<H0*.05)return null;
+ return{x:x0/W0,y:y0/H0,w:(x1-x0+1)/W0,h:(y1-y0+1)/H0}}
+async function autoCrop(){miss=0;redFull=0;const last=Math.min(1,pages.length-1);let F,B;
+ if(Tp.det=='red'){const a=redBox(pages[0]),b=redBox(pages[last]);F=a&&{pi:0,r:a};B=b&&{pi:last,r:b}}
+  else if(Tp.pages==2){const a=await candidates(pages[0]),b=await candidates(pages[last]);F=a[0]&&{pi:0,r:a[0]};B=b[0]&&{pi:last,r:b[0]}}
  else{const cs=await candidates(pages[0]),pr=Tp.one?cs.slice(0,1):pickPair(cs);F=pr[0]&&{pi:0,r:pr[0]};B=pr[1]&&{pi:0,r:pr[1]}}
  const found={F:!!F,B:!!B};
  [['F',F],['B',B]].forEach(([sd,v])=>{if(sd=='B'&&Tp.one)return;const pi=v?v.pi:(sd=='B'&&Tp.pages==2?last:0);let r=v&&[v.r.x,v.r.y,v.r.w,v.r.h];
-  if(!r){miss=1;r=detect(pi,Tp[sd],Tp.det)||Tp[sd]}bx[sd]=fit(pi,r)});
+  if(r&&Tp.det=='red'){const c=pages[pi];bx[sd]={p:pi,x:r[0],y:r[1],w:r[2],ar:(r[2]*c.width)/(r[3]*c.height)};return}
+   if(!r&&Tp.det=='red'){const c=pages[pi];redFull=1;bx[sd]={p:pi,x:0,y:0,w:1,ar:c.width/c.height};return}   /* no red border: the page itself is the card (like selecting the whole page) */
+   if(!r){miss=1;r=detect(pi,Tp[sd],Tp.det)||Tp[sd]}bx[sd]=fit(pi,r)});
  /* front and back are the same physical card: make them the same size when both were really detected */
- if(found.F&&found.B&&!Tp.one&&bx.F&&bx.B){const wa=bx.F.w*pages[bx.F.p].width,wb=bx.B.w*pages[bx.B.p].width;
+ if(found.F&&found.B&&!Tp.one&&Tp.det!='red'&&bx.F&&bx.B){const wa=bx.F.w*pages[bx.F.p].width,wb=bx.B.w*pages[bx.B.p].width;
   if(Math.abs(wa-wb)/Math.max(wa,wb)<.12){const m=(wa+wb)/2;['F','B'].forEach(s=>{const b=bx[s],c=pages[b.p],h=m/R,cx=b.x*c.width+b.w*c.width/2,cy=b.y*c.height+(b.w*c.width/R)/2;
     b.w=m/c.width;b.x=Math.max(0,Math.min(1-b.w,(cx-m/2)/c.width));b.y=Math.max(0,Math.min(1-hOf(b),(cy-h/2)/c.height))})}}
- else if(found.F&&!found.B&&!Tp.one&&bx.F&&bx.B&&bx.B.p==bx.F.p){bx.B=fit(bx.B.p,[bx.B.x,bx.B.y,bx.B.w,hOf(bx.B)],bx.F.w)}
+ else if(found.F&&!found.B&&!Tp.one&&Tp.det!='red'&&bx.F&&bx.B&&bx.B.p==bx.F.p){bx.B=fit(bx.B.p,[bx.B.x,bx.B.y,bx.B.w,hOf(bx.B)],bx.F.w)}
  if(pages.length==1&&!pdfBuf&&!Tp.one)bx.B=bx.F}
 $('auto').onclick=async()=>{st('Finding the card edges…');await autoCrop();layoutBoxes();update();st(miss?'Card edge not found, so a default position is used.':'Auto crop done.',miss)};
 $('reset').onclick=async()=>{bx={};st('Finding the card edges…');await autoCrop();layoutBoxes();update();st(miss?'Card edge not found, so a default position is used.':'Boxes reset.',miss)};
 
 /* ---- boxes UI ---- */
-function hOf(b){const c=pages[b.p];return b.w*c.width/R/c.height}
+const arOf=b=>b.ar||R;
+function hOf(b){const c=pages[b.p];return b.w*c.width/arOf(b)/c.height}
 function layoutBoxes(){document.querySelectorAll('.bx').forEach(e=>e.remove());
  (Tp.one?['F']:['F','B']).forEach(s=>{const b=bx[s];if(!b)return;const host=$('stage').children[b.p],e=document.createElement('div');e.className='bx'+(s==selS?' sel':'');e.dataset.s=s;
   e.innerHTML='<span>'+(s=='F'?'Front':'Back')+'</span><i></i>';host.append(e);pos(e,b);drag(e,s,host)})}
@@ -792,7 +807,7 @@ function drag(e,s,host){let m,sx,sy,o;const hs=e.querySelector('i');
  e.onpointerdown=ev=>{if(!ev.isPrimary)return;m=ev.target===hs?'r':'m';sx=ev.clientX;sy=ev.clientY;o={...bx[s]};selS=s;document.querySelectorAll('.bx').forEach(x=>x.classList.toggle('sel',x.dataset.s==s));try{e.setPointerCapture(ev.pointerId)}catch(_){}ev.preventDefault()};
  e.onpointermove=ev=>{if(!m)return;const r=host.getBoundingClientRect(),dx=(ev.clientX-sx)/r.width,dy=(ev.clientY-sy)/r.height,b=bx[s];
   if(m=='m'){b.x=Math.max(0,Math.min(1-o.w,o.x+dx));b.y=Math.max(0,Math.min(1-hOf(o),o.y+dy))}
-  else{const nw=Math.max(.1,Math.min(o.w+dx,1-o.x));b.w=nw;if(b.y+hOf(b)>1)b.w=(1-b.y)*R*pages[b.p].height/pages[b.p].width}
+  else{const nw=Math.max(.1,Math.min(o.w+dx,1-o.x));b.w=nw;if(b.y+hOf(b)>1)b.w=(1-b.y)*arOf(b)*pages[b.p].height/pages[b.p].width}
   pos(e,b);qUp()};
  e.onpointerup=()=>{m=null}}
 function nudge(k){const b=bx[selS];if(!b||!pages.length)return;const c=pages[b.p],st_=.0015;
@@ -812,10 +827,10 @@ function style(o){const x=o.getContext('2d');
    d[i]=cl(y+(r-y)*sa);d[i+1]=cl(y+(g-y)*sa);d[i+2]=cl(y+(b-y)*sa)}x.putImageData(im,0,0)}
  if(Tp.cc&&cc){x.globalCompositeOperation='multiply';[['#ffd9a8',0],['#ffffff',1/3],['#c9f0d0',2/3]].forEach(([col,p])=>{x.fillStyle=col;x.fillRect(0,p*o.height,o.width,o.height/3+1)});x.globalCompositeOperation='source-over'}
  return o}
-function crop(s,d){const b=bx[s],c=pages[b.p],o=mk(Math.round(85.6/MM*d),Math.round(54/MM*d));
+function crop(s,d){const b=bx[s],c=pages[b.p],o=mk(Math.round(85.6/MM*d),Math.round(85.6/arOf(b)/MM*d));
  const x=o.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(c,b.x*c.width,b.y*c.height,b.w*c.width,hOf(b)*c.height,0,0,o.width,o.height);return style(o)}
 async function cropHQ(s,d){const b=bx[s],p=pp[b.p];if(!p)return crop(s,d);
- const W=Math.round(85.6/MM*d),H=Math.round(54/MM*d),v1=p.getViewport({scale:1}),v=p.getViewport({scale:W/(b.w*v1.width)}),o=mk(W,H),x=o.getContext('2d');
+ const W=Math.round(85.6/MM*d),H=Math.round(85.6/arOf(b)/MM*d),v1=p.getViewport({scale:1}),v=p.getViewport({scale:W/(b.w*v1.width)}),o=mk(W,H),x=o.getContext('2d');
  x.fillStyle='#fff';x.fillRect(0,0,W,H);
  await p.render({canvasContext:x,viewport:v,transform:[1,0,0,1,-b.x*v.width,-b.y*v.height]}).promise;return style(o)}
 function update(){if(!bx.F||!pages.length)return;const f=crop('F',200),g=$('oF');g.width=f.width;g.height=f.height;g.getContext('2d').drawImage(f,0,0);
@@ -834,9 +849,9 @@ $('dBoth').onclick=()=>busy(async()=>{await save(await cropHQ('F',dpi),nm()+'_fr
 const LIM=(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||navigator.maxTouchPoints>1)?15e6:6e7;
 function sheet(wIn,hIn,place){let d=dpi;if(wIn*hIn*d*d>LIM)d=Math.floor(Math.sqrt(LIM/(wIn*hIn)));const c=mk(Math.round(wIn*d),Math.round(hIn*d)),x=c.getContext('2d');
  x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.imageSmoothingQuality='high';place(x,d,v=>v/MM*d,85.6/MM*d,54/MM*d);c.eff=d;return c}
-const makeA4=items=>sheet(8.27,11.69,(x,d,mm,cw,ch)=>items.forEach((p,i)=>{const y=mm(8)+i*(ch+mm(3.5));x.drawImage(p.f,mm(10),y,cw,ch);if(p.b)x.drawImage(p.b,mm(10)+cw+mm(4),y,cw,ch)}));
-const make46=p=>sheet(4,6,(x,d,mm,cw,ch)=>{const X=(4*d-cw)/2,gap=mm(8);
- if(p.b){const y=(6*d-2*ch-gap)/2;x.drawImage(p.f,X,y,cw,ch);x.drawImage(p.b,X,y+ch+gap,cw,ch)}else x.drawImage(p.f,X,(6*d-ch)/2,cw,ch)});
+const makeA4=items=>sheet(8.27,11.69,(x,d,mm,cw,ch)=>{let y=mm(8);items.forEach(p=>{const hf=cw*p.f.height/p.f.width,hb=p.b?cw*p.b.height/p.b.width:0;x.drawImage(p.f,mm(10),y,cw,hf);if(p.b)x.drawImage(p.b,mm(10)+cw+mm(4),y,cw,hb);y+=Math.max(hf,hb)+mm(3.5)})});
+const make46=p=>sheet(4,6,(x,d,mm,cw,ch)=>{const X=(4*d-cw)/2,gap=mm(8),hf=cw*p.f.height/p.f.width,hb=p.b?cw*p.b.height/p.b.width:0;
+ if(p.b){const y=(6*d-hf-hb-gap)/2;x.drawImage(p.f,X,y,cw,hf);x.drawImage(p.b,X,y+hf+gap,cw,hb)}else x.drawImage(p.f,X,(6*d-hf)/2,cw,hf)});
 $('dA4').onclick=()=>busy(async()=>{const items=batch.length?batch:[await pair()],c=makeA4(items);if(c.eff<dpi)st('Phone memory limit: A4 saved at '+c.eff+' DPI.');await save(c,'A4_'+nm()+'.jpg',c.eff)});
 $('d46').onclick=()=>busy(async()=>{const c=make46(await pair());await save(c,'4x6_'+nm()+'.jpg',c.eff)});
 $('add').onclick=()=>busy(async()=>{if(batch.length>=5)return st('Maximum 5 ID pairs per A4.',1);batch.push(await pair());update()});
