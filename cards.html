@@ -595,7 +595,7 @@ pan:{minW:.25,maxW:1,n:'PAN / Others',bn:'প্যান',d:'PDF, JPG or PNG',i
 ayushman:{minW:.3,maxW:1,n:'Ayushman Card',bn:'আয়ুষ্মান',d:'2-page PDF · page 1 front, page 2 back',pdf:1,pages:2,F:[0,0,1,1],B:[0,0,1,1],det:'red',inset:0},
 voter:{n:'Voter Card',bn:'ভোটার কার্ড',d:'e-EPIC PDF · front and back',pdf:1,F:[.03,.03,.47,.3],B:[.5,.03,.47,.3],det:'ink',inset:.004},
 abc:{minW:.4,maxW:1,n:'ABC / APAAR ID',bn:'অ্যাপার',d:'PDF, JPG or PNG · front only',img:1,pdf:1,one:1,fx:1,F:[.04,.03,.92,.4],det:'ink',inset:.002},
-abha:{n:'ABHA Card',bn:'আভা কার্ড',d:'PDF · front and back',pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'ink',inset:.004}};
+abha:{n:'ABHA Card',bn:'আভা কার্ড',d:'PDF · front and back',pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'cards',inset:.004}};
 let K,Tp,pp=[],pages=[],bx={},dpi=300,cc=0,batch=[],pdfBuf=null,srcFile=null,selS='F',sheetPaper='A4';
 
 const CA=(()=>{
@@ -647,7 +647,7 @@ async function load(pass){st('Reading file…');pages=[];bx={};
   if(isPw(err))return showPw(pass?'Wrong password. Check it and try again.':'');
   console.error(err);return st('Could not read this file: '+(err&&err.message||err),1)}
  st('Finding the card edges…');await autoCrop();$('work').classList.remove('hidden');
- st(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(Tp.det=='red'?(redFull?'No red border found, so the whole page is used as the card. Drag the yellow boxes if you need less.':'Red border found on both pages. Cropped exactly inside it.'):'Cards found and cropped. Adjust the boxes if needed.'),miss);layoutBoxes();update()}
+ st(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(isFree()?(redFull?'No red border found, so the whole page is used as the card. Drag the yellow boxes if you need less.':(Tp.det=='red'?'Red border found on both pages. Cropped exactly inside it.':'Front and back card edges found. Cropped exactly to each card.')):'Cards found and cropped. Adjust the boxes if needed.'),miss);layoutBoxes();update()}
 async function render(pass){pages.forEach(freeCanvas);pages=[];pp=[];
  if(!pdfBuf){const im=await new Promise((ok,no)=>{const i=new Image;i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(srcFile)});
   const k=Math.min(1,4096/Math.max(im.naturalWidth,im.naturalHeight)),c=mk(Math.round(im.naturalWidth*k),Math.round(im.naturalHeight*k));
@@ -769,29 +769,46 @@ function fit(pi,b,wOverride){const c=pages[pi],W=c.width,H=c.height;let w=b[2]*W
 let miss=0,redFull=0;
 /* Ayushman PDFs: each page has a red border. Crop exactly to the INSIDE edge of that border (any shape, not forced to card ratio). */
 function redBox(c){const W0=Math.min(1600,c.width),H0=Math.round(W0*c.height/c.width),t=mk(W0,H0),x=t.getContext('2d');x.drawImage(c,0,0,W0,H0);
- const d=x.getImageData(0,0,W0,H0).data,rowN=new Uint16Array(H0),colN=new Uint16Array(W0);
- for(let y=0;y<H0;y++)for(let i=0;i<W0;i++){const o=(y*W0+i)*4,r=d[o],g=d[o+1],b=d[o+2];if(r>150&&g<r*.42&&b<r*.42){rowN[y]++;colN[i]++}}
- let mr=0,mc=0;for(let y=0;y<H0;y++)if(rowN[y]>mr)mr=rowN[y];for(let i=0;i<W0;i++)if(colN[i]>mc)mc=colN[i];
- if(mr<W0*.25||mc<H0*.1)return null;
- const runs=(a,th)=>{const o=[];let s0=-1;for(let i=0;i<=a.length;i++){const on=i<a.length&&a[i]>=th;if(on&&s0<0)s0=i;if(!on&&s0>=0){o.push([s0,i-1]);s0=-1}}return o};
- const rr=runs(rowN,mr*.6),cr=runs(colN,mc*.6);if(rr.length<2||cr.length<2)return null;
- const top=rr[0],bot=rr[rr.length-1],lf=cr[0],rt=cr[cr.length-1],m=1.5,x0=lf[1]+1+m,x1=rt[0]-1-m,y0=top[1]+1+m,y1=bot[0]-1-m;
+ const d=x.getImageData(0,0,W0,H0).data,rowMax=new Uint16Array(H0),rowS=new Int16Array(H0),rowE=new Int16Array(H0),colMax=new Uint16Array(W0),colRun=new Uint16Array(W0);
+ /* A border is a LONG STRAIGHT red line. Text (even bold, orange-red) has gaps, so it can never make a long unbroken run. */
+ for(let y=0;y<H0;y++){let run=0,best=0,bs=0;for(let i=0;i<W0;i++){const o=(y*W0+i)*4,r=d[o],g=d[o+1],b=d[o+2];
+   if(r>150&&g<r*.42&&b<r*.42){run++;if(run>best){best=run;bs=i-run+1}colRun[i]++;if(colRun[i]>colMax[i])colMax[i]=colRun[i]}else{run=0;colRun[i]=0}}
+   rowMax[y]=best;rowS[y]=bs;rowE[y]=bs+best-1}
+ const runs=(a,th,lo,hi)=>{const o=[];let s0=-1;for(let i=lo;i<=hi;i++){const on=i<hi&&a[i]>=th;if(on&&s0<0)s0=i;if(!on&&s0>=0){o.push([s0,i-1]);s0=-1}}return o};
+ const rr=runs(rowMax,W0*.4,0,H0);if(rr.length<2)return null;
+ const top=rr[0],bot=rr[rr.length-1],hb=bot[0]-top[1];if(hb<H0*.1)return null;
+ let xs=W0,xe=0;for(let y=top[0];y<=top[1];y++){if(rowS[y]<xs)xs=rowS[y];if(rowE[y]>xe)xe=rowE[y]}
+ const cr=runs(colMax,hb*.85,Math.max(0,xs-4),Math.min(W0,xe+5));if(cr.length<2)return null;
+ const lf=cr[0],rt=cr[cr.length-1],m=1.5,x0=lf[1]+1+m,x1=rt[0]-1-m,y0=top[1]+1+m,y1=bot[0]-1-m;
  if(x1-x0<W0*.2||y1-y0<H0*.05)return null;
  return{x:x0/W0,y:y0/H0,w:(x1-x0+1)/W0,h:(y1-y0+1)/H0}}
+/* ABHA PDFs: one page with the front card above the back card, separated by white. Find each card's exact outer edges. */
+function inkCards(c){const W0=Math.min(1600,c.width),H0=Math.round(W0*c.height/c.width),t=mk(W0,H0),x=t.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W0,H0);x.drawImage(c,0,0,W0,H0);
+ const d=x.getImageData(0,0,W0,H0).data,ink=(y,i)=>{const o=(y*W0+i)*4;return Math.min(d[o],d[o+1],d[o+2])<245};
+ const rn=new Uint16Array(H0);for(let y=0;y<H0;y++){let n=0;for(let i=0;i<W0;i++)if(ink(y,i))n++;rn[y]=n}
+ const rt=Math.max(3,W0*.04),seg=[];let s0=-1;
+ for(let y=0;y<=H0;y++){const on=y<H0&&rn[y]>=rt;if(on&&s0<0)s0=y;if(!on&&s0>=0){if(y-s0>=H0*.1)seg.push([s0,y-1]);s0=-1}}
+ if(seg.length<2)return null;
+ const two=seg.sort((a,b)=>(b[1]-b[0])-(a[1]-a[0])).slice(0,2).sort((a,b)=>a[0]-b[0]),m=1;
+ return two.map(([ya,yb])=>{const cn=new Uint16Array(W0),ct=Math.max(3,(yb-ya)*.04);for(let y=ya;y<=yb;y++)for(let i=0;i<W0;i++)if(ink(y,i))cn[i]++;
+   let x0=0;while(x0<W0&&cn[x0]<ct)x0++;let x1=W0-1;while(x1>x0&&cn[x1]<ct)x1--;
+   return x1-x0<W0*.3?null:{x:(x0+m)/W0,y:(ya+m)/H0,w:(x1-x0+1-2*m)/W0,h:(yb-ya+1-2*m)/H0}})}
+const isFree=()=>Tp.det=='red'||Tp.det=='cards';
 async function autoCrop(){miss=0;redFull=0;const last=Math.min(1,pages.length-1);let F,B;
- if(Tp.det=='red'){const a=redBox(pages[0]),b=redBox(pages[last]);F=a&&{pi:0,r:a};B=b&&{pi:last,r:b}}
+ if(Tp.det=='cards'){const bs=inkCards(pages[0])||[];F=bs[0]&&{pi:0,r:bs[0]};B=bs[1]&&{pi:0,r:bs[1]}}
+  else if(Tp.det=='red'){const a=redBox(pages[0]),b=redBox(pages[last]);F=a&&{pi:0,r:a};B=b&&{pi:last,r:b}}
   else if(Tp.pages==2){const a=await candidates(pages[0]),b=await candidates(pages[last]);F=a[0]&&{pi:0,r:a[0]};B=b[0]&&{pi:last,r:b[0]}}
  else{const cs=await candidates(pages[0]),pr=Tp.one?cs.slice(0,1):pickPair(cs);F=pr[0]&&{pi:0,r:pr[0]};B=pr[1]&&{pi:0,r:pr[1]}}
  const found={F:!!F,B:!!B};
  [['F',F],['B',B]].forEach(([sd,v])=>{if(sd=='B'&&Tp.one)return;const pi=v?v.pi:(sd=='B'&&Tp.pages==2?last:0);let r=v&&[v.r.x,v.r.y,v.r.w,v.r.h];
-  if(r&&Tp.det=='red'){const c=pages[pi];bx[sd]={p:pi,x:r[0],y:r[1],w:r[2],ar:(r[2]*c.width)/(r[3]*c.height)};return}
+  if(r&&isFree()){const c=pages[pi];bx[sd]={p:pi,x:r[0],y:r[1],w:r[2],ar:(r[2]*c.width)/(r[3]*c.height)};return}
    if(!r&&Tp.det=='red'){const c=pages[pi];redFull=1;bx[sd]={p:pi,x:0,y:0,w:1,ar:c.width/c.height};return}   /* no red border: the page itself is the card (like selecting the whole page) */
    if(!r){miss=1;r=detect(pi,Tp[sd],Tp.det)||Tp[sd]}bx[sd]=fit(pi,r)});
  /* front and back are the same physical card: make them the same size when both were really detected */
- if(found.F&&found.B&&!Tp.one&&Tp.det!='red'&&bx.F&&bx.B){const wa=bx.F.w*pages[bx.F.p].width,wb=bx.B.w*pages[bx.B.p].width;
+ if(found.F&&found.B&&!Tp.one&&!isFree()&&bx.F&&bx.B){const wa=bx.F.w*pages[bx.F.p].width,wb=bx.B.w*pages[bx.B.p].width;
   if(Math.abs(wa-wb)/Math.max(wa,wb)<.12){const m=(wa+wb)/2;['F','B'].forEach(s=>{const b=bx[s],c=pages[b.p],h=m/R,cx=b.x*c.width+b.w*c.width/2,cy=b.y*c.height+(b.w*c.width/R)/2;
     b.w=m/c.width;b.x=Math.max(0,Math.min(1-b.w,(cx-m/2)/c.width));b.y=Math.max(0,Math.min(1-hOf(b),(cy-h/2)/c.height))})}}
- else if(found.F&&!found.B&&!Tp.one&&Tp.det!='red'&&bx.F&&bx.B&&bx.B.p==bx.F.p){bx.B=fit(bx.B.p,[bx.B.x,bx.B.y,bx.B.w,hOf(bx.B)],bx.F.w)}
+ else if(found.F&&!found.B&&!Tp.one&&!isFree()&&bx.F&&bx.B&&bx.B.p==bx.F.p){bx.B=fit(bx.B.p,[bx.B.x,bx.B.y,bx.B.w,hOf(bx.B)],bx.F.w)}
  if(pages.length==1&&!pdfBuf&&!Tp.one)bx.B=bx.F}
 $('auto').onclick=async()=>{st('Finding the card edges…');await autoCrop();layoutBoxes();update();st(miss?'Card edge not found, so a default position is used.':'Auto crop done.',miss)};
 $('reset').onclick=async()=>{bx={};st('Finding the card edges…');await autoCrop();layoutBoxes();update();st(miss?'Card edge not found, so a default position is used.':'Boxes reset.',miss)};
