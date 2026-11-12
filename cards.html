@@ -590,7 +590,7 @@ if(location.hash==='#scanner')mode('scanner');
 
 /* ---------------- card presets (fractions of the page: [x,y,w,h]) ---------------- */
 const T={
-ration:{n:'Ration Card',bn:'রেশন কার্ড',d:'PDF · front and back',pdf:1,F:[.04,.5,.45,.46],B:[.51,.5,.45,.46],det:'ink',inset:.004},
+ration:{n:'Ration Card',bn:'রেশন কার্ড',d:'PDF · front and back',pdf:1,F:[.04,.5,.45,.46],B:[.51,.5,.45,.46],det:'green',inset:.004},
 aadhaar:{n:'Aadhaar Card',bn:'আধার কার্ড',d:'Password PDF · front and back',pdf:1,pw:1,cc:1,F:[.03,.55,.46,.4],B:[.51,.55,.46,.4],det:'ink',inset:.003},
 pan:{minW:.25,maxW:1,n:'PAN / Others',bn:'প্যান',d:'PDF, JPG or PNG',img:1,pdf:1,F:[0,0,1,.5],B:[0,.5,1,.5],det:'blue',inset:0},
 ayushman:{minW:.3,maxW:1,n:'Ayushman Card',bn:'আয়ুষ্মান',d:'2-page PDF · page 1 front, page 2 back',pdf:1,pages:2,F:[0,0,1,1],B:[0,0,1,1],det:'red',inset:0},
@@ -806,9 +806,44 @@ function inkCards(c){const W0=Math.min(1600,c.width),H0=Math.round(W0*c.height/c
    for(let y=Math.max(0,a-3);y<=a+6;y++)if(rowInk(y,x0,x1)>=.5){a=y;break}
    for(let y=Math.min(H0-1,b+3);y>=b-6;y--)if(rowInk(y,x0,x1)>=.5){b=y;break}
    return{x:x0/W0,y:a/H0,w:(x1-x0+1)/W0,h:(b-a+1)/H0}})}
-const isFree=()=>Tp.det=='red'||Tp.det=='cards';
-async function autoCrop(){miss=0;redFull=0;const last=Math.min(1,pages.length-1);let F,B;
- if(Tp.det=='cards'){const bs=inkCards(pages[0])||[];F=bs[0]&&{pi:0,r:bs[0]};B=bs[1]&&{pi:0,r:bs[1]}}
+/* e-Ration PDFs: the printed sheet has dashed CUT LINES around and between the cards. The old ink detector locked onto those dashed lines, so the crop sat on them
+   (white/grey margin, edge off by a few px). The card itself is a rounded rectangle with full-height GREEN panels, so the green mask gives its exact edge. */
+const isGreen=(r,g,b)=>g>r+25&&g>b+15&&g>170&&r>110;
+function greenFromData(d,W,H){
+ const m=new Uint8Array(W*H);let any=0;
+ for(let i=0,o=0;i<W*H;i++,o+=4)if(isGreen(d[o],d[o+1],d[o+2])){m[i]=1;any++}
+ if(any<W*H*.01)return null;
+ const longest=(a,th,lo,hi,gap)=>{let best=null,s0=-1,last=-1;for(let i=lo;i<=hi;i++){const on=i<hi&&a[i]>=th;if(on){if(s0<0)s0=i;last=i}else if(s0>=0&&i-last>gap){if(!best||last-s0>best[1]-best[0])best=[s0,last];s0=-1}}return best};
+ /* 1. vertical band of the cards: the rows that are heavily green (the status icon above the cards is small and dark green, so it does not count) */
+ const row=new Uint32Array(H);let mx=0;
+ for(let y=0;y<H;y++){let n=0;for(let x=0;x<W;x++)n+=m[y*W+x];row[y]=n;if(n>mx)mx=n}
+ const band=longest(row,.15*mx,0,H,Math.max(2,H*.003));if(!band)return null;
+ const ya=band[0],yb=band[1],bh=yb-ya+1;if(bh<H*.05)return null;
+ /* 2. green panels = columns that are green for a big part of that band; short gaps (text, emblem) are bridged */
+ const col=new Uint32Array(W);for(let y=ya;y<=yb;y++)for(let x=0;x<W;x++)col[x]+=m[y*W+x];
+ const runs=[];let s0=-1,last=-1,gap=Math.max(2,W*.004);
+ for(let x=0;x<=W;x++){const on=x<W&&col[x]>=.35*bh;if(on){if(s0<0)s0=x;last=x}else if(s0>=0&&x-last>gap){if(last-s0>=W*.015)runs.push([s0,last]);s0=-1}}
+ if(runs.length<2)return null;
+ /* 3. split the panels into front and back: the split that makes both cards the same width (a card is the same physical size on both sides) */
+ let bk=-1,bd=1e9;
+ for(let k=1;k<runs.length;k++){const wl=runs[k-1][1]-runs[0][0],wr=runs[runs.length-1][1]-runs[k][0],df=Math.abs(wl-wr);if(df<bd){bd=df;bk=k}}
+ const grp=[runs.slice(0,bk),runs.slice(bk)],out=[];
+ for(const g of grp){const x0=g[0][0],x1=g[g.length-1][1],w=x1-x0+1;
+  /* exact top/bottom of THIS card: rows that are green inside its own x-range */
+  const rc=new Uint32Array(H);let rm=0;for(let y=Math.max(0,ya-6);y<=Math.min(H-1,yb+6);y++){let n=0;for(let x=x0;x<=x1;x++)n+=m[y*W+x];rc[y]=n;if(n>rm)rm=n}
+  const b=longest(rc,.3*rm,0,H,Math.max(2,H*.003));if(!b)return null;const h=b[1]-b[0]+1,ratio=w/h;
+  if(ratio<1.3||ratio>1.9)return null;out.push({x:x0/W,y:b[0]/H,w:w/W,h:h/H})}
+ if(out.length<2)return null;
+ const ra=out[0].w*W,rb=out[1].w*W;if(Math.abs(ra-rb)/Math.max(ra,rb)>.12)return null;
+ return out}
+function greenCards(c){const W0=Math.min(1600,c.width),H0=Math.round(W0*c.height/c.width),t=mk(W0,H0),x=t.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W0,H0);x.drawImage(c,0,0,W0,H0);
+ return greenFromData(x.getImageData(0,0,W0,H0).data,W0,H0)}
+let greenOK=0;
+const isFree=()=>Tp.det=='red'||Tp.det=='cards'||(Tp.det=='green'&&greenOK);
+async function autoCrop(){miss=0;redFull=0;greenOK=0;const last=Math.min(1,pages.length-1);let F,B;
+ let gb=null;if(Tp.det=='green'){try{gb=greenCards(pages[0])}catch(e){gb=null}greenOK=gb?1:0}
+ if(greenOK){F={pi:0,r:gb[0]};B={pi:0,r:gb[1]}}
+ else if(Tp.det=='cards'){const bs=inkCards(pages[0])||[];F=bs[0]&&{pi:0,r:bs[0]};B=bs[1]&&{pi:0,r:bs[1]}}
   else if(Tp.det=='red'){const a=redBox(pages[0]),b=redBox(pages[last]);F=a&&{pi:0,r:a};B=b&&{pi:last,r:b}}
   else if(Tp.pages==2){const a=await candidates(pages[0]),b=await candidates(pages[last]);F=a[0]&&{pi:0,r:a[0]};B=b[0]&&{pi:last,r:b[0]}}
  else{const cs=await candidates(pages[0]),pr=Tp.one?cs.slice(0,1):pickPair(cs);F=pr[0]&&{pi:0,r:pr[0]};B=pr[1]&&{pi:0,r:pr[1]}}
