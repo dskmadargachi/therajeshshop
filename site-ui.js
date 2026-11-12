@@ -147,6 +147,31 @@ var BN = {
 'Combine PDFs in the order you want.': 'পছন্দের ক্রমে একাধিক PDF জুড়ুন।', 'Extract pages or ranges into a new PDF.': 'পৃষ্ঠা বা পরিসর আলাদা করে নতুন PDF বানান।', 'Delete or reorder pages.': 'পৃষ্ঠা মুছুন বা ক্রম বদলান।', 'Rotate all pages the way you need.': 'সব পৃষ্ঠা প্রয়োজনমতো ঘোরান।', 'Turn JPG or PNG images into one PDF.': 'JPG বা PNG ছবি এক PDF-এ বদলান।', 'Add page numbers to every page.': 'প্রতিটি পৃষ্ঠায় পেজ নম্বর যোগ করুন।', 'Stamp text diagonally over every page.': 'প্রতিটি পৃষ্ঠায় কোনাকুনি লেখা বসান।', 'Set the title and author of your PDF.': 'PDF-এর শিরোনাম ও লেখকের নাম দিন।', 'Shrink file size by re-encoding pages.': 'পৃষ্ঠা পুনরায় এনকোড করে ফাইলের সাইজ কমান।', 'Convert each page into a JPG.': 'প্রতিটি পৃষ্ঠা JPG-তে বদলান।', 'Trim margins from every page.': 'প্রতিটি পৃষ্ঠার মার্জিন ছাঁটুন।', 'Rebuild a damaged PDF (best effort).': 'নষ্ট PDF ঠিক করার চেষ্টা করুন।', 'Add text anywhere on a page.': 'পৃষ্ঠার যেকোনো জায়গায় লেখা যোগ করুন।', 'Draw your signature and place it on a page.': 'সই এঁকে পৃষ্ঠায় বসান।', 'Permanently black out an area (page is flattened to an image).': 'একটি অংশ স্থায়ীভাবে কালো করুন (পৃষ্ঠা ছবিতে পরিণত হয়)।', 'Capture pages with your camera into a PDF.': 'ক্যামেরায় পৃষ্ঠার ছবি তুলে PDF বানান।', 'Detect and fill form fields.': 'ফর্মের ঘর খুঁজে পূরণ করুন।', 'Paste HTML or text to make a PDF (text only).': 'HTML বা লেখা পেস্ট করে PDF বানান (শুধু লেখা)।', 'Extract text as a Markdown file.': 'লেখা বের করে Markdown ফাইল বানান।', 'Extract text into an editable Word file (layout not kept).': 'লেখা বের করে এডিটযোগ্য Word ফাইল বানান (লেআউট থাকে না)।', 'Show text differences between two PDFs.': 'দুটি PDF-এর লেখার পার্থক্য দেখুন।', 'Remove usage restrictions (cannot crack open passwords).': 'ব্যবহারের বিধিনিষেধ সরান (পাসওয়ার্ড ভাঙা যায় না)।', 'Each page becomes a slide (as an image).': 'প্রতিটি পৃষ্ঠা একটি স্লাইড হয় (ছবি হিসেবে)।', 'Extract text lines into spreadsheet rows (one sheet per page).': 'লেখার লাইন স্প্রেডশিটের সারিতে বদলান (প্রতি পৃষ্ঠায় এক শিট)।', 'Convert a .docx to PDF (text only, formatting simplified).': '.docx থেকে PDF (শুধু লেখা, ফরম্যাট সরল)।', 'Convert a spreadsheet to PDF (values as text rows).': 'স্প্রেডশিট থেকে PDF (মান লেখার সারি হিসেবে)।', 'Convert a .pptx to PDF (slide text only).': '.pptx থেকে PDF (শুধু স্লাইডের লেখা)।',
 'Pages to extract (e.g. 1-3,5)': 'যে পৃষ্ঠাগুলো নেবেন (যেমন 1-3,5)', 'New page order (e.g. 3,1,2-4). Pages left out are deleted.': 'নতুন পৃষ্ঠার ক্রম (যেমন 3,1,2-4)। বাদ দেওয়া পৃষ্ঠা মুছে যাবে।', 'Rotation': 'ঘোরানো', 'Position': 'অবস্থান', 'Watermark text': 'ওয়াটারমার্কের লেখা', 'Title': 'শিরোনাম', 'Author': 'লেখক', 'Quality': 'মান', 'Margin to remove (% of page)': 'বাদ দেওয়া মার্জিন (পৃষ্ঠার %)', 'Text': 'লেখা', 'Page': 'পৃষ্ঠা', 'Page number': 'পৃষ্ঠা নম্বর', 'Size': 'মাপ', 'Draw your signature': 'আপনার সই আঁকুন', 'Clear': 'মুছুন', 'HTML or text': 'HTML বা লেখা', 'Target language': 'যে ভাষায়'
 };
+Object.assign(BN, {
+'Scan QR': 'QR স্ক্যান', 'Upload & Pay': 'আপলোড ও পেমেন্ট', 'Print Ready': 'প্রিন্ট প্রস্তুত',
+'Privacy & Security Info': 'গোপনীয়তা ও নিরাপত্তা তথ্য', 'Privacy & Security': 'গোপনীয়তা ও নিরাপত্তা',
+'Directions': 'দিকনির্দেশ', 'Call': 'কল করুন', 'Step': 'ধাপ', 'of': '/',
+'Preview & edit': 'প্রিভিউ ও এডিট',
+'Check your files. Preview, crop photos, pick pages, or remove a file.': 'আপনার ফাইল দেখে নিন। প্রিভিউ করুন, ছবি ক্রপ করুন, পৃষ্ঠা বেছে নিন বা ফাইল সরান।',
+'Add more files': 'আরও ফাইল যোগ করুন', 'Print settings': 'প্রিন্ট সেটিংস',
+'Continue →': 'এগিয়ে যান →', '← Back': '← পেছনে', 'Continue your order →': 'আপনার অর্ডার চালিয়ে যান →',
+'Continue passport photo →': 'পাসপোর্ট ছবি চালিয়ে যান →', 'Continue crop & preview →': 'ক্রপ ও প্রিভিউ চালিয়ে যান →',
+'Order token & payment': 'অর্ডার টোকেন ও পেমেন্ট', 'Order & payment': 'অর্ডার ও পেমেন্ট', 'Order placed': 'অর্ডার সম্পন্ন',
+'Check the summary below, then tap Send. Secure payment opens next.': 'নিচের সারাংশ দেখে "পাঠান" চাপুন। এরপর নিরাপদ পেমেন্ট খুলবে।',
+'Files': 'ফাইল', 'Paper': 'কাগজ', 'Mode': 'মোড', 'Name': 'নাম',
+'Crop & background': 'ক্রপ ও ব্যাকগ্রাউন্ড',
+'Move and zoom to fit your face in the frame, then pick a background.': 'ফ্রেমে মুখ বসাতে সরান ও জুম করুন, তারপর ব্যাকগ্রাউন্ড বেছে নিন।',
+'Zoom': 'জুম', 'Transparent': 'স্বচ্ছ', 'White': 'সাদা', 'Blue': 'নীল', 'Red': 'লাল', 'Grey': 'ধূসর', 'Green': 'সবুজ', 'Custom': 'কাস্টম',
+'Change photo': 'ছবি বদলান', 'Sheet preview & size': 'শিট প্রিভিউ ও সাইজ', 'Sheet & size': 'শিট ও সাইজ',
+'Details & pay': 'বিবরণ ও পেমেন্ট', 'Your sheet price:': 'আপনার শিটের মূল্য:', 'Upload a portrait': 'একটি পোর্ট্রেট আপলোড করুন',
+'Clear front-facing photo (JPG, PNG or WebP). Background removal is built in.': 'সামনে-মুখ স্পষ্ট ছবি (JPG, PNG বা WebP)। ব্যাকগ্রাউন্ড সরানো বিল্ট-ইন।',
+'PDF, JPG, PNG, Word, Excel or PowerPoint · up to 10 files': 'PDF, JPG, PNG, Word, Excel বা PowerPoint · সর্বোচ্চ 10টি ফাইল',
+'Front Side': 'সামনের দিক', 'Back Side': 'পেছনের দিক',
+'Detect & adjust': 'শনাক্ত ও ঠিক করুন', 'Preview & download': 'প্রিভিউ ও ডাউনলোড', 'Next: preview →': 'পরবর্তী: প্রিভিউ →',
+'Cropped card preview': 'ক্রপ করা কার্ডের প্রিভিউ',
+'Tap Download to save your file. Nothing was uploaded.': 'ফাইল সেভ করতে ডাউনলোড চাপুন। কিছুই আপলোড হয়নি।',
+'Download all': 'সব ডাউনলোড করুন'
+});
 /* Bengali digits for pure numbers are left as-is on purpose (prices, counts). */
 
 var lang = LS.get('site-lang') === 'bn' ? 'bn' : 'en';

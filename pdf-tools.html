@@ -179,6 +179,8 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.js-rv .rv{opacity:1;transform:none}}
 
 </style>
+<link rel="stylesheet" href="/wizard.css">
+<script src="/wizard.js"></script>
 </head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
 <symbol id="i-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></symbol>
@@ -204,7 +206,11 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 </div></nav>
 <div class="hd"><h1>PDF tools</h1><p>Merge, split, compress, rotate, convert and more. Everything runs on your own device.</p></div>
 <div class="bar"><input type="text" id="sq" placeholder="Search all tools…"><div id="tabs"></div></div><div class="grid" id="grid"></div>
-<section class="pvp" id="privacy"><span class="k">Privacy by design</span><h2>Your PDFs never leave your device</h2><p>All PDF tools run inside your browser. Nothing is uploaded to our server. Printing orders are different: those files are deleted right after printing. <a href="/#privacy">Read how we protect your files</a>.</p><figure class="pvd"><figcaption>Where your file goes</figcaption>
+<footer class="cf"><div class="cf-in"><span><strong>therajesh.shop</strong> · Your PDFs never leave your device</span><button type="button" data-wz-modal="pvModal">Privacy &amp; Security Info</button></div><div class="cf-n">Tools marked “Soon” need server-side software and are not available yet.</div></footer>
+<div class="wzm" id="pvModal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="pvT"><div class="wzm-s">
+<div class="wzm-h"><b id="pvT">Privacy &amp; Security</b><button class="wz-x" type="button" data-wz-mclose aria-label="Close">✕</button></div>
+<p class="hint" style="margin:0 0 6px">All PDF tools run inside your browser. Nothing is uploaded to our server. Printing orders are different: those files are deleted right after printing.</p>
+<figure class="pvd"><figcaption>Where your file goes</figcaption>
 <svg viewBox="0 0 760 340" role="img" aria-label="Print orders: your phone uploads to our server, then to the shop PC and printer, and the file is deleted from the server and the PC afterwards. PDF tools: your file is processed inside your own browser and is never uploaded.">
 <defs><marker id="pvar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10z" style="fill:var(--brand)"/></marker><marker id="pvar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10z" fill="#c62828"/></marker></defs>
 <text class="lt" x="20" y="26">1 · PRINT ORDER — your file travels to the shop</text>
@@ -219,8 +225,9 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 <rect class="n" x="20" y="250" width="120" height="64" rx="12"/><text class="nt" x="80" y="278">Your file</text><text class="ns" x="80" y="296">PDF or image</text><rect class="n" x="215" y="250" width="345" height="64" rx="12"/><text class="nt" x="387" y="278">Your own browser</text><text class="ns" x="387" y="296">merge · split · compress · convert all happen here</text><rect class="n" x="635" y="250" width="105" height="64" rx="12"/><text class="nt" x="687" y="278">Download</text><text class="ns" x="687" y="296">result file</text>
 <line class="ln" x1="142" y1="282" x2="213" y2="282"/><line class="ln" x1="562" y1="282" x2="633" y2="282"/>
 <text class="ok" x="387" y="334">No upload · no server · no copy kept</text>
-</svg></figure></section>
-<footer>Tools marked “Soon” need server-side software and are not available yet.</footer>
+</svg></figure>
+</div></div>
+
 <div id="modal"><div class="tp">
 <div class="tp-top"><button id="close" class="tp-x" aria-label="Close">✕</button></div>
 <div class="tp-head"><span id="mti"></span><h2 id="mt"></h2><p id="md"></p></div>
@@ -229,7 +236,7 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
  <div><div id="fl" class="fgrid"></div><button type="button" class="addm" id="addmore">+ Add more files</button></div>
  <aside class="tp-side"><h3 id="optT">Options</h3><div id="opts"></div><button class="go" id="go" disabled>Process</button><div id="msg"></div></aside>
 </div>
-<div id="s3" class="tp-done hidden"><h2>Your file is ready!</h2><p class="mu">It has been saved to your device. Nothing was uploaded.</p><div id="rs"></div><div id="nx"></div><button type="button" id="again" class="addm">← Back to editing</button></div>
+<div id="s3" class="tp-done hidden"><h2>Your file is ready!</h2><p class="mu">Tap Download to save your file. Nothing was uploaded.</p><div id="rs"></div><div id="nx"></div><button type="button" id="again" class="addm">← Back to editing</button></div>
 </div></div>
 <input type="file" id="fi" hidden>
 <script>
@@ -333,7 +340,6 @@ $('close').onclick=closeTool;document.addEventListener('keydown',e=>{if(e.key===
 $('again').onclick=()=>{show('s2')};
 $('go').onclick=async()=>{const m=$('msg');$('go').disabled=true;m.textContent='Processing…';
  try{const rs=[].concat(await cur.run(files));const bl=r=>r.blob||new Blob([r.bytes],{type:r.type||'application/pdf'});
-  for(const r of rs)await dlx.save({filename:r.name,data:bl(r)});
   const box=$('rs');box.innerHTML='';
   rs.forEach(r=>{const row=document.createElement('div');row.className='rr';const n=document.createElement('b');n.textContent=r.name;
    const pv=document.createElement('button');pv.textContent='Preview';pv.onclick=()=>openPv(r.name,bl(r));
@@ -343,6 +349,7 @@ $('go').onclick=async()=>{const m=$('msg');$('go').disabled=true;m.textContent='
   if(first&&!first.blob&&(!first.type||first.type==='application/pdf')){const h=document.createElement('h3');h.textContent='Continue with this file';nx.appendChild(h);const w=document.createElement('div');w.className='nxw';
    ['merge','split','compress','rotate','pagenum','watermark','sign'].filter(id=>id!==cur.id).slice(0,5).forEach(id=>{const t=T.find(x=>x.id===id);if(!t)return;const b=document.createElement('button');b.className='nxb';b.innerHTML=ic(id)+'<span>'+t.n+'</span>';
     b.onclick=()=>{const f=new File([bl(first)],first.name,{type:'application/pdf'});open_(t);files=[f];render();show('s2')};w.appendChild(b)});nx.appendChild(w)}
-  show('s3');openPv(rs[0].name,bl(rs[0]))
+  if(rs.length>1){const all=document.createElement('button');all.className='go';all.textContent='Download all';all.onclick=async()=>{for(const r of rs)await dlx.save({filename:r.name,data:bl(r)})};box.prepend(all)}
+  show('s3');$('modal').scrollTop=0;
  }catch(e){m.textContent='Error: '+(e&&e.message||'could not process this file.')}finally{$('go').disabled=!files.length&&!cur.nofile}};
 </script></body></html>

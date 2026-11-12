@@ -1,0 +1,240 @@
+/* therajesh.shop — wizard.css
+   Compact app-like layout + multi-step bottom-sheet wizard. Loaded AFTER each page's own styles. */
+:root{--wz-ease:cubic-bezier(0.16,1,0.3,1);--wz-pill:#2563eb;--wz-pill-dk:#1d4ed8;--wz-bar:60px}
+
+/* ---------- scroll lock (wizard, previews, password sheet, pdf modal, card popups) ---------- */
+html.wz-lock,html.wz-lock body{overflow:hidden!important;overscroll-behavior:none}
+
+/* ---------- 1. compact top bar: brand + language + price pills ---------- */
+.sui{display:none!important}                       /* old separate language row (its switch is moved into the top bar by wizard.js) */
+.topbar::before{height:3px!important}
+.topbar-in{display:flex!important;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 10px;padding:6px 12px!important;max-width:1160px}
+.topbar .brand{gap:8px}
+.topbar .brand-mark{width:30px!important;height:30px!important;border-radius:9px!important}
+.topbar .brand-mark svg{width:17px!important;height:17px!important}
+.topbar .brand-name{font-size:16px!important;line-height:1.1}
+.topbar .brand-sub{display:none!important}
+.topbar .chips{order:3;width:100%;display:flex;gap:6px;margin:0}
+.topbar .chip{font-size:11.5px!important;padding:3px 9px!important;line-height:1.3;white-space:nowrap}
+.topbar .sg{display:flex;background:#eef2fb;border-radius:999px;padding:2px;flex:none}
+.topbar .sg button{all:unset;cursor:pointer;box-sizing:border-box;font:700 12px/1 Figtree,"Noto Sans Bengali",system-ui,sans-serif;padding:6px 11px;border-radius:999px;color:#4a5670}
+.topbar .sg button.on{background:linear-gradient(135deg,#3b6cff,#7c4dff);color:#fff}
+@media(min-width:760px){
+  .topbar-in{flex-wrap:nowrap;padding:8px 20px!important}
+  .topbar .chips{order:0;width:auto;margin-left:auto}
+  .topbar .brand-sub{display:block!important;font-size:11.5px}
+}
+
+/* ---------- slim one-line step indicator (replaces the tall hero banner) ---------- */
+.flow{display:flex;align-items:center;justify-content:center;gap:6px;height:44px;max-width:1160px;margin:8px auto 0;padding:0 10px;border-radius:14px;
+  background:linear-gradient(135deg,#14163f,#2c2a8f 62%,#5b3fd1);color:#fff;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden}
+.flow span{display:inline-flex;align-items:center;gap:6px}
+.flow b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#ff5fa2,#8b5cf6);font-size:11px}
+.flow i{font-style:normal;opacity:.6}
+@media(max-width:760px){.flow{margin:8px 10px 0;font-size:12px;gap:5px}}
+
+/* ---------- sticky tabs: always above content, never cut headings ---------- */
+html{scroll-padding-top:calc(var(--wz-bar) + 8px)}
+[id],h1,h2,h3{scroll-margin-top:calc(var(--wz-bar) + 8px)}
+.tabs{position:sticky!important;top:0!important;z-index:60!important;margin-top:8px}
+.tabs button,.tabs a{padding:11px 12px!important;font-size:13px!important;gap:6px!important}
+.tabs svg{width:16px!important;height:16px!important}
+.tabs .sep{margin:10px 4px!important}
+@media(min-width:760px){.tabs button,.tabs a{padding:13px 16px!important;font-size:14.5px!important}}
+.wrap{padding-top:12px!important}
+
+/* ---------- main screen: only the primary action ---------- */
+.panel{padding:14px!important}
+.panel-h{font-size:18px!important;margin:0!important}
+.panel-s{margin:2px 0 10px!important;font-size:13px!important}
+.drop{padding:22px 14px!important}
+.drop strong{font-size:16px}
+.drop span{font-size:12.5px}
+.drop .pp-btns{margin-top:10px}
+@media(max-width:600px){.drop-icon{width:44px!important;height:44px!important;margin-bottom:6px!important}}
+
+/* ---------- compact footer ---------- */
+.cf{max-width:1160px;margin:14px auto 0;padding:10px 12px calc(14px + env(safe-area-inset-bottom,0px));text-align:center;font-size:12.5px;color:#5b6783}
+.cf-in{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;justify-content:center}
+.cf a,.cf button{all:unset;cursor:pointer;color:var(--brand-ink,#3338d6);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.cf-n{margin-top:4px;font-size:11.5px;opacity:.8}
+
+/* ---------- generic modal (privacy info) ---------- */
+.wzm{position:fixed;inset:0;z-index:1100;display:flex;align-items:flex-end;justify-content:center;background:rgba(15,23,42,.55);opacity:0;visibility:hidden;transition:opacity .3s var(--wz-ease),visibility 0s .3s}
+.wzm.on{opacity:1;visibility:visible;transition:opacity .3s var(--wz-ease)}
+.wzm-s{width:100%;max-width:640px;max-height:88dvh;overflow:auto;-webkit-overflow-scrolling:touch;background:#fff;border-radius:22px 22px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .45s var(--wz-ease)}
+.wzm.on .wzm-s{transform:none}
+.wzm-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.wzm-h b{font-size:17px}
+.wzm .pvd{margin:8px 0;overflow-x:auto}.wzm .pvd svg{min-width:520px;max-width:100%;height:auto}
+.wzm .pv-cards{display:grid;gap:8px}
+.wzm .pv-c{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid #e3e8f2;border-radius:14px;font-size:13px}
+.wzm .pv-c b{display:block;font-size:13.5px}
+.wzm .pv-c svg{width:20px;height:20px;flex:none}
+@media(min-width:760px){.wzm{align-items:center}.wzm-s{border-radius:22px}}
+
+/* ---------- 2. THE WIZARD (full-screen on phones, centred sheet on desktop) ---------- */
+.wz{position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-end;justify-content:center;background:rgba(15,23,42,.55);opacity:0;visibility:hidden;transition:opacity .3s var(--wz-ease),visibility 0s .45s}
+.wz.on{opacity:1;visibility:visible;transition:opacity .3s var(--wz-ease)}
+.wz-sheet{position:relative;display:flex;flex-direction:column;width:100%;height:100dvh;max-height:100dvh;background:#f6f7ff;border-radius:0;transform:translateY(100%);transition:transform .45s var(--wz-ease);overflow:hidden}
+.wz.on .wz-sheet{transform:none}
+@media(min-width:760px){.wz{align-items:center}.wz-sheet{max-width:600px;height:min(86vh,820px);border-radius:24px;transform:translateY(40px) scale(.98)}.wz.on .wz-sheet{transform:none}}
+
+.wz-h{flex:none;display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px;background:#fff;border-bottom:1px solid #e6eaf8}
+.wz-hm{flex:1;min-width:0;text-align:center;line-height:1.2}
+.wz-hm b#wzTitle{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wz-st{font-size:12px;font-weight:700;color:#5b6783}
+.wz-st b{color:#3338d6}
+.wz-back,.wz-x{all:unset;box-sizing:border-box;cursor:pointer;flex:none;width:38px;height:38px;border-radius:50%;display:inline-grid;place-items:center;background:#eef1f8;color:#334155;font-size:17px;font-weight:700;transition:background .2s,opacity .2s,transform .2s var(--wz-ease)}
+.wz-back:active,.wz-x:active{transform:scale(.92)}
+.wz-back[hidden]{display:inline-grid!important;visibility:hidden}
+.wz-prog{flex:none;height:3px;background:#e6eaf8}
+.wz-prog i{display:block;height:100%;width:33%;background:linear-gradient(90deg,#4f5bff,#8b5cf6 55%,#ff5fa2);transition:width .45s var(--wz-ease)}
+
+.wz-b{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:14px 14px 18px}
+.wz-pane{display:none}
+.wz-pane.on{display:block;animation:wzFwd .42s var(--wz-ease) both}
+.wz-pane.on.rev{animation-name:wzRev}
+@keyframes wzFwd{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes wzRev{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+.wz-pane>h3{margin:0 0 4px;font-size:16px}
+.wz-pane>.sub{margin:0 0 12px;font-size:12.5px;color:#5b6783}
+
+.wz-f{flex:none;background:#fff;border-top:1px solid #e6eaf8;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 24px -18px rgba(30,41,90,.5)}
+.wz-act{display:none;gap:10px;align-items:center}
+.wz-act.on{display:flex}
+.wz-act .grow{flex:1}
+.wz-sum{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 8px;padding:9px 12px;border-radius:12px;background:#f0f2ff;border:1px solid #d6dbff;font-size:13.5px;font-weight:700;color:#2c2a8f}
+.wz-sum b{font-size:18px;color:#14163f}
+.wz .total{margin:0!important}
+.wz-f .btn,.wz-f .go,.wz-btn{flex:1;min-height:48px;border-radius:14px!important;font-size:15.5px;font-weight:800;font-family:inherit;cursor:pointer}
+.wz-btn{border:1px solid #d6dbff;background:#fff;color:#3338d6;padding:0 16px}
+.wz-btn.pri{border:0;color:#fff;background:linear-gradient(135deg,#4f5bff,#8b5cf6 55%,#ff5fa2)}
+.wz-btn:disabled{opacity:.5}
+.wz-btn.sm{min-height:40px;flex:none;font-size:13.5px;padding:0 12px;border-radius:12px}
+
+/* form controls inside wizard (16px stops iOS zoom) */
+.wz label.l{display:block;margin:12px 0 6px;font-size:12.5px;font-weight:800;color:#475569;text-transform:none}
+.wz label.l:first-child{margin-top:0}
+.wz input[type=text],.wz input[type=tel],.wz input[type=number],.wz select{width:100%;padding:11px 12px;border:1px solid #d6dbff;border-radius:12px;font:inherit;font-size:16px;background:#fff;color:#14163f}
+.wz .hint{font-size:12.5px;color:#5b6783;margin-top:6px}
+.wz .err{margin-top:8px}
+.wz .panel,.wz .desk-sticky{all:unset;display:block}
+
+/* ---------- ACTIVE PILL FIX: high-contrast on EVERY segmented / size pill ---------- */
+.seg button.on,.seg button.on:hover,.seg button.on:focus,.wz .seg button.on,#sizeSeg button.on,#sheetSeg button.on,#paperSeg button.on,.ctools button.on,.ctl-g .seg button.on{
+  background:#2563eb!important;background-image:none!important;color:#ffffff!important;font-weight:600!important;-webkit-text-fill-color:#fff!important;border-color:#2563eb!important}
+.seg button.on:hover{background:#1d4ed8!important}
+.wz .seg{display:flex;flex-wrap:wrap;gap:6px;border:0!important;background:transparent!important;overflow:visible}
+.wz .seg button{flex:1 1 auto;min-width:0;padding:10px 12px!important;border:1px solid #d6dbff!important;border-radius:12px!important;background:#fff;color:#334155;font-size:14px;transform:none!important}
+.wz .seg button:disabled{opacity:.45}
+
+/* copies stepper */
+.stepper{display:flex;align-items:stretch;gap:8px}
+.stepper button{all:unset;cursor:pointer;flex:none;width:46px;border-radius:12px;display:grid;place-items:center;background:#fff;border:1px solid #d6dbff;font-size:22px;font-weight:700;color:#3338d6;min-height:46px;box-sizing:border-box}
+.stepper button:active{background:#f0f2ff}
+.stepper input{text-align:center;font-weight:800;width:100%!important}
+
+/* background colour pills */
+.wz .sw{display:flex;flex-wrap:wrap;gap:6px}
+.wz .sw button{width:auto!important;height:auto!important;border-radius:999px!important;padding:5px 11px 5px 6px!important;display:inline-flex;align-items:center;gap:6px;font:600 12.5px Figtree,system-ui,sans-serif;color:#334155;background:#fff;border:1.5px solid #d6dbff!important;transform:none!important}
+.wz .sw button i{width:20px;height:20px;border-radius:50%;border:1px solid #cbd5e1;flex:none}
+.wz .sw button.on{background:#2563eb!important;color:#fff!important;font-weight:600;border-color:#2563eb!important;box-shadow:none!important}
+.wz .sw button.orig{background:#fff}
+.wz .sw button.orig i{background:repeating-conic-gradient(#cbd5e1 0 25%,#fff 0 50%) 50%/8px 8px}
+.wz .sw button.orig.on{background:#2563eb!important}
+.wz .sw label.cust{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#334155;padding:3px 10px 3px 4px;border:1.5px solid #d6dbff;border-radius:999px;background:#fff}
+.wz .sw input[type=color]{width:26px;height:26px;border:0;padding:0;border-radius:50%;background:none}
+.wz .cropbox{margin:8px 0}
+.wz #crop{max-width:100%;border-radius:14px;touch-action:none;box-shadow:0 8px 20px -12px rgba(30,41,90,.6)}
+.wz #sheetPrev{display:block;max-height:34vh;margin:0 auto;width:auto;max-width:100%}
+.wz .price-badge{display:inline-block;padding:4px 12px;border-radius:999px;background:linear-gradient(135deg,#4f5bff,#ff5fa2);color:#fff;font-weight:800;font-size:15px}
+
+/* file rows inside wizard */
+.wz .file{padding:10px!important;border-radius:14px!important;margin-bottom:8px}
+.wz .file:hover{transform:none!important}
+.wz #list:empty{display:none}
+.wz .add-more{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border:1.5px dashed #a5b4ff;border-radius:14px;background:#fff;color:#3338d6;font-weight:800;font-size:14px;cursor:pointer}
+.wz .add-more svg{width:16px;height:16px}
+
+/* order / payment step */
+.wz #done{all:unset;display:block;text-align:center}
+.wz #done.hidden{display:none!important}
+.wz #done .big{font-size:42px}
+
+/* previews, crop windows and password sheet must sit above the wizard */
+.preview-overlay,.password-overlay{z-index:1200!important}
+
+/* ---------- 3. PDF tools: 2-column bento grid + clean modal ---------- */
+@media(max-width:700px){
+  .grid{grid-template-columns:repeat(2,1fr)!important;gap:8px!important;padding:10px 10px 28px!important}
+  .grid .card{padding:10px!important;border-radius:16px!important;display:flex;flex-direction:column;gap:6px;min-height:0}
+  .grid .card .ic{width:36px!important;height:36px!important;margin:0!important}
+  .grid .card b{font-size:13.5px;line-height:1.2}
+  .grid .card span{font-size:11px;line-height:1.25;color:#5b6783;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .hd{padding:6px 12px 0!important}.hd h1{font-size:22px!important;margin:0!important}.hd p{display:none}
+  .bar{padding:6px 10px!important}
+}
+#modal{z-index:1000!important}
+#modal .tp{padding-top:calc(10px + env(safe-area-inset-top,0px));padding-bottom:110px}
+#modal .tp-top{position:sticky;top:0;z-index:5;padding:2px 0 6px;background:linear-gradient(#f6f8ff 70%,transparent)}
+#modal .tp-head{margin-bottom:12px}
+#modal .tp-head h2{font-size:22px!important;scroll-margin-top:60px}
+#modal .tp-head p{font-size:13px}
+#modal .tp-sel{padding:34px 14px}
+#modal .fgrid{grid-template-columns:repeat(2,1fr)!important;gap:10px}
+#modal .tp-done{padding:10px 0 24px}
+#modal .tp-done h2{font-size:24px;margin-top:6px;scroll-margin-top:60px}
+@media(max-width:860px){
+  #modal .tp-side{position:fixed!important;left:0;right:0;bottom:0;z-index:6;border-radius:18px 18px 0 0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));max-height:55dvh;overflow:auto}
+  #modal .tp-side h3{display:none}
+  #modal .tp-side .go{margin-top:8px;font-size:16px;padding:13px}
+}
+#pv,.pv-ov{z-index:1300!important}
+
+/* ---------- cards.html: card-crop wizard polish ---------- */
+.seg2{display:flex;background:#eef1f8;border-radius:14px;padding:3px;gap:3px;margin-bottom:10px}
+.seg2 button{all:unset;cursor:pointer;flex:1;text-align:center;padding:10px 6px;border-radius:11px;font-weight:700;font-size:14px;color:#475569;transition:background .25s var(--wz-ease),color .25s}
+.seg2 button.on{background:#2563eb;color:#fff;font-weight:600}
+.scan-side.off{display:none}
+.nudge button,.ctools button{min-height:40px}
+
+/* summary bar, recap, done state */
+.wz-sum{display:none}.wz-sum.on{display:flex}
+.wz.is-done .wz-f,.wz.is-done .pre-done{display:none}
+.recap{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:6px}
+.recap li{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #e3e8f2;border-radius:12px;background:#fff;font-size:14px}
+.recap li span{color:#5b6783}.recap li b{text-align:right;word-break:break-word}
+[data-wz-resume][hidden]{display:none!important}
+
+/* popups / sheets that open from inside the wizard must sit above it */
+.pop-back{z-index:1400!important}
+.popbody.is-pop,.order.is-pop{z-index:1410!important}
+.wz-f .b{flex:1;min-height:48px;border-radius:14px}
+.wz-f .b.hero{font-size:15px}
+@media(max-width:600px){.page-head{margin:0 0 8px}.page-head h1{font-size:20px}.page-head p{display:none}.typebar{padding:8px 12px;margin-bottom:8px}.typebar b{font-size:16px}}
+/* cards.html: stage, output previews */
+.wz .stage{margin:8px auto}
+.wz .out{grid-template-columns:1fr 1fr;gap:10px}
+.wz .out .oc{padding:8px}
+.wz .out canvas{max-width:100%;height:auto}
+@media(max-width:420px){.wz .out{grid-template-columns:1fr}}
+.wz .ctl{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.wz .nudge{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.wz .nudge button{min-height:40px}
+
+/* wizard polish: header already carries the step title; keep per-row number boxes small */
+.wz-pane>h3{display:none}
+.wz .file input[type=number]{width:54px!important;flex:none;padding:7px 4px;text-align:center;font-weight:700;font-size:15px}
+.wz-f .btn,.wz-f .go{width:auto!important;min-width:0;margin:0!important}
+.wz-act .wz-btn[style*="flex:none"]{width:52px;padding:0}
+.wz-f .wz-sum{margin-bottom:8px}
+
+/* pdf-tools: one-row scrolling category chips + slim search so 8 tools fit above the fold */
+@media(max-width:700px){
+  .bar #tabs{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;gap:6px!important;padding:4px 0 2px;scrollbar-width:none}
+  .bar #tabs::-webkit-scrollbar{display:none}
+  .bar #tabs .tab{flex:none;padding:7px 12px!important;font-size:13px!important}
+  .bar #sq{padding:9px 14px!important;font-size:15px!important;margin:0 0 4px!important}
+  .grid .card{padding:9px!important}
+}

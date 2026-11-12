@@ -403,6 +403,8 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
 .order.is-pop h2{padding-right:48px}
 .toast{z-index:1000!important}
 </style>
+<link rel="stylesheet" href="/wizard.css">
+<script src="/wizard.js"></script>
 </head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
 <symbol id="i-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></symbol>
@@ -446,55 +448,7 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
   <div class="row"><button class="b g sm hidden" id="pwBtn" type="button">Enter password</button></div>
   <div id="st" aria-live="polite"></div>
 
-  <div id="work" class="hidden">
-   <p class="note">Drag a yellow box to move it. Drag its round handle to resize (card ratio stays locked). Use the arrows to nudge.</p>
-   <div class="stage" id="stage"></div>
-   <div class="ctl">
-    <div class="ctl-g"><button class="b" id="auto" type="button">Auto crop again</button><button class="b g" id="reset" type="button">Reset boxes</button></div>
-    <div class="ctl-g"><span class="lab">Nudge</span><span class="nudge" id="nudge"><button data-n="l" aria-label="Left">←</button><button data-n="r" aria-label="Right">→</button><button data-n="u" aria-label="Up">↑</button><button data-n="d" aria-label="Down">↓</button><button data-n="-" aria-label="Smaller">−</button><button data-n="+" aria-label="Larger">+</button></span></div>
-    <div class="ctl-g"><button class="b g" id="setBtn" type="button">⚙ Output settings</button></div>
-   </div>
-   <div class="popbody" id="setBox"><div class="pop-h"><b>Output settings</b><button class="pop-x" type="button" aria-label="Close">✕</button></div>
-   <div class="ctl" style="flex-direction:column;align-items:flex-start">
-    <div class="ctl-g"><span class="lab">Card shape</span><span class="seg" style="display:inline-flex;width:auto"><button data-fit="fill" type="button" title="Stretch the cropped card to exactly 85.6 x 53.98 mm">Fill 85.6×53.98 mm</button><button data-fit="keep" type="button" title="Keep the card proportion, white bars if needed">Keep shape</button></span></div>
-    <div class="ctl-g"><span class="lab">Resolution</span><span class="seg" style="display:inline-flex;width:auto"><button data-dpi="300" type="button">300 DPI</button><button data-dpi="600" type="button">600 DPI</button></span></div>
-   </div>
-   <button class="b" type="button" data-popclose style="width:100%;margin-top:6px">Done</button></div>
-   <div class="row hidden" id="ccRow"><span class="lab">Output</span><span class="seg" style="display:inline-flex;width:auto"><button data-cc="0" class="on" type="button">Normal Aadhaar</button><button data-cc="1" type="button">Tricolour Aadhaar</button></span></div>
-   <div class="row hidden" id="fxRow">
-    <label class="sl">Brightness <input type="range" id="fb" min="70" max="140" value="100"></label>
-    <label class="sl">Contrast <input type="range" id="fc" min="70" max="150" value="100"></label>
-    <label class="sl">Saturation <input type="range" id="fs" min="0" max="200" value="100"></label></div>
-
-   <div class="out">
-    <div class="oc"><b id="fl">Front</b><canvas id="oF"></canvas><button class="b g sm" id="dF" type="button"><svg><use href="#i-down"/></svg>Front JPG</button></div>
-    <div class="oc" id="bWrap"><b>Back</b><canvas id="oB"></canvas><button class="b g sm" id="dB" type="button"><svg><use href="#i-down"/></svg>Back JPG</button></div>
-   </div>
-
-   <div class="printcta"><button class="b hero" id="printBtn" type="button">Print · Save · Download</button></div>
-   <div class="popbody" id="printBox"><div class="pop-h"><b>Print, save or download</b><button class="pop-x" type="button" aria-label="Close">✕</button></div>
-   <div class="sect" style="border-top:0;margin-top:0;padding-top:0">
-    <h3 style="display:none">Print or save</h3>
-    <div class="ctl"><div class="ctl-g"><span class="lab">Sheet</span><span class="seg" id="paperSeg" style="display:inline-flex;width:auto"><button data-v="A4" class="on" type="button">A4 (up to 5 pairs)</button><button data-v="4x6" type="button">4×6 photo</button></span></div></div>
-    <div class="actions two">
-     <button class="b hero" id="addOrder" type="button"><svg><use href="#i-plus"/></svg>Add to print order</button>
-     <button class="b g hero" id="savePdf" type="button"><svg><use href="#i-pdf"/></svg>Save as PDF</button>
-    </div>
-    <div class="lab2">Download</div>
-    <div class="actions three">
-     <button class="b g sm" id="dBoth" type="button">Download both JPG</button>
-     <button class="b g sm" id="dA4" type="button">A4 sheet JPG</button>
-     <button class="b g sm" id="d46" type="button">4×6 sheet JPG</button>
-    </div>
-    <div class="lab2">A4 batch</div>
-    <div class="actions two">
-     <button class="b g sm" id="add" type="button">Add this card to A4 batch</button>
-     <button class="b g sm" id="clr" type="button">Clear batch</button>
-    </div>
-    <span class="note" id="bn"></span>
-    <p class="note">A4 batch: up to 5 front and back pairs on one sheet. Add to print order and Save as PDF use the batch if it has cards, otherwise the card on screen.</p>
-   </div></div>
-  </div>
+  <button class="b hero hidden" type="button" data-wz-resume="card" hidden style="width:100%;margin-top:10px">Continue crop &amp; preview →</button>
  </div>
 </section>
 
@@ -513,15 +467,16 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
    <div><label class="l" for="scanH">Height (mm)</label><input id="scanH" type="number" min="10" max="1000" value="297"></div>
    <div><label class="l" for="scanMax">Max size in KB</label><input id="scanMax" type="number" min="50" max="20000" placeholder="Optional"></div>
   </div>
-  <div class="grid2" style="margin-top:18px">
-   <div>
+  <div class="seg2" role="tablist" aria-label="Side" style="margin-top:14px"><button type="button" class="on" id="sdF" role="tab">Front Side</button><button type="button" id="sdB" role="tab">Back Side</button></div>
+  <div class="scan-sides">
+   <div class="scan-side" id="side1">
     <input id="scanFront" type="file" accept="image/*">
     <p class="hint">Draw a crop box, drag corners to resize, drag inside to move.</p>
     <canvas id="scanCanvas1" class="scanc"></canvas>
     <div class="ctools"><button class="primary" id="scanAuto1" type="button">Auto crop</button><button id="scanResetCrop1" type="button">Full image</button><button id="scanRotate1" type="button">Rotate 90°</button></div>
     <label class="l">Straighten <span id="scanAngle1Text">0°</span></label><input id="scanAngle1" type="range" min="-15" max="15" value="0" step="0.5">
    </div>
-   <div>
+   <div class="scan-side off" id="side2">
     <input id="scanBack" type="file" accept="image/*">
     <p class="hint">Draw a crop box, drag corners to resize, drag inside to move.</p>
     <canvas id="scanCanvas2" class="scanc"></canvas>
@@ -598,6 +553,77 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
  <label class="sl" style="margin-bottom:6px"><input type="checkbox" id="pwShowC"> Show password</label>
  <div id="pwErr" style="color:var(--bad);font-size:13px;min-height:18px"></div>
  <div class="password-actions"><button type="button" class="cancel" id="pwCancel">Cancel</button><button type="submit" class="go">Unlock and crop</button></div></form></div>
+
+<!-- ================= CARD CROP WIZARD ================= -->
+<div class="wz" id="wz" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="wzTitle">
+ <div class="wz-sheet">
+  <header class="wz-h">
+   <button class="wz-back" id="wzBack" type="button" data-wz="prev" aria-label="Back" hidden>←</button>
+   <div class="wz-hm"><b id="wzTitle">Detect &amp; adjust</b><span class="wz-st"><span>Step</span> <b id="wzN">1</b> <span>of</span> <b id="wzT">2</b></span></div>
+   <button class="wz-x" id="wzX" type="button" data-wz="close" aria-label="Close">✕</button>
+  </header>
+  <div class="wz-prog"><i id="wzBar"></i></div>
+  <div class="wz-b" id="wzBody">
+   <div id="work" class="hidden">
+    <section class="wz-pane" data-flow="card" data-step="1">
+     <p class="note" style="margin:0 0 6px">Drag a yellow box to move it. Drag its round handle to resize (card ratio stays locked). Use the arrows to nudge.</p>
+     <div class="note" id="st2" aria-live="polite"></div>
+     <div class="stage" id="stage"></div>
+     <div class="ctl">
+    <div class="ctl-g"><button class="b" id="auto" type="button">Auto crop again</button><button class="b g" id="reset" type="button">Reset boxes</button></div>
+    <div class="ctl-g"><span class="lab">Nudge</span><span class="nudge" id="nudge"><button data-n="l" aria-label="Left">←</button><button data-n="r" aria-label="Right">→</button><button data-n="u" aria-label="Up">↑</button><button data-n="d" aria-label="Down">↓</button><button data-n="-" aria-label="Smaller">−</button><button data-n="+" aria-label="Larger">+</button></span></div>
+    <div class="ctl-g"><button class="b g" id="setBtn" type="button">⚙ Output settings</button></div>
+   </div>
+     <div class="popbody" id="setBox"><div class="pop-h"><b>Output settings</b><button class="pop-x" type="button" aria-label="Close">✕</button></div>
+   <div class="ctl" style="flex-direction:column;align-items:flex-start">
+    <div class="ctl-g"><span class="lab">Card shape</span><span class="seg" style="display:inline-flex;width:auto"><button data-fit="fill" type="button" title="Stretch the cropped card to exactly 85.6 x 53.98 mm">Fill 85.6×53.98 mm</button><button data-fit="keep" type="button" title="Keep the card proportion, white bars if needed">Keep shape</button></span></div>
+    <div class="ctl-g"><span class="lab">Resolution</span><span class="seg" style="display:inline-flex;width:auto"><button data-dpi="300" type="button">300 DPI</button><button data-dpi="600" type="button">600 DPI</button></span></div>
+   </div>
+   <button class="b" type="button" data-popclose style="width:100%;margin-top:6px">Done</button></div>
+     <div class="row hidden" id="ccRow"><span class="lab">Output</span><span class="seg" style="display:inline-flex;width:auto"><button data-cc="0" class="on" type="button">Normal Aadhaar</button><button data-cc="1" type="button">Tricolour Aadhaar</button></span></div>
+   <div class="row hidden" id="fxRow">
+    <label class="sl">Brightness <input type="range" id="fb" min="70" max="140" value="100"></label>
+    <label class="sl">Contrast <input type="range" id="fc" min="70" max="150" value="100"></label>
+    <label class="sl">Saturation <input type="range" id="fs" min="0" max="200" value="100"></label></div>
+    </section>
+    <section class="wz-pane" data-flow="card" data-step="2">
+     <h3 style="margin:0 0 8px;font-size:16px">Cropped card preview</h3>
+     <div class="out">
+    <div class="oc"><b id="fl">Front</b><canvas id="oF"></canvas><button class="b g sm" id="dF" type="button"><svg><use href="#i-down"/></svg>Front JPG</button></div>
+    <div class="oc" id="bWrap"><b>Back</b><canvas id="oB"></canvas><button class="b g sm" id="dB" type="button"><svg><use href="#i-down"/></svg>Back JPG</button></div>
+   </div>
+    </section>
+    <div class="popbody" id="printBox"><div class="pop-h"><b>Print, save or download</b><button class="pop-x" type="button" aria-label="Close">✕</button></div>
+   <div class="sect" style="border-top:0;margin-top:0;padding-top:0">
+    <h3 style="display:none">Print or save</h3>
+    <div class="ctl"><div class="ctl-g"><span class="lab">Sheet</span><span class="seg" id="paperSeg" style="display:inline-flex;width:auto"><button data-v="A4" class="on" type="button">A4 (up to 5 pairs)</button><button data-v="4x6" type="button">4×6 photo</button></span></div></div>
+    <div class="actions two">
+     <button class="b hero" id="addOrder" type="button"><svg><use href="#i-plus"/></svg>Add to print order</button>
+     <button class="b g hero" id="savePdf" type="button"><svg><use href="#i-pdf"/></svg>Save as PDF</button>
+    </div>
+    <div class="lab2">Download</div>
+    <div class="actions three">
+     <button class="b g sm" id="dBoth" type="button">Download both JPG</button>
+     <button class="b g sm" id="dA4" type="button">A4 sheet JPG</button>
+     <button class="b g sm" id="d46" type="button">4×6 sheet JPG</button>
+    </div>
+    <div class="lab2">A4 batch</div>
+    <div class="actions two">
+     <button class="b g sm" id="add" type="button">Add this card to A4 batch</button>
+     <button class="b g sm" id="clr" type="button">Clear batch</button>
+    </div>
+    <span class="note" id="bn"></span>
+    <p class="note">A4 batch: up to 5 front and back pairs on one sheet. Add to print order and Save as PDF use the batch if it has cards, otherwise the card on screen.</p>
+   </div></div>
+   </div>
+  </div>
+  <footer class="wz-f">
+   <div class="wz-act" data-flow="card" data-step="1"><button class="wz-btn pri" type="button" data-wz="next">Next: preview →</button></div>
+   <div class="wz-act" data-flow="card" data-step="2"><button class="wz-btn" type="button" data-wz="prev" style="flex:none">←</button><button class="b hero" id="printBtn" type="button">Print · Save · Download</button></div>
+  </footer>
+ </div>
+</div>
+
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const $=i=>document.getElementById(i),CW=85.6,CH=53.98,R=CW/CH,MM=25.4;
@@ -658,7 +684,7 @@ function pick(k){K=k;Tp=T[k];$('typeName').textContent=Tp.n;$('typeSub').textCon
  $('file').accept=Tp.img?'.pdf,.jpg,.jpeg,.png':'.pdf';$('pickL').textContent='Select '+Tp.n+(Tp.img?' (PDF or image)':' (PDF)');
  $('hint').textContent='Up to 15 MB · '+Tp.d;$('pwBtn').classList.add('hidden');$('pw').value='';$('ccRow').classList.toggle('hidden',!Tp.cc);
  $('fxRow').classList.toggle('hidden',!Tp.fx);$('bWrap').classList.toggle('hidden',!!Tp.one);$('fl').textContent=Tp.one?Tp.n+' front':'Front';
- $('work').classList.add('hidden');st('')}
+ $('work').classList.add('hidden');if(window.Wiz)Wiz.sync('card',0);st('')}
 $('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;
  if(!Tp)return st('Tap a card type above first.',1);
  if(f.size>15*1048576)return st('File is too large. Maximum is 15 MB.',1);
@@ -682,7 +708,7 @@ async function load(pass){st('Reading file…');pages=[];bx={};
  try{await open_(pass)}catch(err){
   if(isPw(err))return showPw(pass?'Wrong password. Check it and try again.':'');
   console.error(err);return st('Could not read this file: '+(err&&err.message||err),1)}
- st('Finding the card edges…');await autoCrop();$('work').classList.remove('hidden');
+ st('Finding the card edges…');await autoCrop();$('work').classList.remove('hidden');if(window.Wiz){Wiz.sync('card',1);Wiz.open('card',1)}
  st(rMsg()||(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(isFree()?(redFull?'No red border found, so the whole page is used as the card. Drag the yellow boxes if you need less.':(Tp.det=='red'?'Red border found on both pages. Cropped exactly inside it.':'Front and back card edges found. Cropped exactly to each card.')):'Cards found and cropped. Adjust the boxes if needed.')),rMsg()?!greenOK:miss);layoutBoxes();update()}
 async function render(pass){pages.forEach(freeCanvas);pages=[];pp=[];
  if(!pdfBuf){const im=await new Promise((ok,no)=>{const i=new Image;i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(srcFile)});
@@ -1199,4 +1225,16 @@ pick(new URLSearchParams(location.search).get('t')in T?new URLSearchParams(locat
 scanDraw(0);scanDraw(1);window.scrollTo(0,0);
 setTimeout(()=>{cvReady().catch(()=>{})},1500);   /* warm up OpenCV quietly in the background */
 
-</script></body></html>
+</script>
+<script>
+(function(){
+  if(window.Wiz){
+    Wiz.register('card',{steps:2,titles:['Detect & adjust','Preview & download']});
+    Wiz.mirror('st','st2');
+  }
+  var f=document.getElementById('sdF'),b=document.getElementById('sdB'),s1=document.getElementById('side1'),s2=document.getElementById('side2');
+  function side(back){f.classList.toggle('on',!back);b.classList.toggle('on',back);f.setAttribute('aria-selected',!back);b.setAttribute('aria-selected',back);s1.classList.toggle('off',back);s2.classList.toggle('off',!back)}
+  if(f&&b){f.onclick=function(){side(false)};b.onclick=function(){side(true)}}
+})();
+</script>
+</body></html>
