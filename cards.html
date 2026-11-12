@@ -648,7 +648,7 @@ async function load(pass){st('Reading file…');pages=[];bx={};
   if(isPw(err))return showPw(pass?'Wrong password. Check it and try again.':'');
   console.error(err);return st('Could not read this file: '+(err&&err.message||err),1)}
  st('Finding the card edges…');await autoCrop();$('work').classList.remove('hidden');
- st(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(isFree()?(redFull?'No red border found, so the whole page is used as the card. Drag the yellow boxes if you need less.':(Tp.det=='red'?'Red border found on both pages. Cropped exactly inside it.':'Front and back card edges found. Cropped exactly to each card.')):'Cards found and cropped. Adjust the boxes if needed.'),miss);layoutBoxes();update()}
+ st(rMsg()||(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(isFree()?(redFull?'No red border found, so the whole page is used as the card. Drag the yellow boxes if you need less.':(Tp.det=='red'?'Red border found on both pages. Cropped exactly inside it.':'Front and back card edges found. Cropped exactly to each card.')):'Cards found and cropped. Adjust the boxes if needed.')),rMsg()?!greenOK:miss);layoutBoxes();update()}
 async function render(pass){pages.forEach(freeCanvas);pages=[];pp=[];
  if(!pdfBuf){const im=await new Promise((ok,no)=>{const i=new Image;i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(srcFile)});
   const k=Math.min(1,4096/Math.max(im.naturalWidth,im.naturalHeight)),c=mk(Math.round(im.naturalWidth*k),Math.round(im.naturalHeight*k));
@@ -808,7 +808,7 @@ function inkCards(c){const W0=Math.min(1600,c.width),H0=Math.round(W0*c.height/c
    return{x:x0/W0,y:a/H0,w:(x1-x0+1)/W0,h:(b-a+1)/H0}})}
 /* e-Ration PDFs: the printed sheet has dashed CUT LINES around and between the cards. The old ink detector locked onto those dashed lines, so the crop sat on them
    (white/grey margin, edge off by a few px). The card itself is a rounded rectangle with full-height GREEN panels, so the green mask gives its exact edge. */
-const isGreen=(r,g,b)=>g>r+25&&g>b+15&&g>170&&r>110;
+const isGreen=(r,g,b)=>g>r+20&&g>b+8&&g>150&&r>90;
 function greenFromData(d,W,H){
  const m=new Uint8Array(W*H);let any=0;
  for(let i=0,o=0;i<W*H;i++,o+=4)if(isGreen(d[o],d[o+1],d[o+2])){m[i]=1;any++}
@@ -832,13 +832,16 @@ function greenFromData(d,W,H){
   /* exact top/bottom of THIS card: rows that are green inside its own x-range */
   const rc=new Uint32Array(H);let rm=0;for(let y=Math.max(0,ya-6);y<=Math.min(H-1,yb+6);y++){let n=0;for(let x=x0;x<=x1;x++)n+=m[y*W+x];rc[y]=n;if(n>rm)rm=n}
   const b=longest(rc,.3*rm,0,H,Math.max(2,H*.003));if(!b)return null;const h=b[1]-b[0]+1,ratio=w/h;
-  if(ratio<1.3||ratio>1.9)return null;out.push({x:x0/W,y:b[0]/H,w:w/W,h:h/H})}
+  if(ratio<1.3||ratio>1.9)return null;
+  const ins=Math.max(1,Math.round(w*.002));   /* stay 1-2px INSIDE the card edge so the anti-aliased white rim is never included */
+  out.push({x:(x0+ins)/W,y:(b[0]+ins)/H,w:(w-2*ins)/W,h:(h-2*ins)/H})}
  if(out.length<2)return null;
  const ra=out[0].w*W,rb=out[1].w*W;if(Math.abs(ra-rb)/Math.max(ra,rb)>.12)return null;
  return out}
 function greenCards(c){const W0=Math.min(1600,c.width),H0=Math.round(W0*c.height/c.width),t=mk(W0,H0),x=t.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W0,H0);x.drawImage(c,0,0,W0,H0);
  return greenFromData(x.getImageData(0,0,W0,H0).data,W0,H0)}
 let greenOK=0;
+const rMsg=()=>Tp.det=='green'?(greenOK?'Ration card edges found from the green panels. Cropped exactly to each card.':'Exact ration edge not found, so the older method was used. Drag the yellow boxes to fit.'):'';
 const isFree=()=>Tp.det=='red'||Tp.det=='cards'||(Tp.det=='green'&&greenOK);
 async function autoCrop(){miss=0;redFull=0;greenOK=0;const last=Math.min(1,pages.length-1);let F,B;
  let gb=null;if(Tp.det=='green'){try{gb=greenCards(pages[0])}catch(e){gb=null}greenOK=gb?1:0}
@@ -858,8 +861,8 @@ async function autoCrop(){miss=0;redFull=0;greenOK=0;const last=Math.min(1,pages
     b.w=m/c.width;b.x=Math.max(0,Math.min(1-b.w,(cx-m/2)/c.width));b.y=Math.max(0,Math.min(1-hOf(b),(cy-h/2)/c.height))})}}
  else if(found.F&&!found.B&&!Tp.one&&!isFree()&&bx.F&&bx.B&&bx.B.p==bx.F.p){bx.B=fit(bx.B.p,[bx.B.x,bx.B.y,bx.B.w,hOf(bx.B)],bx.F.w)}
  if(pages.length==1&&!pdfBuf&&!Tp.one)bx.B=bx.F}
-$('auto').onclick=async()=>{st('Finding the card edges…');await autoCrop();layoutBoxes();update();st(miss?'Card edge not found, so a default position is used.':'Auto crop done.',miss)};
-$('reset').onclick=async()=>{bx={};st('Finding the card edges…');await autoCrop();layoutBoxes();update();st(miss?'Card edge not found, so a default position is used.':'Boxes reset.',miss)};
+$('auto').onclick=async()=>{st('Finding the card edges…');await autoCrop();layoutBoxes();update();st(rMsg()||(miss?'Card edge not found, so a default position is used.':'Auto crop done.'),rMsg()?!greenOK:miss)};
+$('reset').onclick=async()=>{bx={};st('Finding the card edges…');await autoCrop();layoutBoxes();update();st(rMsg()||(miss?'Card edge not found, so a default position is used.':'Boxes reset.'),rMsg()?!greenOK:miss)};
 
 /* ---- boxes UI ---- */
 const arOf=b=>b.ar||R;
