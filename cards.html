@@ -377,6 +377,32 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 .ctools button{border-radius:11px;padding:10px 6px;font-weight:700;font-size:13px}
 @media(max-width:600px){.actions.three{grid-template-columns:1fr}.nudge{grid-template-columns:repeat(6,34px)}.nudge button{width:34px}}
 </style>
+<style>
+/* ---- popups: keep the page short ---- */
+.typebar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r);background:#fff}
+.typebar small{display:block;color:var(--mute);font-size:11.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+.typebar b{display:block;font-size:18px}
+.printcta{margin:18px 0 4px}.printcta .b{width:100%}
+.pop-back{position:fixed;inset:0;background:rgba(15,23,42,.55);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);z-index:900;display:none}
+.pop-back.show{display:block}
+html.pop-lock,html.pop-lock body{overflow:hidden}
+.popbody{display:none}
+.popbody.is-pop,.order.is-pop{display:block;position:fixed;z-index:910;left:50%;top:50%;transform:translate(-50%,-50%);width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:auto;-webkit-overflow-scrolling:touch;background:#fff!important;border-radius:22px;padding:18px 18px 20px;margin:0;box-shadow:0 40px 90px -24px rgba(15,23,42,.65);animation:popIn .22s var(--ease)}
+#tilesBox.is-pop{width:min(920px,calc(100vw - 24px))}
+@keyframes popIn{0%{opacity:0;transform:translate(-50%,-47%) scale(.97)}100%{opacity:1;transform:translate(-50%,-50%)}}
+@keyframes popUp{0%{opacity:.4;transform:translateY(46px)}100%{opacity:1;transform:none}}
+.pop-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-6px 0 10px;position:sticky;top:-18px;background:#fff;padding:12px 0 8px;z-index:2}
+.pop-h b{font-size:17px}
+.pop-x{all:unset;cursor:pointer;flex:none;width:38px;height:38px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#eef1f8;color:#334155;font-size:16px;font-weight:700}
+.order .pop-x{display:none}
+.order.is-pop .pop-x{display:inline-flex;position:absolute;top:12px;right:12px;z-index:3}
+@media(max-width:980px){.order{display:none}.order.is-pop{display:block}}
+@media(max-width:600px){.popbody.is-pop,.order.is-pop{left:0;right:0;top:auto;bottom:0;transform:none;width:100%;max-height:90vh;max-height:90dvh;border-radius:22px 22px 0 0;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));animation:popUp .26s var(--ease)}#tilesBox.is-pop{width:100%}}
+#tilesBox .tiles{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-bottom:0}
+@media(max-width:600px){#tilesBox .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#tilesBox .tile small{font-size:11px}}
+.order.is-pop h2{padding-right:48px}
+.toast{z-index:1000!important}
+</style>
 </head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
 <symbol id="i-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></symbol>
@@ -412,7 +438,8 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 <!-- ============ CARD CROP ============ -->
 <section id="cardsMode">
  <div class="page-head"><h1>Card crop</h1><p>Aadhaar, Ration, PAN, Ayushman, Voter, APAAR, ABHA. Crops to PVC size (85.60 × 53.98 mm). Files are processed in your browser and never uploaded until you send an order.</p></div>
- <div class="tiles" id="tiles"></div>
+ <div class="typebar"><div><small>Card type</small><b id="typeName">Ration Card</b><span id="typeSub" class="note"></span></div><button class="b g sm" id="typeBtn" type="button">Change card type</button></div>
+ <div class="popbody" id="tilesBox"><div class="pop-h"><b>Choose card type</b><button class="pop-x" type="button" aria-label="Close">✕</button></div><div class="tiles" id="tiles"></div></div>
  <div class="panel" id="tool">
   <label class="drop" for="file"><span class="ic"><svg><use href="#i-up"/></svg></span><span><strong id="pickL">Select file</strong><span id="hint"></span></span></label>
   <input type="file" id="file">
@@ -423,11 +450,16 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
    <p class="note">Drag a yellow box to move it. Drag its round handle to resize (card ratio stays locked). Use the arrows to nudge.</p>
    <div class="stage" id="stage"></div>
    <div class="ctl">
-    <div class="ctl-g"><span class="lab">Adjust</span><button class="b" id="auto" type="button">Auto crop again</button><button class="b g" id="reset" type="button">Reset boxes</button></div>
+    <div class="ctl-g"><button class="b" id="auto" type="button">Auto crop again</button><button class="b g" id="reset" type="button">Reset boxes</button></div>
     <div class="ctl-g"><span class="lab">Nudge</span><span class="nudge" id="nudge"><button data-n="l" aria-label="Left">←</button><button data-n="r" aria-label="Right">→</button><button data-n="u" aria-label="Up">↑</button><button data-n="d" aria-label="Down">↓</button><button data-n="-" aria-label="Smaller">−</button><button data-n="+" aria-label="Larger">+</button></span></div>
+    <div class="ctl-g"><button class="b g" id="setBtn" type="button">⚙ Output settings</button></div>
+   </div>
+   <div class="popbody" id="setBox"><div class="pop-h"><b>Output settings</b><button class="pop-x" type="button" aria-label="Close">✕</button></div>
+   <div class="ctl" style="flex-direction:column;align-items:flex-start">
     <div class="ctl-g"><span class="lab">Card shape</span><span class="seg" style="display:inline-flex;width:auto"><button data-fit="fill" type="button" title="Stretch the cropped card to exactly 85.6 x 53.98 mm">Fill 85.6×53.98 mm</button><button data-fit="keep" type="button" title="Keep the card proportion, white bars if needed">Keep shape</button></span></div>
     <div class="ctl-g"><span class="lab">Resolution</span><span class="seg" style="display:inline-flex;width:auto"><button data-dpi="300" type="button">300 DPI</button><button data-dpi="600" type="button">600 DPI</button></span></div>
    </div>
+   <button class="b" type="button" data-popclose style="width:100%;margin-top:6px">Done</button></div>
    <div class="row hidden" id="ccRow"><span class="lab">Output</span><span class="seg" style="display:inline-flex;width:auto"><button data-cc="0" class="on" type="button">Normal Aadhaar</button><button data-cc="1" type="button">Tricolour Aadhaar</button></span></div>
    <div class="row hidden" id="fxRow">
     <label class="sl">Brightness <input type="range" id="fb" min="70" max="140" value="100"></label>
@@ -439,8 +471,10 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
     <div class="oc" id="bWrap"><b>Back</b><canvas id="oB"></canvas><button class="b g sm" id="dB" type="button"><svg><use href="#i-down"/></svg>Back JPG</button></div>
    </div>
 
-   <div class="sect">
-    <h3>Print or save</h3>
+   <div class="printcta"><button class="b hero" id="printBtn" type="button">Print · Save · Download</button></div>
+   <div class="popbody" id="printBox"><div class="pop-h"><b>Print, save or download</b><button class="pop-x" type="button" aria-label="Close">✕</button></div>
+   <div class="sect" style="border-top:0;margin-top:0;padding-top:0">
+    <h3 style="display:none">Print or save</h3>
     <div class="ctl"><div class="ctl-g"><span class="lab">Sheet</span><span class="seg" id="paperSeg" style="display:inline-flex;width:auto"><button data-v="A4" class="on" type="button">A4 (up to 5 pairs)</button><button data-v="4x6" type="button">4×6 photo</button></span></div></div>
     <div class="actions two">
      <button class="b hero" id="addOrder" type="button"><svg><use href="#i-plus"/></svg>Add to print order</button>
@@ -459,7 +493,7 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
     </div>
     <span class="note" id="bn"></span>
     <p class="note">A4 batch: up to 5 front and back pairs on one sheet. Add to print order and Save as PDF use the batch if it has cards, otherwise the card on screen.</p>
-   </div>
+   </div></div>
   </div>
  </div>
 </section>
@@ -512,7 +546,7 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 
 <!-- ============ PRINT ORDER ============ -->
 <aside class="panel order" id="orderPanel">
- <h2>Print order <span class="cnt" id="ocnt">0 pages</span></h2>
+ <h2>Print order <span class="cnt" id="ocnt">0 pages</span></h2><button class="pop-x" type="button" aria-label="Close">✕</button>
  <div id="cartEmpty" class="empty">No pages yet. Crop a card or scan a document, then choose Add to print order.</div>
  <div class="cart" id="cart"></div>
  <div id="orderForm" class="hidden">
@@ -538,15 +572,9 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
  <div class="big" id="oid"></div>
  <div style="text-align:center;font-weight:700;font-size:16px" id="odone"></div>
  <div id="paymentBox" style="margin-top:14px;text-align:center">
-  <div class="hint">Scan the QR or tap your UPI app, then type the exact amount shown above. Prefer cash? Show this token at the counter.</div>
-  <button class="b hidden" id="makePayment" type="button" style="margin-top:10px">Try payment again</button>
-  <div id="upiDetails" class="upi hidden">
-   <div style="font-weight:800;font-size:20px" id="upiAmount"></div>
-   <div id="upiQr" class="qr"></div>
-   <div class="hint" id="qrHint"></div><div id="appBtns" class="appbtns"></div>
-   <a id="upiLink" class="b" href="#" target="_blank" rel="noopener">Open in any UPI app</a>
-   <div class="hint" id="payHint">After paying, show the green success screen at the counter. Printing starts as soon as the counter confirms.</div>
-  </div>
+  <div class="hint" id="payMsg">Opening secure payment…</div>
+  <button class="b hidden" id="makePayment" type="button" style="margin-top:10px">Pay now</button>
+  <div class="hint" id="payHint2">Pay online with any UPI app (QR shown in the payment window). Prefer cash? Show this token at the counter.</div>
  </div>
      <div class="trk" id="trk" aria-label="Order progress">
       <div class="ts" data-s="upload"><i>✓</i>Upload</div>
@@ -616,9 +644,16 @@ abha:bg('#ecfeff')+'<rect width="120" height="76" fill="url(#ag)"/><defs><linear
 })();
 const cardSvg=k=>`<svg class="ca" viewBox="0 0 120 76" aria-hidden="true">${CA[k]||''}</svg>`;
 $('tiles').innerHTML=Object.entries(T).map(([k,t])=>`<button class="tile" data-k="${k}" type="button">${cardSvg(k)}<b>${t.n}</b><small>${t.bn} · ${t.d}</small></button>`).join('');
-document.querySelectorAll('.tile').forEach(b=>b.onclick=()=>{pick(b.dataset.k);$('tool').scrollIntoView({behavior:'smooth',block:'start'});$('file').click()});
+document.querySelectorAll('.tile').forEach(b=>b.onclick=()=>{closePop();pick(b.dataset.k);$('tool').scrollIntoView({behavior:'smooth',block:'start'});$('file').click()});
+/* ---- popups: keep the page short. An element is moved to <body> while it is open and put back afterwards, so every id and handler keeps working ---- */
+let popEl=null;const popBack=document.createElement('div');popBack.className='pop-back';document.body.appendChild(popBack);
+function openPop(id){closePop();const el=$(id);if(!el)return;el._home={p:el.parentNode,n:el.nextSibling};document.body.appendChild(el);el.classList.add('is-pop');popBack.classList.add('show');document.documentElement.classList.add('pop-lock');popEl=el;el.scrollTop=0}
+function closePop(){if(!popEl)return;const el=popEl;popEl=null;el.classList.remove('is-pop');popBack.classList.remove('show');document.documentElement.classList.remove('pop-lock');const hm=el._home;if(hm&&hm.p)hm.p.insertBefore(el,hm.n&&hm.n.parentNode===hm.p?hm.n:null)}
+popBack.onclick=closePop;document.addEventListener('keydown',e=>{if(e.key==='Escape')closePop()});
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('.pop-x,[data-popclose]'))closePop()});
+$('typeBtn').onclick=()=>openPop('tilesBox');$('setBtn').onclick=()=>openPop('setBox');$('printBtn').onclick=()=>openPop('printBox');
 function st(m,e){$('st').textContent=m||'';$('st').className=e?'e':''}
-function pick(k){K=k;Tp=T[k];pages.forEach(freeCanvas);pages=[];bx={};pdfBuf=null;$('file').value='';
+function pick(k){K=k;Tp=T[k];$('typeName').textContent=Tp.n;$('typeSub').textContent=Tp.bn+' · '+Tp.d;pages.forEach(freeCanvas);pages=[];bx={};pdfBuf=null;$('file').value='';
  document.querySelectorAll('.tile').forEach(b=>b.classList.toggle('on',b.dataset.k==k));
  $('file').accept=Tp.img?'.pdf,.jpg,.jpeg,.png':'.pdf';$('pickL').textContent='Select '+Tp.n+(Tp.img?' (PDF or image)':' (PDF)');
  $('hint').textContent='Up to 15 MB · '+Tp.d;$('pwBtn').classList.add('hidden');$('pw').value='';$('ccRow').classList.toggle('hidden',!Tp.cc);
@@ -808,7 +843,7 @@ function inkCards(c){const W0=Math.min(1600,c.width),H0=Math.round(W0*c.height/c
    return{x:x0/W0,y:a/H0,w:(x1-x0+1)/W0,h:(b-a+1)/H0}})}
 /* e-Ration PDFs: the printed sheet has dashed CUT LINES around and between the cards. The old ink detector locked onto those dashed lines, so the crop sat on them
    (white/grey margin, edge off by a few px). The card itself is a rounded rectangle with full-height GREEN panels, so the green mask gives its exact edge. */
-const isGreen=(r,g,b)=>g>r+20&&g>b+8&&g>150&&r>90;
+const isGreen=(r,g,b)=>{const mx=Math.max(r,g,b),mn=Math.min(r,g,b);return mn>=95&&mx-mn>=28};   /* any light, clearly coloured panel (green, pink, yellow, orange, blue...). Black text, grey dashed lines, dark icons and white are ignored */
 function greenFromData(d,W,H){
  const m=new Uint8Array(W*H);let any=0;
  for(let i=0,o=0;i<W*H;i++,o+=4)if(isGreen(d[o],d[o+1],d[o+2])){m[i]=1;any++}
@@ -967,10 +1002,11 @@ function ordRecalc(){const n=cart.length,cp=Math.min(Math.max(parseInt($('oCopie
  $('osum').textContent=n+(n==1?' page':' pages')+' × '+cp+(cp==1?' copy':' copies');$('oamt').textContent='₹'+ordAmount()}
 $('oBw').onclick=()=>{if($('oBw').disabled)return;oColor=false;drawCart()};$('oCol').onclick=()=>{oColor=true;drawCart()};
 $('oCopies').oninput=ordRecalc;$('oClear').onclick=()=>{cart=[];drawCart()};
-$('dockBtn').onclick=()=>$('orderPanel').scrollIntoView({behavior:'smooth',block:'start'});
+$('dockBtn').onclick=()=>openPop('orderPanel');
 $('oPdf').onclick=async()=>{if(!cart.length)return;try{dl(new Blob([await pdfFrom(cart)],{type:'application/pdf'}),'print-order.pdf');toast('PDF saved')}catch(e){$('oerr').textContent='Could not create the PDF: '+(e.message||e)}};
 
 /* Add to print order (card crop) */
+$('addOrder').addEventListener('click',()=>setTimeout(closePop,60));
 $('addOrder').onclick=()=>busy(async()=>{
  const items=batch.length?batch:[await pair()],paper=sheetPaper;
  const cvs=paper==='A4'?[makeA4(items)]:items.map(make46),lbl=Tp.n+(paper==='A4'?(items.length>1?' · '+items.length+' pairs':(Tp.one?'':' · front and back')):(Tp.one?'':' · front and back'));
@@ -1010,26 +1046,40 @@ function updateTracker(o) {
   if (note) note.textContent = st === 'expired' ? 'This upload was not paid within 60 minutes, so it was deleted.' : (st === 'rejected' ? 'Order cancelled. The file was deleted.' : (flags.srv ? 'Done. Your file is gone from the shop PC and from our server.' : ''));
 }
 
-function showDone(d){$('layout').classList.add('hidden');document.querySelector('.tabs').classList.add('hidden');$('dock').classList.remove('show');
+function showDone(d){closePop();$('layout').classList.add('hidden');document.querySelector('.tabs').classList.add('hidden');$('dock').classList.remove('show');
  $('done').classList.remove('hidden');$('oid').textContent=d.id;window.scrollTo(0,0);
  const amount=Number(d.amount);$('odone').textContent='Exact amount to pay: ₹'+amount.toFixed(2);
- $('makePayment').onclick=async()=>{
-  if(!Number.isFinite(amount)||amount<=0){$('upiAmount').textContent='Invalid payment amount';$('upiDetails').classList.remove('hidden');return}
-  const btn=$('makePayment');btn.classList.add('hidden');$('upiAmount').textContent='Preparing your payment QR…';$('upiDetails').classList.remove('hidden');
-  try{const r=await fetch('/api/orders/'+d.id+'/pay',{method:'POST'}),txt=await r.text();let j={};
-   try{j=JSON.parse(txt)}catch{throw new Error('Server answered with a web page instead of data (HTTP '+r.status+'). Redeploy _worker.js and try again.')}
-   if(!j.payment_url)throw new Error(j.error||'Could not start payment');
-   $('upiAmount').textContent='Pay exactly ₹'+amount.toFixed(2);$('upiLink').href=j.payment_url;$('upiQr').innerHTML='';
-   const ui=j.upi_intent||{},generic=[ui.bhim,ui.gpay,ui.phonepe,ui.paytm].find(u=>u&&/^upi:\/\//.test(u)&&/[?&]am=/.test(u)),qrText=generic||j.payment_url;
-   $('qrHint').textContent=generic?'Scan this QR inside any UPI app (PhonePe, GPay, Paytm, BHIM).':'Scan this QR with your phone camera or Google Lens. It opens the payment page.';
-   if(window.QRCode)new QRCode($('upiQr'),{text:qrText,width:200,height:200,correctLevel:QRCode.CorrectLevel.M});
-   $('appBtns').innerHTML='';[['phonepe','PhonePe'],['gpay','GPay'],['paytm','Paytm'],['bhim','BHIM']].forEach(([k,n])=>{if(!ui[k])return;const a=document.createElement('a');a.href=ui[k];a.textContent='Pay with '+n;$('appBtns').appendChild(a)});
-   if(/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent))window.open(j.payment_url,'_blank')}
-  catch(e){$('upiAmount').textContent=e.message||'Could not start payment';btn.classList.remove('hidden');btn.textContent='Try payment again'}};
- if(amount>0)$('makePayment').onclick();
+ // Online payment: Razorpay Standard Checkout when configured, otherwise YOUPI PG (same as the main order page)
+ const useRzp=!!(cfg.razorpay&&cfg.razorpay.keyId),useYoupi=!!(cfg.youpi&&cfg.youpi.key),usePay=useRzp||useYoupi;
+ const msg=t=>{$('payMsg').textContent=t};
+ const showPayBtn=l=>{const b=$('makePayment');b.disabled=false;b.classList.remove('hidden');b.textContent=l};
+ const retryMsg='Payment service is not reachable right now. Tap to retry, or pay cash at the counter and show this token.';
+ const loadScript=(test,src,attrs)=>new Promise((ok,no)=>{if(test())return ok();const s=document.createElement('script');s.src=src;Object.entries(attrs||{}).forEach(([k,v])=>s.setAttribute(k,v));s.onload=()=>test()?ok():no();s.onerror=no;document.head.appendChild(s)});
+ const postJSON=async(url,body)=>{const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Request failed');return j};
+ const openYoupi=()=>{$('makePayment').classList.add('hidden');msg('Complete the payment in the window. Printing starts automatically.');
+  try{window.Youpi.pay({order_id:d.id,amount:amount,currency:'INR',name:cfg.shop||'Digital Seva Kendra',description:'Print order '+d.id,
+    handler:()=>{$('ost').textContent='Confirming your payment…'},
+    onClose:()=>{msg('Payment window closed.');showPayBtn('Pay ₹'+amount.toFixed(2)+' now')}})}
+  catch(e){console.error('Youpi.pay failed',e);msg('Could not open the payment window. Tap the button to try again, or pay cash at the counter.');showPayBtn('Try payment again')}};
+ const openRzp=async()=>{$('makePayment').classList.add('hidden');msg('Opening secure payment…');
+  try{const o=await postJSON('/api/create-order',{orderId:d.id});
+   const rz=new window.Razorpay({key:o.key_id,amount:o.amount,currency:o.currency,order_id:o.order_id,name:cfg.shop||'Digital Seva Kendra',description:'Print order '+d.id,theme:{color:'#4f5bff'},
+    handler:async resp=>{$('ost').textContent='Confirming your payment…';msg('Verifying your payment…');
+     try{await postJSON('/api/verify-payment',{orderId:d.id,razorpay_payment_id:resp.razorpay_payment_id,razorpay_order_id:resp.razorpay_order_id,razorpay_signature:resp.razorpay_signature});msg('Payment verified. Printing starts automatically.')}
+     catch(e){msg((e.message||'Could not verify the payment')+'. If money was deducted, show this token at the counter.');showPayBtn('Try payment again')}},
+    modal:{ondismiss:()=>{msg('Payment cancelled.');showPayBtn('Pay ₹'+amount.toFixed(2)+' now')}}});
+   rz.on('payment.failed',resp=>{msg('Payment failed: '+((resp.error&&resp.error.description)||'please try again')+'.');showPayBtn('Try payment again')});rz.open()}
+  catch(e){msg((e&&e.message)||'Could not start the payment. Try again, or pay cash at the counter.');showPayBtn('Try payment again')}};
+ const startPayment=()=>{msg('Opening secure payment…');$('makePayment').classList.add('hidden');
+  const fail=()=>{$('makePayment').onclick=startPayment;msg(retryMsg);showPayBtn('Try payment again')};
+  if(useRzp)loadScript(()=>!!window.Razorpay,'https://checkout.razorpay.com/v1/checkout.js').then(()=>{$('makePayment').onclick=openRzp;openRzp()}).catch(fail);
+  else loadScript(()=>!!window.Youpi,cfg.youpi.base+'/youpi.js',{'data-youpi-key':cfg.youpi.key,'data-currency':'INR'}).then(()=>{$('makePayment').onclick=openYoupi;openYoupi()}).catch(fail)};
+ if(!(amount>0))msg('Invalid payment amount');
+ else if(!usePay){msg('Online payment is not available right now. Please pay at the counter and show this token.');$('payHint2').classList.add('hidden');try{console.warn('Online payment off. Missing server variables:',(cfg.razorpayMissing||[]).join(', ')||'none reported')}catch(e){}}
+ else startPayment();
  let polls=0,printedSeen=0;
  const poll=async()=>{let delay=3000;try{const o=await(await fetch('/api/orders/'+d.id)).json();
-   $('ost').className='status s-'+o.status;$('ost').textContent=(o.status==='pending'&&o.paying)?'Waiting for your payment…':(LABEL[o.status]||o.status);
+   $('ost').className='status s-'+o.status;$('ost').textContent=(o.status==='pending'&&(o.paying||usePay))?'Waiting for your payment…':(LABEL[o.status]||o.status);
    if(o.pay_status==='paid'){$('paymentBox').innerHTML='<div style="font-weight:800;color:var(--brand-ink);font-size:18px">Payment received. Thank you!</div>';if(o.status==='approved')$('ost').textContent='Payment received. Sending to printer…'}
    updateTracker(o);
    if(['approved','printing'].includes(o.status)||(o.status==='printed'&&!o.srv_deleted))delay=1200;
