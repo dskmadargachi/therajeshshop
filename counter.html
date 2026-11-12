@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>:root{--brand-dk:#062f27;--brand-md:#0b5a49;--brand-lt:#7ee2c4;--brand-lt2:#a7f3d0;--brand-pale:#cdeee4}
   :root{
     --bg:#f1f5f9;--ink:#0f172a;--mute:#64748b;
@@ -339,6 +340,37 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 @media(max-width:760px){.vtiles{grid-template-columns:repeat(2,1fr)}.vcols{grid-template-columns:1fr}}
 </style>
 </head>
+<style id="wa-css">
+  .t-wa_wait{background:#fef9c3;color:#854d0e}
+  .src{padding:4px 11px;border-radius:999px;font-size:11.5px;font-weight:800;letter-spacing:.3px}
+  .src-web{background:#e0e7ff;color:#3730a3}.src-wa{background:#dcfce7;color:#166534}
+  .ctl{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px 18px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:12px 22px;align-items:center;box-shadow:0 4px 14px rgba(15,23,42,.04)}
+  .ctl .grp{display:flex;align-items:center;gap:10px;font-weight:700;font-size:13.5px}
+  .ctl small{display:block;color:var(--mute);font-weight:600;font-size:11.5px;margin-top:1px}
+  .sw{position:relative;width:50px;height:28px;flex-shrink:0}
+  .sw input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2}
+  .sw i{position:absolute;inset:0;border-radius:999px;background:#cbd5e1;transition:background .2s}
+  .sw i:after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:transform .2s}
+  .sw input:checked+i{background:var(--brand2)}.sw input:checked+i:after{transform:translateX(22px)}
+  .seg2{display:inline-flex;background:#f1f5f9;border-radius:12px;padding:3px;gap:2px}
+  .seg2 button{padding:7px 12px;font-size:12.5px;background:transparent;color:#475569;border-radius:9px}
+  .seg2 button.on{background:#fff;color:var(--brand-dark);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+  .wapill{padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:800;background:#f1f5f9;color:#475569}
+  .wapill.ok{background:#dcfce7;color:#166534}.wapill.warn{background:#fef3c7;color:#92400e}.wapill.bad{background:#fee2e2;color:#b91c1c}
+  .flt{display:flex;gap:6px;margin-left:auto}
+  .flt button{padding:7px 13px;font-size:12.5px;background:#f1f5f9;color:#475569;border-radius:999px}
+  .flt button.on{background:var(--brand-dark);color:#fff}
+  #waCard{display:flex;flex-direction:row!important;justify-content:flex-start!important;gap:22px;align-items:center;flex-wrap:wrap;margin-bottom:16px;background:linear-gradient(135deg,#ecfdf5,#fff)}
+  #waQr{background:#fff;padding:10px;border-radius:14px;border:1px solid var(--line)}
+  .toast{position:fixed;top:16px;right:16px;z-index:10001;background:#166534;color:#fff;padding:14px 20px;border-radius:14px;font-weight:800;box-shadow:0 14px 34px rgba(0,0,0,.3);animation:fadeUp .3s var(--ease);max-width:300px}
+  .toast small{display:block;font-weight:600;opacity:.9;margin-top:2px}
+  .act button.sm2{padding:9px 13px;font-size:13px;white-space:nowrap;flex:0 0 auto}
+  .act button.ok.sm2{flex:1 1 100%!important;font-size:15px;padding:12px 16px}
+  .b-prev{background:#e0f2fe;color:#075985}.b-crop{background:#ede9fe;color:#5b21b6}.b-re{background:#fef3c7;color:#92400e}.b-wa{background:#dcfce7;color:#166534}
+  .modal-box{background:#fff;border-radius:22px;padding:22px;width:min(100%,520px);display:flex;flex-direction:column;gap:12px;max-height:92vh;overflow:auto}
+  textarea{font-family:inherit;font-size:15px;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;width:100%;min-height:96px;resize:vertical}
+  #cropCanvas{max-width:100%;touch-action:none;cursor:crosshair;border-radius:8px;background:#0f172a}
+</style>
 <body>
 <div class="wrap">
   <!-- ADMIN LOGIN -->
@@ -365,6 +397,11 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 <rect class="body" x="318" y="108" width="204" height="72" rx="14"/><rect class="slot" x="340" y="104" width="160" height="8" rx="4"/><circle class="led" cx="500" cy="150" r="4.5"/><rect x="340" y="150" width="60" height="6" rx="3" fill="#334155"/>
 <circle class="ok" cx="420" cy="38" r="15"/><path d="M413 38l5 5 10-11" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" style="opacity:1"/>
 <text class="cap" x="74" y="198" text-anchor="middle">SCAN QR</text><text class="cap" x="236" y="124" text-anchor="middle">UPLOAD &amp; PAY</text><text class="cap" x="420" y="198" text-anchor="middle">PRINT READY</text></svg></div></div>
+    <div id="pinBox" class="hidden">
+      <p class="mute" style="margin:0 0 10px">Enter the shop admin PIN / অ্যাডমিন পিন দিন</p>
+      <form id="pinForm" style="display:flex;gap:8px"><input id="pinIn" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN" maxlength="64"><button class="ok" type="submit" style="white-space:nowrap">🔓 Login</button></form>
+      <div class="mute" id="orG" style="margin:14px 0 8px">— or —</div>
+    </div>
     <p class="mute" style="margin:0 0 16px">Sign in with your Google account to manage live print jobs</p>
     <div id="gbtn" style="display:flex;justify-content:center;min-height:46px"></div>
     <div class="mute" id="lerr" style="color:var(--bad);margin-top:10px;font-weight:700"></div>
@@ -396,6 +433,14 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
       </div>
     </div>
 
+    <div class="ctl" id="ctl">
+      <div class="grp"><label class="sw"><input type="checkbox" id="swAuto"><i></i></label><div>⚡ Auto-Print <span id="autoLbl">…</span><small>ON: WhatsApp &amp; paid orders print by themselves · OFF: wait for “Print Now”</small></div></div>
+      <div class="grp"><div>💬 WhatsApp bot<small>when a file arrives</small></div><div class="seg2" id="segBot"><button type="button" data-v="ask">Ask B&amp;W / Color</button><button type="button" data-v="instant">Instant B&amp;W</button></div></div>
+      <div class="grp"><label class="sw"><input type="checkbox" id="swKeep"><i></i></label><div>🔄 Keep files 30 min<small>needed for “Reprint”</small></div></div>
+      <div class="grp"><span class="wapill" id="waPill">WhatsApp: …</span></div>
+      <div class="flt" id="flt"><button type="button" data-v="all" class="on">All</button><button type="button" data-v="web">🌐 Web</button><button type="button" data-v="whatsapp">💬 WhatsApp</button></div>
+    </div>
+    <div class="card hidden" id="waCard"><div id="waQr"></div><div style="flex:1;min-width:220px"><div style="font-size:19px;font-weight:800">📱 Link the shop's WhatsApp</div><p class="mute" style="font-size:14px;margin:6px 0 0">On the shop phone open <b>WhatsApp → Settings → Linked devices → Link a device</b> and scan this code. It disappears once connected. / শপের ফোনে WhatsApp → Linked devices → Link a device থেকে স্ক্যান করুন।</p></div></div>
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-label">Waiting Approval</div>
@@ -435,6 +480,19 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 
 
 <!-- STATEMENT -->
+<div id="replyModal" class="preview-overlay hidden" role="dialog" aria-modal="true"><div class="modal-box">
+  <div style="font-size:20px;font-weight:800">💬 Reply on WhatsApp <span class="mute" id="replyTo"></span></div>
+  <div class="row" id="replyQuick"></div>
+  <textarea id="replyText" maxlength="1000" placeholder="Type your message…"></textarea>
+  <div id="replyMsg" class="mute" style="font-weight:700"></div>
+  <div class="row"><button class="ok" id="replySend" style="flex:1">Send</button><button class="no" id="replyX" type="button">Close</button></div></div></div>
+
+<div id="cropModal" class="preview-overlay hidden" role="dialog" aria-modal="true"><div class="modal-box" style="width:min(100%,920px);background:#0f172a;color:#fff">
+  <div style="font-size:18px;font-weight:800">✂️ Crop / Rotate <span class="mute" style="color:#94a3b8">drag on the photo to choose the area to keep</span></div>
+  <div style="text-align:center"><canvas id="cropCanvas"></canvas></div>
+  <div class="row"><button id="cropRotL" type="button" style="background:#334155;color:#fff">↺</button><button id="cropRotR" type="button" style="background:#334155;color:#fff">↻</button><button id="cropFull" type="button" style="background:#334155;color:#fff">Reset</button>
+  <span id="cropMsg" style="flex:1;font-weight:700"></span><button class="no" id="cropX" type="button">Cancel</button><button class="ok" id="cropOk" type="button">✓ Save</button></div></div></div>
+
 <div id="stModal" class="preview-overlay hidden" role="dialog" aria-modal="true">
   <div class="card" style="width:min(100%,780px);max-height:92vh;overflow:auto;gap:12px">
     <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:20px;font-weight:800">📒 Statement</div><button id="stX" style="background:#e2e8f0;color:#0f172a;padding:8px 14px">✕</button></div>
@@ -567,9 +625,10 @@ async function getThumbUrl(f) {
 let gInit = false, vtimer;
 async function initGoogle() {
   if (gInit) return; gInit = true;
-  let cid = '';
-  try { cid = (await (await fetch('/api/admin-config')).json()).googleClientId || ''; } catch {}
-  if (!cid) { $('lerr').textContent = 'Google login is not set up yet. Add GOOGLE_CLIENT_ID in Cloudflare.'; return; }
+  let cid = '', pin = false;
+  try { const c = await (await fetch('/api/admin-config')).json(); cid = c.googleClientId || ''; pin = !!c.pinLogin; } catch {}
+  $('pinBox').classList.toggle('hidden', !pin); $('orG').classList.toggle('hidden', !cid);
+  if (!cid) { if (!pin) $('lerr').textContent = 'Login is not set up yet. Add ADMIN_PIN (or GOOGLE_CLIENT_ID) in Cloudflare.'; return; }
   await new Promise((res) => { const t = setInterval(() => { if (window.google && google.accounts) { clearInterval(t); res(); } }, 100); setTimeout(() => { clearInterval(t); res(); }, 8000); });
   if (!(window.google && google.accounts)) { $('lerr').textContent = 'Could not load Google sign-in. Check your internet connection.'; gInit = false; return; }
   google.accounts.id.initialize({
@@ -634,8 +693,8 @@ $('out').onclick = () => { ls.del('gsess'); store.del('agentkey'); try { google.
 async function load() {
   if (!$('previewModal').classList.contains('hidden')) return;
   try {
-    const { orders } = await (await api('orders')).json();
-    const pend = orders.filter((o) => o.status === 'pending').length;
+    const data = await (await api('orders')).json(); const orders = data.orders; applyFlags(data.flags, data.wa);
+    const pend = orders.filter((o) => ['pending', 'wa_wait'].includes(o.status)).length;
     const work = orders.filter((o) => ['approved', 'printing'].includes(o.status)).length;
     const done = orders.filter((o) => o.status === 'printed').length;
     const rev = orders.filter((o) => o.status !== 'rejected').reduce((s, o) => s + (Number(o.amount) || 0), 0);
@@ -647,9 +706,10 @@ async function load() {
 
     $('count').textContent = pend ? `🔔 ${pend} waiting` : '✓ Queue clear';
     document.title = (pend ? `(${pend}) ` : '') + 'Admin Counter – therajesh.shop';
-    if (pend > lastPending) beep();
+    announceNew(orders);
     lastPending = pend;
-    draw(orders);
+    allOrders = orders;
+    draw(orders.filter((o) => srcFilter === 'all' || (o.source || 'web') === srcFilter));
   } catch (e) { if (e.message === 'auth') { clearInterval(timer); location.reload(); } }
 }
 
@@ -665,9 +725,9 @@ function draw(orders) {
     const pages = o.files.reduce((s, f) => s + f.pages, 0);
     div.innerHTML = `
       <div>
-        <div class="row"><span class="id">${o.id}</span><span class="tag t-${o.status}">${o.status.toUpperCase()}</span>${o.pay_status === 'paid' ? '<span class="tag t-printed">💰 PAID ONLINE</span>' : ''}
+        <div class="row">${o.source === 'whatsapp' ? '<span class="src src-wa">💬 WhatsApp</span>' : '<span class="src src-web">🌐 Web</span>'}<span class="id">${o.token ? '#' + esc(o.token) : o.id}</span><span class="tag t-${o.status}">${STATUS_LABEL[o.status] || o.status.toUpperCase()}</span>${o.pay_status === 'paid' ? '<span class="tag t-printed">💰 PAID ONLINE</span>' : ''}
         <span class="amt">₹${o.amount}</span></div>
-        <div class="mute" style="margin-top:4px">${esc(o.name || 'Walk-in Customer')} ${o.phone ? '· 📞 ' + esc(o.phone) : ''} · 🕒 ${new Date(o.created_at).toLocaleTimeString()}</div>
+        <div class="mute" style="margin-top:4px">${esc(o.name || 'Walk-in Customer')} ${o.source === 'whatsapp' && o.wa_number ? '· <a href="https://wa.me/' + esc(o.wa_number) + '" target="_blank" rel="noopener" style="color:#166534;font-weight:800;text-decoration:none">💬 +' + esc(o.wa_number) + '</a>' : (o.phone ? '· 📞 ' + esc(o.phone) : '')} · 🕒 ${new Date(o.created_at).toLocaleTimeString()}</div>
         <div style="margin-top:10px;padding:8px 12px;background:#f8fafc;border-radius:10px;font-size:13.5px;font-weight:700">
           ${o.opt && o.opt.kind === 'passport' ? '🪪 PASSPORT SHEET' : '📄 DOCUMENT'} · Paper ${esc(o.paper || 'A4')} · ${o.color ? '🌈 COLOR' : '⚫ B&W'} · ${o.copies} ${o.opt && o.opt.kind === 'passport' ? 'sheet(s)' : 'copy'} · ${pages} page(s)
         </div>
@@ -719,24 +779,7 @@ function draw(orders) {
         r.onclick = () => decide('reject', o.id); act.appendChild(r);
       }
     } else {
-      if (o.status === 'pending' || o.status === 'error') {
-        const ap = document.createElement('button'); ap.className = 'ok';
-        ap.style.flex = '1';
-        ap.textContent = (o.status === 'error' ? '🔁 Retry Print' : '✅ Approve & Print') + ` (${o.color ? 'Color' : 'B&W'} × ${o.copies})`;
-        ap.onclick = () => { ap.disabled = true; ap.textContent = '⏳ Sending to printer…'; decide('approve', o.id); }; act.appendChild(ap);
-      } else if (o.status === 'approved' || o.status === 'printing') {
-        const w = document.createElement('span'); w.className = 'mute';
-        w.style.flex = '1';
-        w.textContent = o.status === 'approved' ? '⏳ Sent to PC Agent – starting…' : '🖨️ Printing on PC…';
-        act.appendChild(w);
-      }
-      if (['pending', 'approved', 'printing', 'error'].includes(o.status)) {
-        const mp = document.createElement('button'); mp.style.cssText = 'background:#1d4ed8;color:#fff';
-        mp.title = 'Print from this browser now - no approval, the PC agent is not used';
-        mp.textContent = '🖨️ Manual Print'; mp.onclick = () => printOrderManually(o, o.files, true); act.appendChild(mp);
-        const r = document.createElement('button'); r.className = 'no'; r.textContent = 'Reject';
-        r.onclick = () => decide('reject', o.id); act.appendChild(r);
-      }
+      buildActions(act, o);
     }
     box.appendChild(div);
   }
@@ -966,13 +1009,154 @@ window.addEventListener('keydown', (e) => {
 
 function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
+
+/* ---------- WhatsApp / master controls (added) ---------- */
+const STATUS_LABEL = { wa_wait: 'AWAITING REPLY', pending: 'PENDING', approved: 'PRINTING', printing: 'PRINTING', printed: 'PRINTED', error: 'FAILED', rejected: 'DELETED', expired: 'EXPIRED' };
+let srcFilter = 'all', allOrders = [], seen = null, flagLock = 0, lastQr = '';
+const PIN_TXT = { 1: 'cleared' };
+
+$('pinForm').onsubmit = async (e) => {
+  e.preventDefault(); $('lerr').textContent = 'Checking…';
+  try {
+    const r = await fetch('/api/admin-pin-login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pin: $('pinIn').value }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Login failed');
+    sess = j.session; ls.set('gsess', sess); $('pinIn').value = ''; enter();
+  } catch (err) { $('lerr').textContent = err.message || 'Login failed'; }
+};
+
+async function saveSetting(patch) {
+  flagLock = Date.now() + 6000;
+  try { const r = await api('settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(patch) }); const j = await r.json(); applyFlags(j.flags, j.wa, true); } catch { flagLock = 0; load(); }
+}
+$('swAuto').onchange = (e) => { $('autoLbl').textContent = e.target.checked ? 'ON' : 'OFF'; saveSetting({ autoprint: e.target.checked }); };
+$('swKeep').onchange = (e) => saveSetting({ keepfiles: e.target.checked });
+document.querySelectorAll('#segBot button').forEach((b) => b.onclick = () => saveSetting({ wabot: b.dataset.v }));
+document.querySelectorAll('#flt button').forEach((b) => b.onclick = () => { srcFilter = b.dataset.v; document.querySelectorAll('#flt button').forEach((x) => x.classList.toggle('on', x === b)); draw(allOrders.filter((o) => srcFilter === 'all' || (o.source || 'web') === srcFilter)); });
+
+function applyFlags(f, wa, force) {
+  if (f && (force || Date.now() > flagLock)) {
+    $('swAuto').checked = !!f.autoprint; $('autoLbl').textContent = f.autoprint ? 'ON' : 'OFF';
+    $('swKeep').checked = !!f.keepfiles;
+    document.querySelectorAll('#segBot button').forEach((b) => b.classList.toggle('on', b.dataset.v === f.wabot));
+  }
+  if (!wa) return;
+  const pill = $('waPill');
+  let t = '🔴 WhatsApp: PC agent offline', c = 'bad';
+  if (wa.provider === 'cloud') { t = wa.online ? '🟢 WhatsApp Cloud API' : '🔴 Cloud API not configured'; c = wa.online ? 'ok' : 'bad'; }
+  else if (wa.state === 'ready') { t = '🟢 WhatsApp connected' + (wa.number ? ' · +' + wa.number : ''); c = 'ok'; }
+  else if (wa.state === 'qr') { t = '🟡 Scan the QR to link WhatsApp'; c = 'warn'; }
+  else if (wa.online) { t = '🟡 WhatsApp: ' + wa.state; c = 'warn'; }
+  pill.textContent = t; pill.className = 'wapill ' + c;
+  const showQr = wa.state === 'qr' && wa.qr;
+  $('waCard').classList.toggle('hidden', !showQr);
+  if (showQr && wa.qr !== lastQr && window.QRCode) { lastQr = wa.qr; $('waQr').innerHTML = ''; new QRCode($('waQr'), { text: wa.qr, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.L }); }
+  if (!showQr) lastQr = '';
+}
+
+let actx;
 function beep() {
   try {
-    const a = new (window.AudioContext || window.webkitAudioContext)();
-    const o = a.createOscillator(); o.connect(a.destination); o.frequency.value = 880;
-    o.start(); setTimeout(() => o.stop(), 250);
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume();
+    [[880, 0], [1175, 0.22]].forEach(([fr, at]) => { const o = actx.createOscillator(), g = actx.createGain(); o.connect(g); g.connect(actx.destination); o.frequency.value = fr; g.gain.value = 0.25; o.start(actx.currentTime + at); o.stop(actx.currentTime + at + 0.18); });
   } catch {}
 }
+document.addEventListener('click', () => { try { if (actx && actx.state === 'suspended') actx.resume(); } catch {} }, { once: true });
+function toast(t, sub) {
+  const d = document.createElement('div'); d.className = 'toast'; d.innerHTML = esc(t) + (sub ? '<small>' + esc(sub) + '</small>' : '');
+  document.body.appendChild(d); setTimeout(() => d.remove(), 6000);
+}
+function announceNew(orders) {   // 🔔 sound + toast for every job that was not on the screen before
+  const ids = new Set(orders.map((o) => o.id));
+  if (seen) {
+    const fresh = orders.filter((o) => !seen.has(o.id) && ['wa_wait', 'pending', 'approved'].includes(o.status));
+    if (fresh.length) { beep(); const o = fresh[0]; toast('🔔 New Print Job!', (o.source === 'whatsapp' ? '💬 WhatsApp' : '🌐 Web') + ' · ' + (o.name || 'Customer') + (fresh.length > 1 ? ' (+' + (fresh.length - 1) + ' more)' : '')); }
+  }
+  seen = ids;
+}
+
+function mkBtn(label, cls, fn, title) {
+  const b = document.createElement('button'); b.type = 'button'; b.className = cls + ' sm2'; b.textContent = label; if (title) b.title = title; b.onclick = fn; return b;
+}
+function buildActions(act, o) {
+  const live = ['wa_wait', 'pending', 'approved', 'printing', 'error'].includes(o.status);
+  const files = o.files || [], img = files.find((f) => isImg(f.name));
+  if (o.status === 'wa_wait') { const w = document.createElement('div'); w.className = 'mute'; w.style.cssText = 'width:100%;font-weight:700'; w.textContent = '⏳ Customer has not chosen B&W / Color yet — you can print now as B&W.'; act.appendChild(w); }
+  if (['wa_wait', 'pending', 'error'].includes(o.status)) {
+    const ap = mkBtn(o.status === 'error' ? '🔁 Retry Print' : '🖨️ Print Now (1-Click)', 'ok', () => { ap.disabled = true; ap.textContent = '⏳ Sending to printer…'; decide('approve', o.id); });
+    ap.style.flex = '1'; act.appendChild(ap);
+  } else if (o.status === 'approved' || o.status === 'printing') {
+    const w = document.createElement('span'); w.className = 'mute'; w.style.flex = '1'; w.textContent = o.status === 'approved' ? '⏳ Sent to PC agent – starting…' : '🖨️ Printing on PC…'; act.appendChild(w);
+  }
+  if (files.length) act.appendChild(mkBtn('👁️ Preview', 'b-prev', () => previewModal(files[0], o)));
+  if (img && o.status !== 'printed') act.appendChild(mkBtn('✂️ Crop', 'b-crop', () => openCrop(img)));
+  if (['printed', 'error'].includes(o.status)) act.appendChild(mkBtn('🔄 Reprint', 'b-re', async () => {
+    const r = await api('reprint/' + o.id, { method: 'POST' }); const j = await r.json().catch(() => ({}));
+    if (!r.ok) alert(j.error || 'Could not reprint'); load(); setTimeout(load, 1500);
+  }, 'Prints the same job again (files must still be kept)'));
+  if (o.source === 'whatsapp' && o.wa_number) act.appendChild(mkBtn('💬 Reply on WhatsApp', 'b-wa', () => openReply(o)));
+  if (live && files.length) act.appendChild(mkBtn('🖨️ This PC', 'b-prev', () => printOrderManually(o, o.files, true), 'Print from this browser – the PC agent is not used'));
+  act.appendChild(mkBtn('🗑️ Delete', 'no', () => decide('reject', o.id)));
+}
+
+/* reply on WhatsApp */
+let replyOrder = null;
+const QUICK = ['✅ আপনার প্রিন্ট রেডি, কাউন্টার থেকে নিয়ে যান। / Your print is ready.', '🙏 ফাইলটি পরিষ্কার নয়, আবার পাঠান। / The file is unclear, please resend.', '⏳ একটু অপেক্ষা করুন, প্রিন্ট হচ্ছে। / Please wait, printing.', '💰 মোট টাকা কাউন্টারে দিন। / Please pay at the counter.'];
+function openReply(o) {
+  replyOrder = o; $('replyTo').textContent = '→ ' + (o.name || '') + ' +' + o.wa_number; $('replyText').value = ''; $('replyMsg').textContent = '';
+  $('replyQuick').innerHTML = ''; QUICK.forEach((q) => { const b = mkBtn(q.split(' / ')[1] || q.slice(0, 22), 'b-wa', () => { $('replyText').value = q; }); b.title = q; $('replyQuick').appendChild(b); });
+  $('replyModal').classList.remove('hidden'); $('replyText').focus();
+}
+$('replyX').onclick = () => $('replyModal').classList.add('hidden');
+$('replySend').onclick = async () => {
+  const text = $('replyText').value.trim(); if (!text) return;
+  $('replyMsg').textContent = 'Sending…';
+  const r = await api('wa-reply', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: replyOrder.id, text }) });
+  const j = await r.json().catch(() => ({}));
+  $('replyMsg').textContent = r.ok ? '✅ Sent' : (j.error || 'Failed');
+  if (r.ok) setTimeout(() => $('replyModal').classList.add('hidden'), 700);
+};
+
+/* crop / rotate */
+let cr = null;
+async function openCrop(f) {
+  try { const blob = await getFileBlob(f.id); cr = { f, src: await createImageBitmap(blob), rot: 0, sel: null }; } catch { alert('Could not open the image'); return; }
+  $('cropMsg').textContent = ''; $('cropModal').classList.remove('hidden'); drawCrop();
+}
+function drawCrop() {
+  const sw = cr.src.width, sh = cr.src.height, swap = cr.rot % 180 !== 0;
+  const full = document.createElement('canvas'); full.width = swap ? sh : sw; full.height = swap ? sw : sh;
+  const x = full.getContext('2d'); x.translate(full.width / 2, full.height / 2); x.rotate(cr.rot * Math.PI / 180); x.drawImage(cr.src, -sw / 2, -sh / 2);
+  const k = Math.min(Math.min(innerWidth - 80, 860) / full.width, innerHeight * 0.55 / full.height, 1);
+  const cv = $('cropCanvas'); cv.width = Math.round(full.width * k); cv.height = Math.round(full.height * k); cr.k = k; cr.full = full;
+  const c = cv.getContext('2d'); c.drawImage(full, 0, 0, cv.width, cv.height);
+  if (cr.sel) {
+    const { x: a, y: b, w, h } = cr.sel; c.fillStyle = 'rgba(0,0,0,.55)';
+    c.fillRect(0, 0, cv.width, b); c.fillRect(0, b + h, cv.width, cv.height - b - h); c.fillRect(0, b, a, h); c.fillRect(a + w, b, cv.width - a - w, h);
+    c.strokeStyle = '#34d399'; c.lineWidth = 2; c.strokeRect(a, b, w, h);
+  }
+}
+(function () {
+  const cv = $('cropCanvas'); let start = null;
+  const pt = (e) => { const r = cv.getBoundingClientRect(); return { x: Math.min(Math.max((e.clientX - r.left) * cv.width / r.width, 0), cv.width), y: Math.min(Math.max((e.clientY - r.top) * cv.height / r.height, 0), cv.height) }; };
+  cv.onpointerdown = (e) => { start = pt(e); cv.setPointerCapture(e.pointerId); };
+  cv.onpointermove = (e) => { if (!start) return; const p = pt(e); cr.sel = { x: Math.min(start.x, p.x), y: Math.min(start.y, p.y), w: Math.abs(p.x - start.x), h: Math.abs(p.y - start.y) }; drawCrop(); };
+  cv.onpointerup = () => { start = null; if (cr.sel && (cr.sel.w < 8 || cr.sel.h < 8)) { cr.sel = null; drawCrop(); } };
+  $('cropRotL').onclick = () => { cr.rot = (cr.rot + 270) % 360; cr.sel = null; drawCrop(); };
+  $('cropRotR').onclick = () => { cr.rot = (cr.rot + 90) % 360; cr.sel = null; drawCrop(); };
+  $('cropFull').onclick = () => { cr.rot = 0; cr.sel = null; drawCrop(); };
+  $('cropX').onclick = () => $('cropModal').classList.add('hidden');
+  $('cropOk').onclick = async () => {
+    const s = cr.sel ? { x: cr.sel.x / cr.k, y: cr.sel.y / cr.k, w: cr.sel.w / cr.k, h: cr.sel.h / cr.k } : { x: 0, y: 0, w: cr.full.width, h: cr.full.height };
+    const out = document.createElement('canvas'); out.width = Math.round(s.w); out.height = Math.round(s.h);
+    const c = out.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, out.width, out.height); c.drawImage(cr.full, s.x, s.y, s.w, s.h, 0, 0, out.width, out.height);
+    $('cropMsg').textContent = 'Saving…';
+    const blob = await new Promise((res) => out.toBlob(res, 'image/jpeg', 0.93));
+    const r = await api('replace-file/' + cr.f.id, { method: 'POST', headers: { 'content-type': 'image/jpeg' }, body: blob });
+    if (!r.ok) { $('cropMsg').textContent = ((await r.json().catch(() => ({}))).error) || 'Could not save'; return; }
+    blobCache.delete(cr.f.id); thumbCache.delete(cr.f.id); $('cropModal').classList.add('hidden'); load();
+  };
+})();
 
 /* ---------- Statement ---------- */
 (function(){

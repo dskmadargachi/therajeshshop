@@ -16,12 +16,12 @@ body{margin:0;background:#cfd5dc;font-family:'Noto Sans Bengali','Hind Siliguri'
 .bar button{padding:10px 22px;font:700 16px 'Noto Sans Bengali',system-ui;border:0;border-radius:10px;cursor:pointer;background:var(--gold);color:#3a2a00}
 .page{width:210mm;height:297mm;margin:12px auto;background:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column}
 /* header */
-.hero{position:relative;background:linear-gradient(150deg,var(--brand-dk),var(--brand-md) 50%,#7c4dff 80%,#ff4d9d);color:#fff;padding:13mm 12mm 22mm;text-align:center}
+.hero{position:relative;background:linear-gradient(150deg,var(--brand-dk),var(--brand-md) 50%,#7c4dff 80%,#ff4d9d);color:#fff;padding:9mm 12mm 17mm;text-align:center}
 .hero:before,.hero:after{content:"";position:absolute;border-radius:50%;background:color-mix(in srgb,var(--brand-lt) 16%,transparent)}
 .hero:before{width:90mm;height:90mm;right:-28mm;top:-34mm}.hero:after{width:60mm;height:60mm;left:-22mm;bottom:-30mm}
 .hero>*{position:relative;z-index:1}
 .tag{display:inline-block;background:var(--gold);color:#3a2a00;font-weight:800;font-size:4.6mm;padding:1.6mm 6mm;border-radius:99mm;letter-spacing:.2px}
-.hero h1{margin:5mm 0 2mm;font-size:21mm;line-height:1.12;font-weight:900}
+.hero h1{margin:4mm 0 2mm;font-size:16mm;line-height:1.12;font-weight:900}
 .hero h1 em{font-style:normal;color:var(--gold)}
 .hero p{margin:0;font-size:6.2mm;font-weight:600;color:var(--brand-pale)}
 .wave{position:absolute;left:0;right:0;bottom:-1px;height:12mm;z-index:2}
@@ -70,6 +70,10 @@ body{margin:0;background:#cfd5dc;font-family:'Noto Sans Bengali','Hind Siliguri'
   <div class="mid">
     <div class="qrbox"><div id="qr"></div></div>
     <div class="cta">📱 মোবাইলের ক্যামেরা খুলে QR কোডটি স্ক্যান করুন<small id="url"></small></div>
+    <div class="wa" id="waPoster" style="display:none;align-items:center;gap:5mm;width:100%;background:linear-gradient(135deg,#128c7e,#25d366);color:#fff;border-radius:6mm;padding:3mm 5mm">
+      <div style="background:#fff;border-radius:3mm;padding:1.5mm;line-height:0"><div id="waqr"></div></div>
+      <div style="flex:1;text-align:left"><div style="font-size:6.4mm;font-weight:900;line-height:1.25">💬 WhatsApp-এ ফাইল পাঠান!</div><div style="font-size:4.2mm;font-weight:700;margin-top:1mm">QR স্ক্যান করে PDF বা ছবি পাঠান — প্রিন্ট নিজেই শুরু হবে।</div><div style="font-size:4.6mm;font-weight:900;margin-top:1mm" id="wanum"></div></div>
+    </div>
     <div class="steps">
       <div class="st"><i>১</i><b>স্ক্যান</b><span>QR কোড স্ক্যান করুন</span></div>
       <div class="st"><i>২</i><b>আপলোড</b><span>আপনার ফাইল বেছে নিন</span></div>
@@ -98,7 +102,14 @@ body{margin:0;background:#cfd5dc;font-family:'Noto Sans Bengali','Hind Siliguri'
   var url = location.origin + '/';
   document.getElementById('url').textContent = location.host;
   document.getElementById('host').textContent = '🌐 ' + location.host;
-  new QRCode(document.getElementById('qr'), { text: url, width: 250, height: 250, correctLevel: QRCode.CorrectLevel.H });
+  new QRCode(document.getElementById('qr'), { text: url, width: 190, height: 190, correctLevel: QRCode.CorrectLevel.H });
+  // WhatsApp QR (number comes from the WA_NUMBER variable in Cloudflare; hidden until it is set)
+  fetch('/api/config').then(function (r) { return r.json(); }).then(function (c) {
+    if (!c.waNumber) return;
+    document.getElementById('waPoster').style.display = 'flex';
+    document.getElementById('wanum').textContent = '+' + c.waNumber;
+    new QRCode(document.getElementById('waqr'), { text: 'https://wa.me/' + c.waNumber + '?text=PRINT', width: 84, height: 84, correctLevel: QRCode.CorrectLevel.M });
+  }).catch(function () {});
 </script>
 </body>
 </html>

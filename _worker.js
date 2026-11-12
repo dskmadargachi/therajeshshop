@@ -55,7 +55,7 @@ function newId() {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
 
@@ -70,7 +70,7 @@ export default {
         const p = await getPrices(env);
         const youpiKey = clean(env.YOUPI_KEY) || YOUPI_PUBLIC_KEY;
         const youpi = (youpiKey && youpiKey !== YOUPI_PUBLIC_KEY) ? { key: youpiKey, base: (clean(env.YOUPI_BASE) || 'https://pay.therajesh.shop').replace(/\/+$/, '') } : null;
-        return json({ shop: env.SHOP_NAME || 'Digital Seva Kendra', rate: { bw: p.bw, color: p.color }, a3: p.a3, photo4x6: p.photo4x6, passport: { '4x6': p.passport4x6, A4: p.passportA4 }, youpi, razorpay: rzpPublic(env), razorpayMissing: rzpMissing(env) });
+        return json({ shop: env.SHOP_NAME || 'Digital Seva Kendra', waNumber: clean(env.WA_NUMBER).replace(/\D/g, '') || null, rate: { bw: p.bw, color: p.color }, a3: p.a3, photo4x6: p.photo4x6, passport: { '4x6': p.passport4x6, A4: p.passportA4 }, youpi, razorpay: rzpPublic(env), razorpayMissing: rzpMissing(env) });
       }
       if (path === 'youpi/webhook' && method === 'POST') return youpiWebhook(request, env);
       if (path === 'create-order' && method === 'POST') return rzpCreateOrder(request, env);
@@ -79,7 +79,9 @@ export default {
       m = path.match(/^orders\/([A-Z0-9]+)$/);
       if (m && method === 'GET') return orderStatus(env, m[1]);
 
-      if (path === 'admin-config' && method === 'GET') return json({ googleClientId: clean(env.GOOGLE_CLIENT_ID) || null });
+      if (path === 'admin-config' && method === 'GET') return json({ googleClientId: clean(env.GOOGLE_CLIENT_ID) || null, pinLogin: !!(clean(env.ADMIN_PIN) && sessionSecret(env)) });
+      if (path === 'admin-pin-login' && method === 'POST') return adminPinLogin(request, env);
+      if (path === 'wa/webhook') return waWebhook(request, env, ctx);
       if (path === 'admin-login' && method === 'POST') return adminLogin(request, env);
       if (path === 'visit' && method === 'POST') return recordVisit(request, env);
 
@@ -93,6 +95,12 @@ export default {
         if (path === 'admin/prices' && method === 'GET') return json({ prices: await getPrices(env), labels: PRICE_KEYS });
         if (path === 'admin/prices' && method === 'POST') return savePrices(request, env);
         if (path === 'admin/clear' && method === 'POST') return adminClear(env);
+        if (path === 'admin/settings') return adminSettings(request, env);
+        if (path === 'admin/wa-reply' && method === 'POST') return adminWaReply(request, env);
+        m = path.match(/^admin\/reprint\/([A-Z0-9]+)$/);
+        if (m && method === 'POST') return adminReprint(env, m[1]);
+        m = path.match(/^admin\/replace-file\/(\d+)$/);
+        if (m && method === 'POST') return adminReplaceFile(request, env, m[1]);
         m = path.match(/^admin\/(start|done)\/([A-Z0-9]+)$/);
         if (m && method === 'POST') return adminMark(request, env, m[2], m[1]);
         m = path.match(/^admin\/(approve|reject)\/([A-Z0-9]+)$/);
@@ -104,6 +112,10 @@ export default {
       if (path.startsWith('agent/')) {
         if (!sameSecret(request.headers.get('x-agent-key'), env.AGENT_KEY)) return json({ error: 'Bad agent key' }, 401);
         if (path === 'agent/jobs' && method === 'GET') return agentJobs(env);
+        if (path === 'agent/wa/incoming' && method === 'POST') return agentWaIncoming(request, env);
+        if (path === 'agent/wa/outbox' && method === 'GET') return agentWaOutbox(env);
+        if (path === 'agent/wa/ack' && method === 'POST') return agentWaAck(request, env);
+        if (path === 'agent/wa/status' && method === 'POST') return agentWaStatus(request, env);
         m = path.match(/^agent\/(claim|printed|done|fail)\/([A-Z0-9]+)$/);
         if (m && method === 'POST') return agentUpdate(request, env, m[2], m[1]);
         m = path.match(/^agent\/file\/(\d+)$/);
@@ -143,7 +155,9 @@ async function roleOf(request, env) {
   const payload = tok.slice(0, i);
   if (!sameSecret(tok.slice(i + 1), await hmacHex(secret, new TextEncoder().encode(payload)))) return null;
   let p; try { p = JSON.parse(unb64u(payload)); } catch { return null; }
-  if (!p || !p.e || !(p.x > Date.now()) || !adminEmails(env).includes(String(p.e).toLowerCase())) return null;
+  if (!p || !p.e || !(p.x > Date.now())) return null;
+  if (p.e === '__pin__') return clean(env.ADMIN_PIN) && p.k === await pinTag(env) ? { role: 'admin', email: 'pin' } : null;   // changing ADMIN_PIN signs everyone out
+  if (!adminEmails(env).includes(String(p.e).toLowerCase())) return null;
   return { role: 'admin', email: p.e };
 }
 async function verifyGoogle(idToken, env) {
@@ -217,6 +231,11 @@ async function ensureSchema(env) {
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS ledger (order_id TEXT PRIMARY KEY, ts INTEGER, amount REAL, copies INTEGER, pages INTEGER, paper TEXT, color INTEGER, kind TEXT)').run();
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS visits (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER, ip TEXT, country TEXT, region TEXT, city TEXT, path TEXT, ua TEXT)').run();
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS visits_ts ON visits (ts)').run();
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS wa_tokens (day TEXT PRIMARY KEY, n INTEGER)').run();
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS wa_outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, to_id TEXT, text TEXT, ts INTEGER)').run();
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS wa_seen (id TEXT PRIMARY KEY, ts INTEGER)').run();
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS wa_hits (number TEXT, ts INTEGER, kind TEXT)').run();
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS login_fail (ip TEXT, ts INTEGER)').run();
   // base tables (no-ops when they already exist) so a fresh database works without manual SQL
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, name TEXT, phone TEXT, color INTEGER, copies INTEGER, amount REAL, status TEXT, created_at INTEGER, note TEXT)').run();
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id TEXT, name TEXT, r2_key TEXT, pages INTEGER)').run();
@@ -231,6 +250,8 @@ async function ensureSchema(env) {
   if (!have.has('pay_utr')) await env.DB.prepare('ALTER TABLE orders ADD COLUMN pay_utr TEXT').run();
   if (!have.has('pc_deleted')) await env.DB.prepare('ALTER TABLE orders ADD COLUMN pc_deleted INTEGER DEFAULT 0').run();
   if (!have.has('srv_deleted')) await env.DB.prepare('ALTER TABLE orders ADD COLUMN srv_deleted INTEGER DEFAULT 0').run();
+  for (const [col, ddl] of [['source', "TEXT DEFAULT 'web'"], ['token', 'TEXT'], ['wa_number', 'TEXT'], ['wa_name', 'TEXT'], ['wa_chat', 'TEXT'], ['printed_at', 'INTEGER'], ['wa_notified', 'INTEGER DEFAULT 0']])
+    if (!have.has(col)) await env.DB.prepare(`ALTER TABLE orders ADD COLUMN ${col} ${ddl}`).run();
   schemaChecked = true;
 }
 
@@ -353,7 +374,7 @@ async function youpiWebhook(request, env) {
   if (p.currency && String(p.currency).toUpperCase() !== 'INR') return json({ received: true, ignored: 'currency mismatch' });
 
   const utr = String(p.utr || '').slice(0, 30);
-  const auto = clean(env.YOUPI_AUTO_APPROVE) !== '0';
+  const auto = await autoOn(env, clean(env.YOUPI_AUTO_APPROVE) !== '0');
   await env.DB.prepare("UPDATE orders SET pay_status='paid', pay_utr=?, status=CASE WHEN ? AND status IN ('pending','error') THEN 'approved' ELSE status END WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')")
     .bind(utr, auto ? 1 : 0, id).run();
   if (auto && ['pending', 'error'].includes(o.status)) await ledgerAdd(env, id);
@@ -415,7 +436,7 @@ async function rzpVerify(request, env) {
   if (!o) return json({ error: 'Order not found or expired' }, 404);
   if (o.rzp_order_id !== oid) return json({ success: false, error: 'This payment does not belong to this order' }, 400);
   if (o.pay_status === 'paid') return json({ success: true, duplicate: true });
-  const auto = clean(env.RAZORPAY_AUTO_APPROVE) !== '0';
+  const auto = await autoOn(env, clean(env.RAZORPAY_AUTO_APPROVE) !== '0');
   await env.DB.prepare("UPDATE orders SET pay_status='paid', pay_utr=?, status=CASE WHEN ? AND status IN ('pending','error') THEN 'approved' ELSE status END WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')")
     .bind(pid.slice(0, 30), auto ? 1 : 0, id).run();
   if (auto && ['pending', 'error'].includes(o.status)) await ledgerAdd(env, id);
@@ -460,15 +481,27 @@ async function adminStatement(request, env) {
 async function adminList(env) {
   await ensureSchema(env);
   await expireStale(env);
-  return json({ orders: await ordersWithFiles(env, ['pending', 'approved', 'printing', 'error', 'printed', 'rejected'], 40) });
+  return json({ orders: await ordersWithFiles(env, ['wa_wait', 'pending', 'approved', 'printing', 'error', 'printed', 'rejected'], 60), flags: await getFlags(env), wa: await waStatus(env) });
 }
 
 async function adminDecide(env, id, action) {
+  const o = await env.DB.prepare('SELECT * FROM orders WHERE id=?').bind(id).first();
+  if (!o) return json({ error: 'Order not found' }, 404);
+  const wa = o.source === 'whatsapp' && o.wa_number;
   if (action === 'approve') {
+    if (o.status === 'wa_wait') {   // counter prints before the customer answered: B&W, the copies set so far
+      const r = await waFinalize(env, id, { color: !!o.color, copies: o.copies || 1 }, { autoprint: true });
+      if (wa && r.text) await waSend(env, o.wa_number, o.wa_chat, r.text);
+      return json({ ok: true });
+    }
     const r = await env.DB.prepare("UPDATE orders SET status='approved' WHERE id=? AND status IN ('pending','error')").bind(id).run();
-    if ((r.meta && r.meta.changes) > 0) await ledgerAdd(env, id);
+    if ((r.meta && r.meta.changes) > 0) {
+      await ledgerAdd(env, id);
+      if (wa) await waSend(env, o.wa_number, o.wa_chat, `✅ টোকেন #${o.token || o.id}: আপনার ফাইলটি প্রিন্ট হচ্ছে!\nYour file is printing.`);
+    }
   } else {
-    await env.DB.prepare("UPDATE orders SET status='rejected', name='', phone='' WHERE id=? AND status IN ('pending','approved','printing','error')").bind(id).run();
+    if (wa && ['wa_wait', 'pending', 'approved', 'printing', 'error'].includes(o.status)) await waSend(env, o.wa_number, o.wa_chat, `❌ ${o.token ? '#' + o.token + ': ' : ''}আপনার প্রিন্ট অর্ডারটি বাতিল করা হয়েছে।\nYour print order was cancelled by the shop.`);
+    await env.DB.prepare("UPDATE orders SET status='rejected', name='', phone='', wa_number='', wa_chat='' WHERE id=? AND status IN ('wa_wait','pending','approved','printing','error')").bind(id).run();
     await purgeFiles(env, id);
     await env.DB.prepare('DELETE FROM files WHERE order_id=?').bind(id).run(); // forget file names too
   }
@@ -520,6 +553,20 @@ async function expireStale(env) {
     await env.DB.prepare("UPDATE orders SET status='expired', name='', phone='' WHERE id=? AND status='pending'").bind(r.id).run();
     await env.DB.prepare('DELETE FROM files WHERE order_id=?').bind(r.id).run();
   }
+  // WhatsApp files nobody answered for (menu never replied to) are deleted after 60 minutes as well
+  const { results: stale } = await env.DB.prepare("SELECT id FROM orders WHERE status='wa_wait' AND created_at < ?").bind(Date.now() - UNPAID_TTL_MS).all();
+  for (const r of stale) {
+    await purgeFiles(env, r.id);
+    await env.DB.prepare("UPDATE orders SET status='expired', name='', phone='', wa_number='', wa_chat='' WHERE id=? AND status='wa_wait'").bind(r.id).run();
+    await env.DB.prepare('DELETE FROM files WHERE order_id=?').bind(r.id).run();
+  }
+  // "Keep files for reprint" holds a finished job for 30 minutes at most, then the normal privacy wipe happens
+  const { results: kept } = await env.DB.prepare("SELECT id FROM orders WHERE status='printed' AND printed_at IS NOT NULL AND printed_at < ? AND EXISTS (SELECT 1 FROM files f WHERE f.order_id=orders.id AND f.r2_key IS NOT NULL)").bind(Date.now() - 30 * 60000).all();
+  for (const r of kept) {
+    await purgeFiles(env, r.id);
+    await env.DB.prepare("UPDATE orders SET name='', phone='', wa_number='', wa_chat='', srv_deleted=1 WHERE id=?").bind(r.id).run();
+    await env.DB.prepare('DELETE FROM files WHERE order_id=?').bind(r.id).run();
+  }
 }
 
 // Order of events after printing (the customer's tracker shows each one):
@@ -533,13 +580,24 @@ async function agentUpdate(request, env, id, action, src = 'agent') {
     return json({ claimed: (r.meta?.changes || 0) > 0 });
   }
   if (action === 'printed') {
-    await env.DB.prepare("UPDATE orders SET status='printed', name='', phone='' WHERE id=? AND status IN ('printing','approved')").bind(id).run();
+    const o = await env.DB.prepare('SELECT * FROM orders WHERE id=?').bind(id).first();
+    if (o && ['printing', 'approved'].includes(o.status)) {
+      await waNotifyPrinted(env, o);   // tell the WhatsApp customer, then forget the number (unless the counter keeps the job for reprint)
+      const keep = await keepFiles(env);
+      await env.DB.prepare(`UPDATE orders SET status='printed', printed_at=?${keep ? '' : ", name='', phone='', wa_number='', wa_chat=''"} WHERE id=? AND status IN ('printing','approved')`).bind(Date.now(), id).run();
+    }
     return json({ ok: true });
   }
   if (action === 'done') {
     const body = src === 'agent' ? await request.json().catch(() => ({})) : {};
     const pc = src === 'admin' ? 2 : (body.pc_deleted ? 1 : 0);
-    await env.DB.prepare("UPDATE orders SET status='printed', name='', phone='' WHERE id=?").bind(id).run();
+    const o = await env.DB.prepare('SELECT * FROM orders WHERE id=?').bind(id).first();
+    await waNotifyPrinted(env, o);
+    if (await keepFiles(env)) {   // counter toggle: keep the job for 30 minutes so 🔄 Reprint works
+      await env.DB.prepare("UPDATE orders SET status='printed', printed_at=COALESCE(printed_at,?), pc_deleted=? WHERE id=?").bind(Date.now(), pc, id).run();
+      return json({ ok: true, kept: true });
+    }
+    await env.DB.prepare("UPDATE orders SET status='printed', name='', phone='', wa_number='', wa_chat='' WHERE id=?").bind(id).run();
     await purgeFiles(env, id); // privacy: file removed right after printing
     await env.DB.prepare('DELETE FROM files WHERE order_id=?').bind(id).run(); // forget file names too
     await env.DB.prepare('UPDATE orders SET pc_deleted=?, srv_deleted=1 WHERE id=?').bind(pc, id).run();
@@ -555,4 +613,370 @@ async function purgeFiles(env, id) {
   const { results } = await env.DB.prepare('SELECT r2_key FROM files WHERE order_id=? AND r2_key IS NOT NULL').bind(id).all();
   for (const f of results) await env.FILES.delete(f.r2_key);
   await env.DB.prepare('UPDATE files SET r2_key=NULL WHERE order_id=?').bind(id).run();
+}
+
+
+// =====================================================================================================
+//  WHATSAPP PRINT BOT · PIN LOGIN · MASTER SETTINGS   (added)
+//  Two ways in, ONE brain (waIncoming):
+//    A) Self-hosted bridge  -> the shop PC's local-print-server.js posts to /api/agent/wa/incoming and sends the replies it gets back
+//    B) Meta Cloud API      -> Meta calls /api/wa/webhook, replies go out through the Graph API
+//  Worker variables for WhatsApp:  WA_NUMBER (shop number, digits, e.g. 919876543210 – shown on the website),
+//    WA_PROVIDER ("bridge" default | "cloud"),  Cloud API only: WA_TOKEN, WA_PHONE_ID, WA_VERIFY_TOKEN, WA_APP_SECRET
+//    Optional: WA_MAX_PER_HOUR (default 10 file messages per customer number per hour)
+//  Admin PIN login:  ADMIN_PIN  (+ SESSION_SECRET or AGENT_KEY, which already exist)
+// =====================================================================================================
+
+// ---------- settings (saved in the D1 "settings" table, changed from the counter's top bar) ----------
+async function getSetting(env, k) {
+  try { const r = await env.DB.prepare('SELECT v FROM settings WHERE k=?').bind(k).first(); return r ? r.v : null; } catch { return null; }
+}
+const setSetting = (env, k, v) => env.DB.prepare('INSERT INTO settings (k,v) VALUES (?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v').bind(k, String(v)).run();
+// Master Auto-Print switch. When the counter has never touched it, `fallback` keeps the old behaviour.
+async function autoOn(env, fallback) {
+  const s = await getSetting(env, 'autoprint');
+  return s === '1' ? true : s === '0' ? false : !!fallback;
+}
+async function keepFiles(env) { return (await getSetting(env, 'keepfiles')) === '1'; }
+async function getFlags(env) {
+  return { autoprint: await autoOn(env, true), wabot: (await getSetting(env, 'wabot')) === 'instant' ? 'instant' : 'ask', keepfiles: await keepFiles(env) };
+}
+const waProvider = (env) => (clean(env.WA_PROVIDER).toLowerCase() === 'cloud' ? 'cloud' : 'bridge');
+async function waStatus(env) {
+  let s = {};
+  try { s = JSON.parse((await getSetting(env, 'wa_status')) || '{}'); } catch {}
+  const age = Date.now() - Number(s.ts || 0);
+  const provider = waProvider(env);
+  if (provider === 'cloud') return { provider, online: !!(clean(env.WA_TOKEN) && clean(env.WA_PHONE_ID)), state: 'cloud' };
+  return { provider, online: age < 60000, state: age < 60000 ? s.state || 'starting' : 'offline', qr: age < 60000 && s.state === 'qr' ? s.qr || '' : '', number: s.number || '', printer: s.printer || '', age };
+}
+async function adminSettings(request, env) {
+  if (request.method === 'POST') {
+    const b = await request.json().catch(() => ({}));
+    if (b.autoprint !== undefined) await setSetting(env, 'autoprint', b.autoprint ? '1' : '0');
+    if (b.wabot !== undefined) await setSetting(env, 'wabot', b.wabot === 'instant' ? 'instant' : 'ask');
+    if (b.keepfiles !== undefined) await setSetting(env, 'keepfiles', b.keepfiles ? '1' : '0');
+  }
+  return json({ flags: await getFlags(env), wa: await waStatus(env) });
+}
+
+// ---------- admin PIN login (same signed session as the Google login; no password is stored in the browser) ----------
+async function pinTag(env) { return (await hmacHex(sessionSecret(env), new TextEncoder().encode('pin:' + clean(env.ADMIN_PIN)))).slice(0, 20); }
+async function adminPinLogin(request, env) {
+  const pin = clean(env.ADMIN_PIN);
+  if (!pin || !sessionSecret(env)) return json({ error: 'PIN login is not set up. In Cloudflare add ADMIN_PIN and SESSION_SECRET, then redeploy.' }, 500);
+  await ensureSchema(env);
+  const ip = (request.headers.get('cf-connecting-ip') || 'x').slice(0, 64), now = Date.now();
+  await env.DB.prepare('DELETE FROM login_fail WHERE ts<?').bind(now - 15 * 60000).run();
+  const f = await env.DB.prepare('SELECT COUNT(*) AS n FROM login_fail WHERE ip=?').bind(ip).first();
+  if (f && Number(f.n) >= 5) return json({ error: 'Too many wrong attempts. Please wait 15 minutes.' }, 429);
+  const b = await request.json().catch(() => ({}));
+  if (!sameSecret(String(b.pin || '').slice(0, 64), pin)) {
+    await env.DB.prepare('INSERT INTO login_fail (ip, ts) VALUES (?,?)').bind(ip, now).run();
+    return json({ error: 'Wrong PIN' }, 401);
+  }
+  await env.DB.prepare('DELETE FROM login_fail WHERE ip=?').bind(ip).run();
+  const payload = b64u(JSON.stringify({ e: '__pin__', x: now + 14 * 86400000, k: await pinTag(env) }));
+  return json({ session: payload + '.' + await hmacHex(sessionSecret(env), new TextEncoder().encode(payload)), email: 'Admin PIN' });
+}
+
+// ---------- helpers ----------
+const MIME_EXT = {
+  'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+  'application/msword': 'doc', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.ms-powerpoint': 'ppt', 'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+};
+const istDay = () => new Date(Date.now() + 19800000).toISOString().slice(0, 10);
+const rupee = (n) => '₹' + String(Math.round(Number(n) * 100) / 100);
+function pdfPages(buf) {          // good-enough page counter for the Cloud API path (the PC bridge counts exactly with pdf-lib)
+  try {
+    const s = new TextDecoder('latin1').decode(new Uint8Array(buf));
+    const n = (s.match(/\/Type\s*\/Page(?![A-Za-z])/g) || []).length;
+    if (n) return Math.min(n, 2000);
+    let max = 0; for (const m of s.matchAll(/\/Count\s+(\d+)/g)) max = Math.max(max, Number(m[1]));
+    return Math.min(Math.max(max, 1), 2000);
+  } catch { return 1; }
+}
+// "2 bw", "1 color", "color", "bw 3 copies", "2 কালার"  ->  { mode: 'bw'|'color'|null, copies }
+function parsePrintCaption(text) {
+  const t = String(text || '').toLowerCase();
+  const color = /colou?r|rangin|rongin|রঙিন|রঙীন|কালার/.test(t);
+  const bw = /(^|[^a-z])b\s*&\s*w([^a-z]|$)|(^|[^a-z])bw([^a-z]|$)|b\/w|black|mono|sada|সাদা|কালো/.test(t);
+  const n = t.match(/(\d{1,3})/);
+  const copies = Math.min(Math.max(n ? parseInt(n[1]) : 1, 1), 100);
+  return { mode: color ? 'color' : bw ? 'bw' : null, copies, onlyNumber: /^\s*\d{1,3}\s*(copies|copy|কপি)?\s*$/.test(t) };
+}
+// customer's reply to the menu:  1 | 2 | 3 | "1 x3" | "2 3" | "bw" | "color" | 0 / cancel
+function parseChoice(text) {
+  const t = String(text || '').trim().toLowerCase();
+  if (/^(0|cancel|stop|বাতিল)$/.test(t)) return { cancel: true };
+  const m = /^([1-3])(?:\s*(?:x|×|\*|-)?\s*(\d{1,3}))?$/.exec(t);
+  if (m) return { opt: Number(m[1]), copies: m[2] ? Math.min(Math.max(parseInt(m[2]), 1), 100) : null };
+  const c = parsePrintCaption(t);
+  if (c.mode) return { opt: c.mode === 'color' ? 2 : 1, copies: c.copies };
+  return {};
+}
+async function nextWaToken(env) {   // #WA-101, #WA-102 … restarts every day (India time)
+  const r = await env.DB.prepare('INSERT INTO wa_tokens (day,n) VALUES (?,101) ON CONFLICT(day) DO UPDATE SET n=n+1 RETURNING n').bind(istDay()).first();
+  return 'WA-' + r.n;
+}
+function waMenuText(pages, P, copies) {
+  return `📄 আপনার ফাইল পাওয়া গেছে (Pages: ${pages})! প্রিন্ট করতে নিচের নম্বর রিপ্লাই দিন:\n` +
+    `1️⃣ সাদাকালো প্রিন্ট (B&W - ${rupee(P.bw)}/p)\n2️⃣ কালার প্রিন্ট (Color - ${rupee(P.color)}/p)\n3️⃣ পাসপোর্ট ফটো / কার্ড প্রিন্ট\n\n` +
+    `Your file is received (${pages} page${pages > 1 ? 's' : ''}). Reply 1, 2 or 3.\n` +
+    `কপি / copies: "1 x3" = B&W × 3${copies > 1 ? `\n(এখন ${copies} কপি সেট আছে / ${copies} copies set)` : ''}\n❌ বাতিল / cancel: 0`;
+}
+const WA_WELCOME = '👋 নমস্কার! Digital Seva Kendra-তে স্বাগতম।\nপ্রিন্ট করতে আপনার PDF / ছবি / ডকুমেন্ট এখানেই পাঠান।\nক্যাপশনে লিখতে পারেন: "2 bw" (২ কপি সাদাকালো) বা "1 color".\n\nSend your PDF / photo / document here to print it. Caption example: "2 bw" or "1 color".';
+
+// ---------- sending ----------
+async function waCloudSend(env, to, text) {
+  const id = clean(env.WA_PHONE_ID), tok = clean(env.WA_TOKEN);
+  if (!id || !tok) throw new Error('WA_PHONE_ID / WA_TOKEN not set');
+  const r = await fetch(`https://graph.facebook.com/v21.0/${id}/messages`, {
+    method: 'POST', headers: { authorization: 'Bearer ' + tok, 'content-type': 'application/json' },
+    body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body: String(text).slice(0, 3800), preview_url: false } }),
+  });
+  if (!r.ok) throw new Error('WhatsApp send failed: ' + (await r.text()).slice(0, 200));
+}
+// Messages the shop sends on its own (printed notice, counter replies). Bridge mode: queued, the PC picks them up within ~2 s.
+async function waSend(env, number, chat, text) {
+  if (!number || !text) return;
+  try {
+    if (waProvider(env) === 'cloud') await waCloudSend(env, number, text);
+    else await env.DB.prepare('INSERT INTO wa_outbox (to_id, text, ts) VALUES (?,?,?)').bind(chat || (number + '@c.us'), String(text).slice(0, 3800), Date.now()).run();
+  } catch (e) { /* a failed courtesy message must never block printing */ }
+}
+async function waNotifyPrinted(env, o) {
+  if (!o || o.source !== 'whatsapp' || !o.wa_number || o.wa_notified) return;
+  await env.DB.prepare('UPDATE orders SET wa_notified=1 WHERE id=?').bind(o.id).run();
+  await waSend(env, o.wa_number, o.wa_chat, `🖨️ টোকেন #${o.token || o.id}: আপনার প্রিন্ট হয়ে গেছে! কাউন্টার থেকে নিয়ে নিন${Number(o.amount) ? ` (মোট ${rupee(o.amount)})` : ''}। ধন্যবাদ! 🙏\nYour print is ready — please collect it at the counter.`);
+}
+
+// ---------- the bot ----------
+async function waFinalize(env, id, ch, flags) {
+  const o = await env.DB.prepare('SELECT * FROM orders WHERE id=?').bind(id).first();
+  if (!o) return { text: '' };
+  const P = await getPrices(env);
+  const pages = Number((await env.DB.prepare('SELECT COALESCE(SUM(pages),0) AS p FROM files WHERE order_id=?').bind(id).first()).p) || 1;
+  const copies = Math.min(Math.max(parseInt(ch.copies) || o.copies || 1, 1), 100);
+  const token = o.token || await nextWaToken(env);
+  if (ch.passport) {   // option 3: the shopkeeper prepares a passport / card sheet by hand
+    await env.DB.prepare("UPDATE orders SET status='pending', color=1, copies=?, amount=0, token=?, note=?, opts=? WHERE id=? AND status IN ('wa_wait','pending')")
+      .bind(copies, token, 'Passport / card request – please prepare the sheet and talk to the customer', JSON.stringify({ kind: 'passport', source: 'whatsapp', info: 'Customer chose option 3 (passport photo / card)' }), id).run();
+    return { token, text: `🪪 টোকেন #${token}: ঠিক আছে! পাসপোর্ট ফটো / কার্ডের জন্য দোকান থেকে আপনাকে জানানো হবে।\nWe'll get back to you shortly about your passport photo / card print.` };
+  }
+  const color = ch.color ? 1 : 0;
+  const amount = Math.round(pages * copies * (color ? P.color : P.bw) * 100) / 100;
+  const auto = !!flags.autoprint;
+  const status = auto ? 'approved' : 'pending';    // 'approved' == READY_TO_PRINT: the PC agent picks it up
+  const r = await env.DB.prepare("UPDATE orders SET color=?, copies=?, amount=?, status=?, token=?, paper='A4' WHERE id=? AND status IN ('wa_wait','pending')").bind(color, copies, amount, status, token, id).run();
+  if (!((r.meta && r.meta.changes) > 0)) return { token, text: '' };
+  if (auto) await ledgerAdd(env, id);
+  const sum = `${pages} page${pages > 1 ? 's' : ''} × ${copies} ${color ? 'Color' : 'B&W'} = ${rupee(amount)}`;
+  return { token, text: auto
+    ? `✅ টোকেন #${token}: আপনার ফাইলটি প্রিন্ট হচ্ছে!\n${sum}\nপ্রিন্ট হলে জানাব — কাউন্টারে এসে টাকা দিন।\nYour file is printing. Pay at the counter.`
+    : `✅ টোকেন #${token}: আপনার ফাইল জমা হয়েছে!\n${sum}\nদোকান থেকে অনুমোদন হলেই প্রিন্ট শুরু হবে।\nWaiting for the shop to approve — we'll message you.` };
+}
+
+// m = { from, chat, name, text, files: [{ name, bytes: ArrayBuffer, pages? }] }  ->  array of reply texts
+async function waIncoming(env, m) {
+  await ensureSchema(env);
+  const number = String(m.from || '').replace(/\D/g, '').slice(0, 15);
+  if (!number) return [];
+  const chat = String(m.chat || '').slice(0, 80), name = String(m.name || '').slice(0, 60);
+  const text = String(m.text || '').trim().slice(0, 500);
+  const now = Date.now();
+  const flags = await getFlags(env), P = await getPrices(env);
+  const replies = [];
+  const files = Array.isArray(m.files) ? m.files : [];
+  await env.DB.prepare('DELETE FROM wa_hits WHERE ts<?').bind(now - 2 * 3600000).run();
+  const waiting = await env.DB.prepare("SELECT * FROM orders WHERE source='whatsapp' AND wa_number=? AND status='wa_wait' AND created_at>? ORDER BY created_at DESC LIMIT 1").bind(number, now - UNPAID_TTL_MS).first();
+
+  // ---- a file (or several) arrived ----
+  if (files.length) {
+    const limit = Number(env.WA_MAX_PER_HOUR) || 10;
+    const hits = await env.DB.prepare("SELECT COUNT(*) AS n FROM wa_hits WHERE number=? AND kind='file' AND ts>?").bind(number, now - 3600000).first();
+    if (Number(hits.n) >= limit) return ['⏳ একসাথে অনেক ফাইল পাঠানো হয়েছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।\nToo many files in a short time — please try again later.'];
+    await env.DB.prepare("INSERT INTO wa_hits (number, ts, kind) VALUES (?,?,'file')").bind(number, now).run();
+
+    const ok = [], bad = [];
+    for (const f of files) {
+      const x = ext(f.name || '');
+      if (!ALLOWED.includes(x)) bad.push(f.name || 'file');
+      else if (!f.bytes || f.bytes.byteLength > MAX_FILE_BYTES || !f.bytes.byteLength) bad.push((f.name || 'file') + ' (25 MB+)');
+      else ok.push(f);
+    }
+    if (bad.length) replies.push(`⚠️ এই ফাইল নেওয়া যায়নি / not accepted: ${bad.join(', ')}\nসাপোর্টেড: PDF, JPG, PNG, Word, Excel, PowerPoint (২৫ MB পর্যন্ত)`);
+    if (!ok.length) return replies;
+
+    let id, isNew = !waiting, have = 0;
+    if (waiting) { id = waiting.id; have = Number((await env.DB.prepare('SELECT COUNT(*) AS n FROM files WHERE order_id=?').bind(id).first()).n); }
+    if (have + ok.length > MAX_FILES) return replies.concat([`⚠️ একসাথে সর্বোচ্চ ${MAX_FILES}টি ফাইল। / Max ${MAX_FILES} files per order.`]);
+    if (isNew) {
+      id = newId();
+      await env.DB.prepare("INSERT INTO orders (id,name,phone,color,copies,amount,status,created_at,paper,opts,source,wa_number,wa_name,wa_chat) VALUES (?,?,?,0,1,0,'wa_wait',?,'A4',?,'whatsapp',?,?,?)")
+        .bind(id, name, number, now, JSON.stringify({ kind: 'doc', source: 'whatsapp' }), number, name, chat).run();
+    } else if (chat) await env.DB.prepare('UPDATE orders SET wa_chat=? WHERE id=?').bind(chat, id).run();
+    let i = have;
+    for (const f of ok) {
+      const pages = Math.min(Math.max(parseInt(f.pages) || (ext(f.name) === 'pdf' ? pdfPages(f.bytes) : 1), 1), 2000);
+      const key = `${id}/${i++}-${safeName(f.name)}`;
+      await env.FILES.put(key, f.bytes, { expirationTtl: FILE_TTL, metadata: { type: f.mime || 'application/octet-stream' } });
+      await env.DB.prepare('INSERT INTO files (order_id,name,r2_key,pages) VALUES (?,?,?,?)').bind(id, String(f.name).slice(0, 120), key, pages).run();
+    }
+    const total = Number((await env.DB.prepare('SELECT COALESCE(SUM(pages),0) AS p FROM files WHERE order_id=?').bind(id).first()).p) || 1;
+    const pc = parsePrintCaption(text);
+    const mode = pc.mode || (flags.wabot === 'instant' ? 'bw' : null);
+    if (mode) {
+      const r = await waFinalize(env, id, { color: mode === 'color', copies: pc.copies }, flags);
+      if (r.text) replies.push(r.text);
+    } else {
+      const copies = pc.onlyNumber ? pc.copies : 1;
+      if (copies > 1) await env.DB.prepare('UPDATE orders SET copies=? WHERE id=?').bind(copies, id).run();
+      replies.push(isNew ? waMenuText(total, P, copies) : `➕ ফাইল যোগ হয়েছে (মোট Pages: ${total})। এবার 1 / 2 / 3 রিপ্লাই দিন।\nFile added (total ${total} pages). Reply 1, 2 or 3.`);
+    }
+    return replies;
+  }
+
+  // ---- plain text ----
+  if (!waiting) {   // nothing pending: greet once in a while, never chat endlessly
+    const seen = await env.DB.prepare("SELECT 1 AS x FROM wa_hits WHERE number=? AND kind='welcome' AND ts>? LIMIT 1").bind(number, now - 30 * 60000).first();
+    if (seen) return [];
+    await env.DB.prepare("INSERT INTO wa_hits (number, ts, kind) VALUES (?,?,'welcome')").bind(number, now).run();
+    return [WA_WELCOME];
+  }
+  const ch = parseChoice(text);
+  if (ch.cancel) {
+    await env.DB.prepare("UPDATE orders SET status='rejected', name='', phone='', wa_number='', wa_chat='' WHERE id=? AND status='wa_wait'").bind(waiting.id).run();
+    await purgeFiles(env, waiting.id); await env.DB.prepare('DELETE FROM files WHERE order_id=?').bind(waiting.id).run();
+    return ['❌ বাতিল হয়েছে, ফাইল মুছে ফেলা হয়েছে।\nCancelled — your file was deleted.'];
+  }
+  if (ch.opt) {
+    const r = await waFinalize(env, waiting.id, { color: ch.opt === 2, passport: ch.opt === 3, copies: ch.copies || waiting.copies }, flags);
+    return r.text ? [r.text] : [];
+  }
+  return ['🙏 অনুগ্রহ করে 1, 2 বা 3 লিখে রিপ্লাই দিন।\n1 = সাদাকালো (B&W) · 2 = কালার · 3 = পাসপোর্ট/কার্ড · 0 = বাতিল\nPlease reply 1, 2 or 3 (0 to cancel).'];
+}
+
+// ---------- A) PC bridge endpoints (protected by the agent key) ----------
+async function agentWaIncoming(request, env) {
+  let meta = {}, files = [];
+  if ((request.headers.get('content-type') || '').includes('application/json')) meta = await request.json().catch(() => ({}));
+  else {
+    const form = await request.formData();
+    try { meta = JSON.parse(form.get('meta') || '{}'); } catch {}
+    const fl = form.getAll('files').filter((f) => typeof f !== 'string');
+    for (let i = 0; i < fl.length; i++) {
+      const mf = (meta.files || [])[i] || {};
+      files.push({ name: String(mf.name || fl[i].name || 'file'), mime: String(mf.mime || fl[i].type || ''), pages: mf.pages, bytes: await fl[i].arrayBuffer() });
+    }
+  }
+  const replies = await waIncoming(env, { from: meta.from, chat: meta.chat, name: meta.name, text: meta.text, files });
+  return json({ replies });
+}
+async function agentWaOutbox(env) {
+  await ensureSchema(env);
+  await env.DB.prepare('DELETE FROM wa_outbox WHERE ts<?').bind(Date.now() - 86400000).run();
+  const { results } = await env.DB.prepare('SELECT id, to_id, text FROM wa_outbox ORDER BY id LIMIT 20').all();
+  return json({ messages: results });
+}
+async function agentWaAck(request, env) {
+  const b = await request.json().catch(() => ({}));
+  for (const id of (Array.isArray(b.ids) ? b.ids : []).slice(0, 50)) await env.DB.prepare('DELETE FROM wa_outbox WHERE id=?').bind(Number(id) || 0).run();
+  return json({ ok: true });
+}
+async function agentWaStatus(request, env) {
+  await ensureSchema(env);
+  const b = await request.json().catch(() => ({}));
+  const state = ['starting', 'qr', 'authenticated', 'ready', 'disconnected', 'error'].includes(b.state) ? b.state : 'starting';
+  await setSetting(env, 'wa_status', JSON.stringify({ state, qr: state === 'qr' ? String(b.qr || '').slice(0, 600) : '', number: String(b.number || '').slice(0, 20), printer: String(b.printer || '').slice(0, 80), ts: Date.now() }));
+  return json({ ok: true });
+}
+
+// ---------- B) Meta WhatsApp Cloud API webhook ----------
+async function waWebhook(request, env, ctx) {
+  if (request.method === 'GET') {            // Meta's one-time "verify" handshake
+    const u = new URL(request.url);
+    if (u.searchParams.get('hub.mode') === 'subscribe' && sameSecret(u.searchParams.get('hub.verify_token'), env.WA_VERIFY_TOKEN)) return new Response(u.searchParams.get('hub.challenge') || '', { status: 200 });
+    return new Response('Forbidden', { status: 403 });
+  }
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+  const secret = clean(env.WA_APP_SECRET);
+  if (!secret) return json({ error: 'WA_APP_SECRET is not set' }, 500);
+  const raw = new Uint8Array(await request.arrayBuffer());
+  const got = (request.headers.get('x-hub-signature-256') || '').replace(/^sha256=/, '');
+  if (!sameSecret(got, await hmacHex(secret, raw))) return json({ error: 'Invalid signature' }, 401);
+  let p; try { p = JSON.parse(new TextDecoder().decode(raw)); } catch { return json({ error: 'Bad JSON' }, 400); }
+  const job = waCloudProcess(env, p).catch(() => {});
+  if (ctx && ctx.waitUntil) ctx.waitUntil(job); else await job;
+  return json({ received: true });          // answer Meta fast; the work continues in the background
+}
+async function waCloudMedia(env, mediaId) {
+  const h = { authorization: 'Bearer ' + clean(env.WA_TOKEN) };
+  const meta = await (await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(mediaId)}`, { headers: h })).json();
+  if (!meta.url) throw new Error('media url missing');
+  const r = await fetch(meta.url, { headers: h });
+  if (!r.ok) throw new Error('media download failed');
+  return { bytes: await r.arrayBuffer(), mime: meta.mime_type || '' };
+}
+async function waCloudProcess(env, p) {
+  await ensureSchema(env);
+  for (const entry of p.entry || []) for (const ch of entry.changes || []) {
+    const v = ch.value || {}, names = {};
+    for (const c of v.contacts || []) names[c.wa_id] = (c.profile && c.profile.name) || '';
+    for (const msg of v.messages || []) {
+      const seen = await env.DB.prepare('INSERT OR IGNORE INTO wa_seen (id, ts) VALUES (?,?)').bind(String(msg.id || ''), Date.now()).run();
+      if (!(seen.meta && seen.meta.changes > 0)) continue;                    // Meta retries deliveries: handle each message once
+      if (Math.random() < 0.05) await env.DB.prepare('DELETE FROM wa_seen WHERE ts<?').bind(Date.now() - 2 * 86400000).run();
+      const m = { from: msg.from, name: names[msg.from] || '', text: '', files: [] };
+      try {
+        if (msg.type === 'text') m.text = (msg.text && msg.text.body) || '';
+        else if (msg.type === 'image' || msg.type === 'document') {
+          const media = msg[msg.type] || {};
+          const got = await waCloudMedia(env, media.id);
+          const mime = got.mime || media.mime_type || '';
+          const name = media.filename || `whatsapp-${String(msg.id).slice(-8)}.${MIME_EXT[mime.split(';')[0]] || (msg.type === 'image' ? 'jpg' : 'pdf')}`;
+          m.text = media.caption || '';
+          m.files.push({ name, mime, bytes: got.bytes });
+        } else if (msg.type === 'button') m.text = (msg.button && msg.button.text) || '';
+        else if (msg.type === 'interactive') m.text = (msg.interactive && ((msg.interactive.button_reply || {}).id || (msg.interactive.list_reply || {}).id)) || '';
+        else continue;
+        for (const t of await waIncoming(env, m)) await waSend(env, msg.from, '', t);
+      } catch (e) { await waSend(env, msg.from, '', '⚠️ ফাইলটি নেওয়া যায়নি, আবার পাঠান। / Could not receive that file, please send it again.'); }
+    }
+  }
+}
+
+// ---------- counter actions ----------
+async function adminWaReply(request, env) {
+  const b = await request.json().catch(() => ({}));
+  const id = String(b.id || ''), text = String(b.text || '').trim().slice(0, 1000);
+  if (!/^[A-Z0-9]+$/.test(id) || !text) return json({ error: 'Message is empty' }, 400);
+  const o = await env.DB.prepare('SELECT wa_number, wa_chat FROM orders WHERE id=?').bind(id).first();
+  if (!o || !o.wa_number) return json({ error: 'This customer\'s number is no longer stored (the order was already finished).' }, 404);
+  await waSend(env, o.wa_number, o.wa_chat, text);
+  return json({ ok: true });
+}
+// 🔄 Reprint: only possible while the files are still kept (counter toggle "Keep files for reprint", 30 min)
+async function adminReprint(env, id) {
+  const o = await env.DB.prepare('SELECT status FROM orders WHERE id=?').bind(id).first();
+  if (!o) return json({ error: 'Order not found' }, 404);
+  const f = await env.DB.prepare('SELECT r2_key FROM files WHERE order_id=? AND r2_key IS NOT NULL LIMIT 1').bind(id).first();
+  const alive = f ? await env.FILES.get(f.r2_key, 'stream') : null;
+  if (!alive) return json({ error: 'The file was already deleted for privacy. Turn on "Keep files for reprint" before printing next time.' }, 410);
+  try { await alive.cancel(); } catch {}
+  await env.DB.prepare("UPDATE orders SET status='approved', printed_at=NULL, note=NULL WHERE id=?").bind(id).run();
+  return json({ ok: true });
+}
+// ✂️ Crop / rotate: the counter uploads the edited image over the original
+async function adminReplaceFile(request, env, fileId) {
+  const f = await env.DB.prepare('SELECT r2_key FROM files WHERE id=?').bind(fileId).first();
+  if (!f || !f.r2_key) return json({ error: 'File not found' }, 404);
+  const type = (request.headers.get('content-type') || '').split(';')[0];
+  if (!['image/jpeg', 'image/png'].includes(type)) return json({ error: 'Only JPEG or PNG can be replaced' }, 400);
+  const buf = await request.arrayBuffer();
+  if (!buf.byteLength || buf.byteLength > MAX_FILE_BYTES) return json({ error: 'Bad file size' }, 400);
+  await env.FILES.put(f.r2_key, buf, { expirationTtl: FILE_TTL, metadata: { type } });
+  return json({ ok: true });
 }
