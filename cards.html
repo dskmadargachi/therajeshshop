@@ -388,7 +388,7 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 html.pop-lock,html.pop-lock body{overflow:hidden}
 .popbody{display:none}
 .popbody.is-pop,.order.is-pop{display:block;position:fixed;z-index:910;left:50%;top:50%;transform:translate(-50%,-50%);width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:auto;-webkit-overflow-scrolling:touch;background:#fff!important;border-radius:22px;padding:18px 18px 20px;margin:0;box-shadow:0 40px 90px -24px rgba(15,23,42,.65);animation:popIn .22s var(--ease)}
-#tilesBox.is-pop{width:min(920px,calc(100vw - 24px))}
+
 @keyframes popIn{0%{opacity:0;transform:translate(-50%,-47%) scale(.97)}100%{opacity:1;transform:translate(-50%,-50%)}}
 @keyframes popUp{0%{opacity:.4;transform:translateY(46px)}100%{opacity:1;transform:none}}
 .pop-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-6px 0 10px;position:sticky;top:-18px;background:#fff;padding:12px 0 8px;z-index:2}
@@ -440,9 +440,8 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
 <!-- ============ CARD CROP ============ -->
 <section id="cardsMode">
  <div class="page-head"><h1>Card crop</h1><p>Aadhaar, Ration, PAN, Ayushman, Voter, APAAR, ABHA. Crops to PVC size (85.60 × 53.98 mm). Files are processed in your browser and never uploaded until you send an order.</p></div>
- <div class="typebar"><div><small>Card type</small><b id="typeName">Ration Card</b><span id="typeSub" class="note"></span></div><button class="b g sm" id="typeBtn" type="button">Change card type</button></div>
- <div class="popbody" id="tilesBox"><div class="pop-h"><b>Choose card type</b><button class="pop-x" type="button" aria-label="Close">✕</button></div><div class="tiles" id="tiles"></div></div>
- <div class="panel" id="tool">
+ <div id="tilesBox"><div class="tiles" id="tiles"></div></div>
+ <div class="panel hidden" id="tool">
   <label class="drop" for="file"><span class="ic"><svg><use href="#i-up"/></svg></span><span><strong id="pickL">Select file</strong><span id="hint"></span></span></label>
   <input type="file" id="file">
   <div class="row"><button class="b g sm hidden" id="pwBtn" type="button">Enter password</button></div>
@@ -670,16 +669,16 @@ abha:bg('#ecfeff')+'<rect width="120" height="76" fill="url(#ag)"/><defs><linear
 })();
 const cardSvg=k=>`<svg class="ca" viewBox="0 0 120 76" aria-hidden="true">${CA[k]||''}</svg>`;
 $('tiles').innerHTML=Object.entries(T).map(([k,t])=>`<button class="tile" data-k="${k}" type="button">${cardSvg(k)}<b>${t.n}</b><small>${t.bn} · ${t.d}</small></button>`).join('');
-document.querySelectorAll('.tile').forEach(b=>b.onclick=()=>{closePop();pick(b.dataset.k);$('tool').scrollIntoView({behavior:'smooth',block:'start'});$('file').click()});
+document.querySelectorAll('.tile').forEach(b=>b.onclick=()=>{pick(b.dataset.k);$('tool').scrollIntoView({behavior:'smooth',block:'start'});$('file').click()});
 /* ---- popups: keep the page short. An element is moved to <body> while it is open and put back afterwards, so every id and handler keeps working ---- */
 let popEl=null;const popBack=document.createElement('div');popBack.className='pop-back';document.body.appendChild(popBack);
 function openPop(id){closePop();const el=$(id);if(!el)return;el._home={p:el.parentNode,n:el.nextSibling};document.body.appendChild(el);el.classList.add('is-pop');popBack.classList.add('show');document.documentElement.classList.add('pop-lock');popEl=el;el.scrollTop=0}
 function closePop(){if(!popEl)return;const el=popEl;popEl=null;el.classList.remove('is-pop');popBack.classList.remove('show');document.documentElement.classList.remove('pop-lock');const hm=el._home;if(hm&&hm.p)hm.p.insertBefore(el,hm.n&&hm.n.parentNode===hm.p?hm.n:null)}
 popBack.onclick=closePop;document.addEventListener('keydown',e=>{if(e.key==='Escape')closePop()});
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('.pop-x,[data-popclose]'))closePop()});
-$('typeBtn').onclick=()=>openPop('tilesBox');$('setBtn').onclick=()=>openPop('setBox');$('printBtn').onclick=()=>openPop('printBox');
+$('setBtn').onclick=()=>openPop('setBox');$('printBtn').onclick=()=>openPop('printBox');
 function st(m,e){$('st').textContent=m||'';$('st').className=e?'e':''}
-function pick(k){K=k;Tp=T[k];$('typeName').textContent=Tp.n;$('typeSub').textContent=Tp.bn+' · '+Tp.d;pages.forEach(freeCanvas);pages=[];bx={};pdfBuf=null;$('file').value='';
+function pick(k){K=k;Tp=T[k];$('tool').classList.remove('hidden');pages.forEach(freeCanvas);pages=[];bx={};pdfBuf=null;$('file').value='';
  document.querySelectorAll('.tile').forEach(b=>b.classList.toggle('on',b.dataset.k==k));
  $('file').accept=Tp.img?'.pdf,.jpg,.jpeg,.png':'.pdf';$('pickL').textContent='Select '+Tp.n+(Tp.img?' (PDF or image)':' (PDF)');
  $('hint').textContent='Up to 15 MB · '+Tp.d;$('pwBtn').classList.add('hidden');$('pw').value='';$('ccRow').classList.toggle('hidden',!Tp.cc);
@@ -1221,7 +1220,7 @@ $('scanAddOrder').onclick=async()=>{if(!scanOutput.length){$('scanStatus').textC
 
 /* ---- start ---- */
 drawCart();
-pick(new URLSearchParams(location.search).get('t')in T?new URLSearchParams(location.search).get('t'):'ration');
+{const q0=new URLSearchParams(location.search).get('t');if(q0 in T)pick(q0)}
 scanDraw(0);scanDraw(1);window.scrollTo(0,0);
 setTimeout(()=>{cvReady().catch(()=>{})},1500);   /* warm up OpenCV quietly in the background */
 
