@@ -525,88 +525,6 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
  <a href="/pdf-tools.html"><svg><use href="#i-pdf"/></svg>PDF tools</a>
 </div></nav>
 <div class="wrap">
-  <!-- ===== SEND VIA WHATSAPP: print bot card (pay by UPI QR or cash, then collect) ===== -->
-  <style>
-  .wa-card{--sp:cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden;margin:0 0 16px;padding:18px 20px;border-radius:24px;color:#fff;background:linear-gradient(135deg,#0b6b5f 0%,#128c7e 38%,#25d366 100%);box-shadow:0 22px 40px -20px rgba(18,140,126,.9);animation:waIn .7s var(--sp) both}
-  .wa-card[hidden]{display:none}
-  .wa-card:before{content:"";position:absolute;inset:-40% -10% auto auto;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
-  @keyframes waIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
-  .wa-top{position:relative;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-  .wa-ic{position:relative;width:56px;height:56px;border-radius:18px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:30px}
-  .wa-ic:after{content:"";position:absolute;inset:-2px;border-radius:20px;border:2px solid rgba(255,255,255,.7);animation:waPulse 2s var(--sp) infinite}
-  @keyframes waPulse{0%{transform:scale(1);opacity:.9}100%{transform:scale(1.5);opacity:0}}
-  .wa-tx{flex:1;min-width:220px}
-  .wa-live{display:inline-flex;align-items:center;gap:7px;background:rgba(0,0,0,.24);padding:4px 11px;border-radius:999px;font-size:11.5px;font-weight:800;letter-spacing:.4px;margin-bottom:6px}
-  .wa-live i{width:8px;height:8px;border-radius:50%;background:#7CFF9E;animation:waDot 1.6s infinite}
-  @keyframes waDot{0%{box-shadow:0 0 0 0 rgba(124,255,158,.9)}70%{box-shadow:0 0 0 8px rgba(124,255,158,0)}100%{box-shadow:0 0 0 0 rgba(124,255,158,0)}}
-  .wa-tx b{display:block;font-size:17px;line-height:1.35;font-weight:800}
-  .wa-tx span{display:block;font-size:13px;opacity:.95;margin-top:3px;font-weight:600}
-  .wa-acts{display:flex;gap:8px;flex-wrap:wrap}
-  .wa-acts a,.wa-acts button{font:inherit;font-weight:800;font-size:14px;padding:12px 17px;border-radius:14px;border:0;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:transform .45s var(--sp),box-shadow .45s var(--sp)}
-  .wa-acts a:hover,.wa-acts button:hover{transform:translateY(-3px) scale(1.04)}
-  .wa-acts a:active,.wa-acts button:active{transform:scale(.96)}
-  .wa-go{background:#fff;color:#0b6b5f;box-shadow:0 12px 22px -12px rgba(0,0,0,.5)}.wa-qr{background:rgba(0,0,0,.24);color:#fff}
-  .wa-steps{position:relative;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:14px}
-  .wa-step{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);backdrop-filter:blur(6px);padding:8px 14px;border-radius:999px;font-size:13px;font-weight:800;animation:waIn .6s var(--sp) both;transition:transform .45s var(--sp),background .3s}
-  .wa-step:nth-child(3){animation-delay:.1s}.wa-step:nth-child(5){animation-delay:.2s}
-  .wa-step:hover{transform:translateY(-3px);background:rgba(255,255,255,.3)}
-  .wa-step em{font-style:normal;width:22px;height:22px;border-radius:50%;background:#fff;color:#0b6b5f;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
-  .wa-arrow{opacity:.8;font-weight:900}
-  .wa-note{position:relative;margin-top:10px;font-size:12.5px;font-weight:600;opacity:.95}
-  .wa-mod{position:fixed;inset:0;z-index:9990;background:rgba(15,23,42,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px}
-  .wa-mod[hidden]{display:none}
-  .wa-box{background:#fff;color:#0f172a;border-radius:26px;padding:26px;width:min(100%,380px);text-align:center;animation:waIn .5s cubic-bezier(.16,1,.3,1) both}
-  .wa-box h3{margin:0 0 4px;font-size:19px}.wa-box p{margin:0 0 14px;font-size:13.5px;color:#5a6778}
-  #waQrBox{position:relative;display:inline-block;padding:14px;border:3px solid #25d366;border-radius:20px;background:#fff;overflow:hidden}
-  #waQrBox:after{content:"";position:absolute;left:0;right:0;height:40px;top:-40px;background:linear-gradient(180deg,transparent,rgba(37,211,102,.45),transparent);animation:waScan 2.4s linear infinite}
-  @keyframes waScan{to{top:100%}}
-  .wa-num{margin-top:12px;font-weight:800;font-size:15px;color:#0b6b5f}
-  .wa-box .wa-open{display:inline-block;margin-top:12px;padding:12px 22px;border-radius:14px;background:linear-gradient(135deg,#128c7e,#25d366);color:#fff;font-weight:800;text-decoration:none}
-  .wa-box button{margin-top:12px;font:inherit;font-weight:700;padding:10px 22px;border:0;border-radius:12px;background:#eef2f7;cursor:pointer;display:block;margin-left:auto;margin-right:auto}
-  @media(max-width:520px){.wa-arrow{display:none}.wa-step{flex:1 1 100%}}
-  @media(prefers-reduced-motion:reduce){.wa-card *,.wa-card,.wa-box{animation:none!important}}
-  </style>
-  <section class="wa-card" id="waCard" hidden aria-label="Print on WhatsApp">
-    <div class="wa-top">
-      <div class="wa-ic" aria-hidden="true">💬</div>
-      <div class="wa-tx"><div class="wa-live"><i></i> LIVE · WhatsApp Print Bot</div>
-        <b>💬 WhatsApp-এ ফাইল পাঠান, প্রিন্ট নিন (Print via WhatsApp)</b>
-        <span>PDF বা ছবি পাঠান → QR/UPI অথবা ক্যাশে পেমেন্ট → প্রিন্ট রেডি। · Send your PDF / photo, pay and collect.</span></div>
-      <div class="wa-acts"><a class="wa-go" id="waLink" href="#" target="_blank" rel="noopener">📤 WhatsApp খুলুন / Open</a><button class="wa-qr" id="waQrBtn" type="button">📷 QR স্ক্যান / Scan QR</button></div>
-    </div>
-    <div class="wa-steps" aria-label="How it works">
-      <span class="wa-step"><em>1</em>Send File on WhatsApp</span><span class="wa-arrow">→</span>
-      <span class="wa-step"><em>2</em>Pay via QR or Cash</span><span class="wa-arrow">→</span>
-      <span class="wa-step"><em>3</em>Collect Print</span>
-    </div>
-    <div class="wa-note">⚡ UPI পেমেন্ট হলেই অটো প্রিন্ট · 💵 ক্যাশে দিলে কাউন্টারে টোকেন বলুন। · Pay by UPI = instant print; Cash = tell the token at the counter.</div>
-  </section>
-  <div class="wa-mod" id="waMod" hidden role="dialog" aria-modal="true"><div class="wa-box">
-    <h3>📷 WhatsApp QR স্ক্যান করুন</h3><p>ফোনের ক্যামেরা দিয়ে স্ক্যান করুন, তারপর আপনার ফাইল পাঠান।<br>Scan with your phone camera, then attach your PDF / photo.</p>
-    <div id="waQrBox"></div><div class="wa-num" id="waNum"></div>
-    <a class="wa-open" id="waLink2" href="#" target="_blank" rel="noopener">📤 WhatsApp-এ খুলুন / Open WhatsApp</a>
-    <button id="waModX" type="button">✕ বন্ধ / Close</button></div></div>
-  <script>
-  (function () {
-    var PLACEHOLDER = '91XXXXXXXXXX';            // <- or set WA_NUMBER in Cloudflare (digits with country code); the site reads it from /api/config
-    var card = document.getElementById('waCard'), drawn = false;
-    function close() { document.getElementById('waMod').hidden = true; }
-    function setup(num) {
-      if (!num || num === PLACEHOLDER) return;   // not configured yet: keep the card hidden instead of showing a dead link
-      var link = 'https://wa.me/' + num + '?text=PRINT';
-      document.getElementById('waLink').href = link; document.getElementById('waLink2').href = link;
-      document.getElementById('waNum').textContent = '+' + num.replace(/^(\d{2})(\d{5})(\d+)$/, '$1 $2 $3'); card.hidden = false;
-      document.getElementById('waQrBtn').onclick = function () {
-        document.getElementById('waMod').hidden = false;
-        if (!drawn && window.QRCode) { drawn = true; new QRCode(document.getElementById('waQrBox'), { text: link, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M }); }
-      };
-      document.getElementById('waModX').onclick = close;
-      document.getElementById('waMod').onclick = function (e) { if (e.target.id === 'waMod') close(); };
-      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
-    }
-    fetch('/api/config').then(function (r) { return r.json(); }).then(function (c) { setup(c.waNumber || PLACEHOLDER); }).catch(function () { setup(PLACEHOLDER); });
-  })();
-  </script>
 <div id="pdfPasswordOverlay" class="password-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pdfPasswordTitle">
     <form id="pdfPasswordForm" class="password-card">
       <h2 id="pdfPasswordTitle">Protected PDF</h2>
@@ -662,13 +580,13 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 
   <!-- ================= DOCUMENTS / PHOTOS — main screen: upload only ================= -->
   <div class="panel" id="docForm">
-    <h2 class="panel-h">Print documents and photos</h2>
-    <p class="panel-s">Upload your files, choose the paper and send them to the counter.</p>
+    <h2 class="panel-h" data-en="Print Documents &amp; Photos" data-bn="ডকুমেন্ট ও ছবি প্রিন্ট করুন">Print Documents &amp; Photos</h2>
+    <p class="panel-s" data-en="Select files, choose paper &amp; print instantly" data-bn="ফাইল সিলেক্ট করে সাথে সাথে প্রিন্ট নিন">Select files, choose paper &amp; print instantly</p>
     <div id="docSplit">
       <label class="drop" for="pick">
         <div class="drop-icon"><svg><use href="#i-up"/></svg></div>
-        <strong>Upload documents or photos</strong>
-        <span>PDF, JPG, PNG, Word, Excel or PowerPoint · up to 10 files</span>
+        <strong data-en="Upload documents or photos" data-bn="ডকুমেন্ট বা ছবি আপলোড করুন">Upload documents or photos</strong>
+        <span data-en="PDF, JPG, PNG, Word, Excel · up to 10 files" data-bn="PDF, JPG, PNG, Word, Excel · সর্বোচ্চ ১০টি ফাইল">PDF, JPG, PNG, Word, Excel · up to 10 files</span>
       </label>
       <input type="file" id="pick" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
       <button class="wz-btn pri hidden" type="button" data-wz-resume="doc" hidden style="width:100%;margin-top:10px">Continue your order →</button>
@@ -695,6 +613,97 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
       <button class="wz-btn pri hidden" type="button" data-wz-resume="pp" hidden style="width:100%;margin-top:10px">Continue passport photo →</button>
     </div>
   </div>
+
+  <!-- ================= PRINT VIA WHATSAPP (compact; follows the English / বাংলা switch) ================= -->
+  <style>
+  /* --- compact header + step strip + tabs + upload card: everything fits one phone screen --- */
+  .sui{padding:3px 12px!important;font-size:12px!important;min-height:0!important}
+  .topbar-in{padding:8px 14px!important;gap:6px 8px!important;flex-wrap:wrap!important}
+  .topbar::before,.topbar:before{height:3px!important}
+  .brand-mark{width:34px!important;height:34px!important;border-radius:10px!important}.brand-mark svg{width:18px;height:18px}
+  .brand-name{font-size:16px!important}.brand-sub{font-size:11px!important;white-space:nowrap}
+  .chips{gap:5px!important;flex-wrap:wrap!important}.chip{padding:3px 9px!important;font-size:11.5px!important}
+  @media(max-width:640px){.brand-sub{display:none}.topbar-in{padding:8px 12px!important}.brand-name{font-size:15px!important}.chip{padding:3px 7px!important;font-size:10.5px!important}.chips{gap:4px!important}}
+  .flow{height:28px!important;margin:6px auto 8px!important;padding:0 12px!important;font-size:12px!important;border-radius:999px!important;gap:5px!important;width:fit-content;max-width:calc(100% - 24px)}
+  .flow b{width:17px!important;height:17px!important;font-size:10px!important}
+  .tabs button,.tabs a{padding:8px 12px!important;font-size:13px!important;gap:6px!important}.tabs svg{width:16px!important;height:16px!important}
+  .wrap{padding:10px 12px 40px!important}
+  .panel{padding:14px!important}.panel-h{font-size:17px!important}.panel-s{margin:0 0 10px!important;font-size:12.5px!important}
+  .drop{padding:18px 16px!important}.drop-icon{width:40px!important;height:40px!important;margin-bottom:8px!important}.drop-icon svg{width:22px!important;height:22px!important}
+  .drop strong{font-size:15.5px!important;margin-bottom:2px!important}.drop span{font-size:12.5px!important;line-height:1.35!important}
+  /* --- OR divider + WhatsApp quick card --- */
+  .wa-or{display:flex;align-items:center;gap:10px;margin:10px 4px;color:#64748b;font-size:12px;font-weight:800;letter-spacing:.08em}
+  .wa-or:before,.wa-or:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,#c7d2fe,transparent)}
+  .wa-or[hidden]{display:none}
+  .wa-card{margin:0;padding:12px 14px;border-radius:16px;color:#fff;background:linear-gradient(135deg,#065f46 0%,#059669 100%);box-shadow:0 12px 24px -16px rgba(5,95,70,.9)}
+  .wa-card[hidden]{display:none}
+  .wa-r1{display:flex;align-items:center;gap:8px}
+  .wa-ic{font-size:20px;line-height:1}
+  .wa-t{flex:1;min-width:0;font-size:15.5px;font-weight:800;line-height:1.2}
+  .wa-live{display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,.25);padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:800;letter-spacing:.5px;flex:none}
+  .wa-live i{width:7px;height:7px;border-radius:50%;background:#7CFF9E;animation:waDot 1.6s ease-in-out infinite}
+  @keyframes waDot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.5);opacity:.35}}
+  .wa-s{margin:5px 0 10px;font-size:12.5px;font-weight:600;opacity:.95;line-height:1.35}
+  .wa-acts{display:flex;gap:8px}
+  .wa-acts a,.wa-acts button{font:inherit;font-weight:800;font-size:13.5px;padding:10px 12px;border-radius:12px;border:0;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;transition:transform .25s}
+  .wa-acts a:active,.wa-acts button:active{transform:scale(.96)}
+  .wa-go{flex:1;background:#fff;color:#065f46}
+  .wa-qr{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35)!important}
+  .wa-mod{position:fixed;inset:0;z-index:9990;background:rgba(15,23,42,.72);display:flex;align-items:center;justify-content:center;padding:16px}
+  .wa-mod[hidden]{display:none}
+  .wa-box{background:#fff;color:#0f172a;border-radius:24px;padding:24px;width:min(100%,360px);text-align:center}
+  .wa-box h3{margin:0 0 4px;font-size:18px}.wa-box p{margin:0 0 14px;font-size:13.5px;color:#5a6778}
+  #waQrBox{display:inline-block;padding:12px;border:3px solid #25d366;border-radius:18px;background:#fff}
+  .wa-num{margin-top:10px;font-weight:800;font-size:15px;color:#065f46}
+  .wa-box .wa-open{display:inline-block;margin-top:10px;padding:11px 20px;border-radius:12px;background:linear-gradient(135deg,#065f46,#059669);color:#fff;font-weight:800;text-decoration:none}
+  .wa-box button{margin:10px auto 0;font:inherit;font-weight:700;padding:10px 22px;border:0;border-radius:12px;background:#eef2f7;cursor:pointer;display:block}
+  @media(prefers-reduced-motion:reduce){.wa-live i{animation:none}}
+  </style>
+  <div class="wa-or" id="waOr" hidden><span data-en="OR" data-bn="অথবা">OR</span></div>
+  <section class="wa-card" id="waCard" hidden aria-label="Print via WhatsApp">
+    <div class="wa-r1"><span class="wa-ic" aria-hidden="true">💬</span><b class="wa-t" data-en="Print via WhatsApp" data-bn="WhatsApp-এ পাঠিয়ে প্রিন্ট নিন">Print via WhatsApp</b><span class="wa-live"><i></i>LIVE</span></div>
+    <p class="wa-s" data-en="Send PDF/photo on WhatsApp → Pay UPI/Cash → Auto Print!" data-bn="হোয়াটসঅ্যাপে ফাইল পাঠান → UPI বা ক্যাশ দিন → অটো প্রিন্ট!">Send PDF/photo on WhatsApp → Pay UPI/Cash → Auto Print!</p>
+    <div class="wa-acts"><a class="wa-go" id="waLink" href="#" target="_blank" rel="noopener" data-en="💬 Open WhatsApp" data-bn="💬 WhatsApp খুলুন">💬 Open WhatsApp</a><button class="wa-qr" id="waQrBtn" type="button" data-en="📷 Scan QR" data-bn="📷 QR স্ক্যান">📷 Scan QR</button></div>
+  </section>
+  <div class="wa-mod" id="waMod" hidden role="dialog" aria-modal="true"><div class="wa-box">
+    <h3 data-en="📷 Scan the WhatsApp QR" data-bn="📷 WhatsApp QR স্ক্যান করুন">📷 Scan the WhatsApp QR</h3>
+    <p data-en="Scan with your phone camera, then send your PDF / photo." data-bn="ফোনের ক্যামেরা দিয়ে স্ক্যান করুন, তারপর ফাইল পাঠান।">Scan with your phone camera, then send your PDF / photo.</p>
+    <div id="waQrBox"></div><div class="wa-num" id="waNum"></div>
+    <a class="wa-open" id="waLink2" href="#" target="_blank" rel="noopener" data-en="📤 Open WhatsApp" data-bn="📤 WhatsApp-এ খুলুন">📤 Open WhatsApp</a>
+    <button id="waModX" type="button" data-en="✕ Close" data-bn="✕ বন্ধ করুন">✕ Close</button></div></div>
+  <script>
+  (function () {
+    var PLACEHOLDER = '91XXXXXXXXXX';            // <- or set WA_NUMBER in Cloudflare (digits with country code); the site reads it from /api/config
+    var card = document.getElementById('waCard'), or = document.getElementById('waOr'), drawn = false;
+    /* language: follows the site's English / বাংলা switch (site-ui.js sets <html lang> and saves 'site-lang') */
+    function curLang() {
+      if (document.documentElement.lang === 'bn') return 'bn';
+      try { return localStorage.getItem('site-lang') === 'bn' ? 'bn' : 'en'; } catch (e) { return 'en'; }
+    }
+    function applyLang() {
+      var l = curLang(), n = document.querySelectorAll('[data-en]');
+      for (var i = 0; i < n.length; i++) { var t = n[i].getAttribute('data-' + l); if (t && n[i].textContent !== t) n[i].textContent = t; }
+    }
+    applyLang();
+    try { new MutationObserver(applyLang).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] }); } catch (e) {}
+    window.addEventListener('storage', applyLang); window.addEventListener('load', applyLang);
+    function close() { document.getElementById('waMod').hidden = true; }
+    function setup(num) {
+      if (!num || num === PLACEHOLDER) return;   // not configured yet: keep the card hidden instead of showing a dead link
+      var link = 'https://wa.me/' + num + '?text=PRINT';
+      document.getElementById('waLink').href = link; document.getElementById('waLink2').href = link;
+      document.getElementById('waNum').textContent = '+' + num.replace(/^(\d{2})(\d{5})(\d+)$/, '$1 $2 $3'); card.hidden = false; or.hidden = false;
+      document.getElementById('waQrBtn').onclick = function () {
+        document.getElementById('waMod').hidden = false;
+        if (!drawn && window.QRCode) { drawn = true; new QRCode(document.getElementById('waQrBox'), { text: link, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M }); }
+      };
+      document.getElementById('waModX').onclick = close;
+      document.getElementById('waMod').onclick = function (e) { if (e.target.id === 'waMod') close(); };
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    }
+    fetch('/api/config').then(function (r) { return r.json(); }).then(function (c) { setup(c.waNumber || PLACEHOLDER); }).catch(function () { setup(PLACEHOLDER); });
+  })();
+  </script>
 
   <!-- ================= COMPACT FOOTER ================= -->
   <footer class="cf" id="outro">
