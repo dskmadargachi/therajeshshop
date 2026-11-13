@@ -178,6 +178,117 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 .js-rv .rv.in{opacity:1;transform:none;transition:opacity .65s ease,transform .7s var(--ease2);transition-delay:var(--d,0s)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.js-rv .rv{opacity:1;transform:none}}
 
+/* ===== v7: Privacy & Security modal ===== */
+#pvModal .wzm-s.pm{max-width:520px;width:100%;overflow-x:hidden;padding:0 0 calc(18px + env(safe-area-inset-bottom,0px))}
+#pvModal .wzm-h{position:sticky;top:0;z-index:2;margin:0;padding:14px 16px 10px;background:#fff;border-bottom:1px solid #eef0fa}
+#pvModal .pm-body{padding:12px 14px 0;display:grid;gap:12px;min-width:0}
+#pvModal .pm-body *{min-width:0;overflow-wrap:anywhere;box-sizing:border-box}
+.pm-hero{display:flex;gap:12px;align-items:center;padding:14px;border-radius:18px;color:#fff;background:linear-gradient(135deg,#14163f,#2c2a8f 65%,#4b36c4)}
+.pm-shield{position:relative;flex:none;width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:rgba(255,255,255,.14)}
+.pm-shield svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.pm-shield:after{content:"";position:absolute;inset:0;border-radius:inherit;border:2px solid #7ee2c4;opacity:0}
+.pm-badge{display:block;font-weight:800;font-size:15px;line-height:1.25}
+.pm-sub{margin:4px 0 0;font-size:12.5px;line-height:1.45;color:#d3d8ff}
+.pm-sec{--pc:#4f5bff;--pb:#f0f2ff;padding:12px;border:1px solid #e3e8f2;border-radius:18px}
+.pm-wa{--pc:#059669;--pb:#ecfdf5}
+.pm-h{margin:0 0 10px;font-size:14.5px;font-weight:800;line-height:1.3}
+.pm-flow{display:grid;grid-template-columns:1fr;align-items:stretch}
+.pm-st{position:relative;padding:10px 10px 11px;border-radius:14px;background:var(--pb);border:1px solid color-mix(in srgb,var(--pc) 25%,#fff);display:grid;gap:3px;align-content:start}
+.pm-st:after{content:"";position:absolute;inset:-1px;border-radius:inherit;border:2px solid var(--pc);opacity:0;pointer-events:none}
+.pm-st b{font-size:13px;font-weight:800;line-height:1.3}
+.pm-st small{font-size:11.5px;line-height:1.4;color:#5b6778}
+.pm-n{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--pc);color:#fff;font-size:11px;font-weight:800}
+.pm-ar{position:relative;height:28px;color:var(--pc)}
+.pm-ar:before{content:"";position:absolute;left:50%;top:3px;bottom:3px;width:2px;margin-left:-1px;background:currentColor;opacity:.25}
+.pm-ar i{position:absolute;left:50%;top:3px;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:currentColor;opacity:0}
+.pm-ar:after{content:"";position:absolute;left:50%;bottom:3px;width:7px;height:7px;margin-left:-3.5px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg)}
+.pm-wipe{position:absolute;top:8px;right:8px;width:22px;height:22px;display:block}
+.pm-wipe em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-size:15px;line-height:1}
+.pm-wipe .t{color:var(--pc);font-weight:800;opacity:0}
+.pm-tool{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:14px;background:#f5f3ff;border:1px solid #ddd6fe}
+.pm-tool>span{flex:none;font-size:22px;line-height:1}
+.pm-tool b{display:block;font-size:13.5px;font-weight:800}
+.pm-tool p{margin:3px 0 0;font-size:12.5px;line-height:1.45;color:#475569}
+.pm-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pm-gc{padding:11px;border-radius:14px;border:1px solid #e3e8f2;background:#fff}
+.pm-gc b{display:block;font-size:12.5px;font-weight:800;line-height:1.3}
+.pm-gc span{display:block;margin-top:3px;font-size:11.5px;line-height:1.4;color:#5b6778}
+.pm-fn{margin:0;font-size:11px;line-height:1.45;color:#94a3b8;text-align:center}
+@media(min-width:480px){
+ .pm-flow{grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr) 22px minmax(0,1fr)}
+ .pm-ar{height:auto;min-height:20px}
+ .pm-ar:before{left:0;right:0;top:50%;bottom:auto;width:auto;height:2px;margin:-1px 0 0}
+ .pm-ar i{left:0;top:50%;margin:-4px 0 0}
+ .pm-ar:after{left:auto;right:1px;top:50%;bottom:auto;margin:-3.5px 0 0;transform:rotate(-45deg)}
+}
+/* animations run only while the modal is open; transform + opacity only */
+#pvModal.on .pm-shield:after{animation:pmShield 2.4s ease-out infinite}
+#pvModal.on .pm-ar i{animation:pmY 1.5s linear infinite}
+#pvModal.on .pm-ar:nth-child(4) i{animation-delay:.5s}
+#pvModal.on .pm-st{animation:pmLift 6s ease-in-out infinite;animation-delay:calc(var(--i)*2s)}
+#pvModal.on .pm-st:after{animation:pmRingHi 6s ease-in-out infinite;animation-delay:calc(var(--i)*2s)}
+#pvModal.on .pm-wipe .f{animation:pmFile 4s ease-in-out infinite}
+#pvModal.on .pm-wipe .t{animation:pmTick 4s ease-in-out infinite}
+@keyframes pmShield{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.6);opacity:0}}
+@keyframes pmY{0%{transform:translateY(0);opacity:0}15%,80%{opacity:1}100%{transform:translateY(16px);opacity:0}}
+@keyframes pmX{0%{transform:translateX(0);opacity:0}15%,80%{opacity:1}100%{transform:translateX(16px);opacity:0}}
+@media(min-width:480px){#pvModal.on .pm-ar i{animation-name:pmX}}
+@keyframes pmLift{0%,34%,100%{transform:none}8%,28%{transform:translateY(-2px)}}
+@keyframes pmRingHi{0%,34%,100%{opacity:0}8%,28%{opacity:1}}
+@keyframes pmFile{0%,45%{opacity:1;transform:scale(1)}62%,100%{opacity:0;transform:scale(.3)}}
+@keyframes pmTick{0%,50%{opacity:0;transform:scale(.3)}66%,90%{opacity:1;transform:scale(1)}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){#pvModal .pm-ar i,#pvModal .pm-st,#pvModal .pm-st:after,#pvModal .pm-shield:after{animation:none!important}#pvModal .pm-wipe .t{opacity:1}#pvModal .pm-wipe .f{opacity:0}}
+
+/* ===== v8: bigger brand header (selectors out-rank wizard.css) ===== */
+body .topbar .topbar-in{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 10px;padding:10px 14px 8px!important}
+body .topbar .brand{gap:10px;min-width:0;grid-column:1;grid-row:1}
+body .topbar .topbar-in .sg{grid-column:2;grid-row:1}
+body .topbar .brand-mark{width:44px!important;height:44px!important;border-radius:12px!important;background:var(--rgb2)!important;box-shadow:0 8px 18px -8px rgba(79,91,255,.8)}
+body .topbar .brand-mark svg{width:24px!important;height:24px!important}
+body .topbar .brand-name{font-size:clamp(21px,5.5vw,25px)!important;font-weight:900;letter-spacing:-.5px;line-height:1.05;color:#1e1b6e;white-space:nowrap}
+body .topbar .brand-name b{font-weight:900;background:var(--rgb2);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:shopShift 6s ease-in-out infinite alternate}
+@keyframes shopShift{to{background-position:100% 0}}
+body .topbar .brand-sub{display:block!important;margin-top:2px;font-size:10.5px!important;font-weight:700;letter-spacing:.1px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body .topbar .chips{grid-column:1/-1;grid-row:2;order:0;width:auto;margin:0;display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:flex-start;gap:6px}
+body .topbar .chip{padding:2px 9px!important;font-size:11px!important;line-height:1.35;white-space:nowrap}
+@media(min-width:700px){body .topbar .topbar-in{grid-template-columns:minmax(0,1fr) auto auto}body .topbar .chips{grid-column:2;grid-row:1;margin:0}body .topbar .topbar-in .sg{grid-column:3}}
+
+/* ===== v9: PDF Studio hero, premium search, privacy flow extras, trust badges ===== */
+body .hd.hero{position:relative;display:flex;flex-direction:column;align-items:center;gap:9px;max-width:760px;margin:8px auto 0;padding:14px 16px 6px;text-align:center}
+.hero-pill{display:inline-flex;align-items:center;justify-content:center;max-width:100%;padding:5px 13px;border-radius:999px;font-size:11.5px;font-weight:800;line-height:1.35;letter-spacing:.1px;color:#3730a3;background:linear-gradient(135deg,rgba(79,70,229,.1),rgba(219,39,119,.1)),rgba(255,255,255,.85);border:1px solid rgba(99,102,241,.3);box-shadow:0 8px 18px -12px rgba(79,70,229,.7),inset 0 1px 0 rgba(255,255,255,.9);animation:heroFloat 3.6s ease-in-out infinite}
+body .hd.hero h1.hero-t{display:flex;align-items:center;justify-content:center;gap:11px;max-width:100%;margin:0;font-size:clamp(24px,6vw,32px);font-weight:900;letter-spacing:-.9px;line-height:1.15;color:#1e1b4b!important;background:none!important;-webkit-text-fill-color:initial!important;animation:none!important}
+.hero-tx{display:inline-block;padding:0 .04em .1em;line-height:1.25;background:linear-gradient(135deg,#1e1b4b 0%,#4f46e5 45%,#db2777 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.hero-ic{position:relative;isolation:isolate;flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:14px;color:#fff;background:linear-gradient(145deg,#6366f1,#7c3aed 55%,#db2777);box-shadow:0 12px 24px -8px rgba(124,58,237,.75),0 0 0 1px rgba(255,255,255,.35) inset,inset 0 2px 3px rgba(255,255,255,.55),inset 0 -6px 10px rgba(30,27,75,.28)}
+.hero-ic:before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:linear-gradient(135deg,#a5b4fc,#f0abfc);opacity:.75;transform:translate(4px,4px) rotate(8deg)}
+.hero-ic:after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;border:2px solid #8b5cf6;opacity:0;animation:heroGlow 2.8s ease-out infinite}
+.hero-ic svg{width:25px;height:25px;filter:drop-shadow(0 2px 3px rgba(30,27,75,.4))}
+body .hd.hero .hero-sub{margin:0;max-width:520px;font-size:13.5px;line-height:1.5;font-weight:600;color:#475569}
+@keyframes heroFloat{50%{transform:translateY(-3px)}}
+@keyframes heroGlow{0%{transform:scale(1);opacity:.55}100%{transform:scale(1.6);opacity:0}}
+.sx{position:relative;display:flex;align-items:center;margin:4px 0 0}
+.sx-i{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:16px;line-height:1;pointer-events:none;z-index:1}
+body .sx input#sq{display:block;width:100%;height:50px;margin:0;padding:0 46px 0 44px!important;font:600 16px/1.2 inherit;font-family:inherit;color:#1e1b4b;border-radius:16px!important;border:1.5px solid rgba(165,180,252,.6)!important;background:rgba(255,255,255,.92)!important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 10px 24px -16px rgba(79,70,229,.6),inset 0 1px 0 #fff;outline:0;transition:box-shadow .2s,border-color .2s}
+body .sx input#sq::placeholder{color:#8b93b8;font-weight:600}
+body .sx input#sq:focus{border-color:#6366f1!important;box-shadow:0 0 0 4px rgba(99,102,241,.18),0 14px 30px -14px rgba(124,58,237,.65)}
+.sx-c{position:absolute;right:9px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:#eef0ff;color:#4338ca;font-size:13px;font-weight:800;line-height:1;cursor:pointer}
+.sx-c[hidden]{display:none}
+#pvModal .pm-dev{--pc:#7c3aed;--pb:#f5f3ff;border-color:#ddd6fe;background:linear-gradient(180deg,#faf8ff,#fff);box-shadow:0 14px 28px -22px rgba(124,58,237,.8)}
+.pm-zero{margin:10px 0 0;padding:8px 10px;border-radius:12px;font-size:12px;font-weight:800;line-height:1.4;text-align:center;color:#065f46;background:#ecfdf5;border:1px dashed #6ee7b7}
+.pm-brbar{position:absolute;top:9px;right:8px;display:flex;align-items:center;gap:3px}
+.pm-brbar>i{display:block;width:5px;height:5px;border-radius:50%;background:#c4b5fd}
+.pm-lock{position:relative;display:grid;place-items:center;width:22px;height:22px;margin-left:3px;border-radius:50%;font-size:12px;line-height:1;background:#ede9fe}
+.pm-lock:after{content:"";position:absolute;inset:-1px;border-radius:50%;border:2px solid #7c3aed;opacity:0}
+#pvModal.on .pm-lock{animation:pmGlow 2s ease-in-out infinite}
+#pvModal.on .pm-lock:after{animation:pmShield 2s ease-out infinite}
+@keyframes pmGlow{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+body .topbar .brand>span:last-child{min-width:0;overflow:hidden}
+.trust{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 8px;margin:8px auto 2px;padding:0 8px}
+.tb{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.85);border:1px solid #e2e8f0;box-shadow:0 4px 12px -8px rgba(15,23,42,.4);font-size:11.5px;font-weight:700;line-height:1.3;color:#475569;text-align:left}
+.tb svg{flex:none;width:16px;height:16px}
+.tb-rz b{color:#2563eb;font-weight:800}
+.tb-cf b{color:#ea580c;font-weight:800}
+@media (prefers-reduced-motion:reduce){.hero-pill,.hero-ic:after,#pvModal .pm-lock,#pvModal .pm-lock:after{animation:none!important}}
+@media print{.trust{display:none!important}}
 </style>
 <link rel="stylesheet" href="/wizard.css">
 <script src="/wizard.js"></script>
@@ -408,29 +519,10 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
  <a href="/cards.html#scanner"><svg><use href="#i-scan"/></svg>Smart scanner</a>
  <a href="/pdf-tools.html" class="on"><svg><use href="#i-pdf"/></svg>PDF tools</a>
 </div></nav>
-<div class="hd"><h1>PDF tools</h1><p>Merge, split, compress, rotate, convert and more. Everything runs on your own device.</p></div>
-<div class="bar"><input type="text" id="sq" placeholder="Search all tools…"><div id="tabs"></div></div><div class="grid" id="grid"></div>
-<footer class="cf"><div class="cf-in"><span><strong>therajesh.shop</strong> · Your PDFs never leave your device</span><button type="button" data-wz-modal="pvModal">Privacy &amp; Security Info</button></div></footer>
-<div class="wzm" id="pvModal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="pvT"><div class="wzm-s">
-<div class="wzm-h"><b id="pvT">Privacy &amp; Security</b><button class="wz-x" type="button" data-wz-mclose aria-label="Close">✕</button></div>
-<p class="hint" style="margin:0 0 6px">All PDF tools run inside your browser. Nothing is uploaded to our server. Printing orders are different: those files are deleted right after printing.</p>
-<figure class="pvd"><figcaption>Where your file goes</figcaption>
-<svg viewBox="0 0 760 340" role="img" aria-label="Print orders: your phone uploads to our server, then to the shop PC and printer, and the file is deleted from the server and the PC afterwards. PDF tools: your file is processed inside your own browser and is never uploaded.">
-<defs><marker id="pvar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10z" style="fill:var(--brand)"/></marker><marker id="pvar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10z" fill="#c62828"/></marker></defs>
-<text class="lt" x="20" y="26">1 · PRINT ORDER — your file travels to the shop</text>
-<rect class="n" x="20" y="44" width="120" height="64" rx="12"/><text class="nt" x="80" y="72">Your phone</text><text class="ns" x="80" y="90">upload file</text><rect class="n" x="215" y="44" width="140" height="64" rx="12"/><text class="nt" x="285" y="72">Our server</text><text class="ns" x="285" y="90">held until paid</text><rect class="n" x="430" y="44" width="130" height="64" rx="12"/><text class="nt" x="495" y="72">Shop PC</text><text class="ns" x="495" y="90">temporary copy</text><rect class="n" x="635" y="44" width="105" height="64" rx="12"/><text class="nt" x="687" y="72">Printer</text><text class="ns" x="687" y="90">prints it</text>
-<line class="ln" x1="142" y1="76" x2="213" y2="76"/><line class="ln" x1="357" y1="76" x2="428" y2="76"/><line class="ln" x1="562" y1="76" x2="633" y2="76"/>
-<text class="al" x="177" y="66">HTTPS</text><text class="al" x="392" y="66">after pay</text><text class="al" x="597" y="66">print</text>
-<line class="dl" x1="285" y1="110" x2="285" y2="146"/><line class="dl" x1="495" y1="110" x2="495" y2="146"/>
-<rect class="d" x="215" y="148" width="140" height="34" rx="9"/><text class="dt" x="285" y="170">Deleted after print</text>
-<rect class="d" x="430" y="148" width="130" height="34" rx="9"/><text class="dt" x="495" y="170">Deleted after print</text>
-<line class="sep" x1="20" y1="204" x2="740" y2="204"/>
-<text class="lt" x="20" y="232">2 · PDF TOOLS — your file never leaves your device</text>
-<rect class="n" x="20" y="250" width="120" height="64" rx="12"/><text class="nt" x="80" y="278">Your file</text><text class="ns" x="80" y="296">PDF or image</text><rect class="n" x="215" y="250" width="345" height="64" rx="12"/><text class="nt" x="387" y="278">Your own browser</text><text class="ns" x="387" y="296">merge · split · compress · convert all happen here</text><rect class="n" x="635" y="250" width="105" height="64" rx="12"/><text class="nt" x="687" y="278">Download</text><text class="ns" x="687" y="296">result file</text>
-<line class="ln" x1="142" y1="282" x2="213" y2="282"/><line class="ln" x1="562" y1="282" x2="633" y2="282"/>
-<text class="ok" x="387" y="334">No upload · no server · no copy kept</text>
-</svg></figure>
-</div></div>
+<div class="hd hero"><span class="hero-pill" data-en="✨ 100% Free · Runs on Your Device · Zero Upload" data-bn="✨ ১০০% ফ্রি · আপনার ফোনেই কাজ করে · কোনো আপলোড হয় না">✨ 100% Free · Runs on Your Device · Zero Upload</span><h1 class="hero-t"><span class="hero-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-pdf"/></svg></span><span class="hero-tx" data-en="All-in-One PDF Studio" data-bn="অল-ইন-ওয়ান PDF স্টুডিও">All-in-One PDF Studio</span></h1><p class="hero-sub" data-en="Merge, split, compress, convert &amp; print-ready PDFs in seconds" data-bn="মার্জ, স্প্লিট, কমপ্রেস, কনভার্ট ও প্রিন্ট-রেডি PDF — কয়েক সেকেন্ডেই">Merge, split, compress, convert &amp; print-ready PDFs in seconds</p></div>
+<div class="bar"><div class="sx"><span class="sx-i" aria-hidden="true">🔍</span><input type="text" id="sq" placeholder="Search all tools…" aria-label="Search all tools…" autocomplete="off" enterkeyhint="search"><button type="button" class="sx-c" id="sqx" aria-label="Clear search" hidden>✕</button></div><div id="tabs"></div></div><div class="grid" id="grid"></div>
+<footer class="cf"><div class="cf-in"><span><strong>therajesh.shop</strong> · Your PDFs never leave your device</span><button type="button" data-wz-modal="pvModal">Privacy &amp; Security Info</button><a href="https://maps.app.goo.gl/UmdKBVE93Mx9LiMfA" target="_blank" rel="noopener">Directions</a><a href="tel:+919932250689">Call</a></div><div class="trust" role="group" aria-label="Payments &amp; Security"><span class="tb tb-rz"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4l8 3v6.1c0 5-3.3 8.7-8 10.1-4.7-1.4-8-5.100-8-10.100V5.400z" fill="#2563eb"/><rect x="7" y="9.200" width="10" height="6.600" rx="1.500" fill="#fff"/><rect x="7" y="10.800" width="10" height="1.600" fill="#02042b"/><rect x="8.400" y="13.800" width="3" height="1" rx=".5" fill="#2563eb"/></svg><span class="tb-t"><span data-en="Payments Powered &amp; Secured by " data-bn="">Payments Powered &amp; Secured by </span><b>Razorpay</b><span data-en="" data-bn=" দ্বারা চালিত ও সুরক্ষিত পেমেন্ট"></span></span></span><span class="tb tb-cf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.200 18.500a4.600 4.600 0 0 1-.7-9.150A6.100 6.100 0 0 1 18.200 9a4.800 4.800 0 0 1-.4 9.500z" fill="#f59e0b"/><rect x="9.800" y="11.600" width="4.400" height="3.800" rx=".9" fill="#fff"/><path d="M10.700 11.600v-.9a1.300 1.300 0 0 1 2.600 0v.9" fill="none" stroke="#ea580c" stroke-width="1.200" stroke-linecap="round"/></svg><span class="tb-t"><span data-en="Secured by " data-bn="">Secured by </span><b>Cloudflare</b><span data-en="" data-bn=" দ্বারা সুরক্ষিত"></span></span></span></div><div class="cf-n">Developed by <strong>Rajesh Das</strong></div></footer>
+<div class="wzm" id="pvModal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="pvT"><div class="wzm-s pm" data-pv="9"><div class="wzm-h"><b id="pvT">Privacy &amp; Security</b><button class="wz-x" type="button" data-wz-mclose aria-label="Close">✕</button></div><div class="pm-body"><div class="pm-hero"><div class="pm-shield" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.6-3 8.3-7 10-4-1.7-7-5.4-7-10V6z"/><rect x="9" y="10.5" width="6" height="4.5" rx="1"/><path d="M10.5 10.5V9a1.5 1.5 0 0 1 3 0v1.5"/></svg></div><div><span class="pm-badge" data-en="🔒 100% Private &amp; Auto-Deleted" data-bn="🔒 ১০০% গোপনীয় ও অটো-ডিলিট">🔒 100% Private &amp; Auto-Deleted</span><p class="pm-sub" data-en="Your files are automatically wiped the moment printing finishes—both from our shop PC and cloud server." data-bn="প্রিন্ট শেষ হওয়ার সাথে সাথেই আপনার ফাইল আমাদের দোকানের পিসি ও ক্লাউড সার্ভার—দুই জায়গা থেকেই অটোমেটিক মুছে যায়।">Your files are automatically wiped the moment printing finishes—both from our shop PC and cloud server.</p></div></div><section class="pm-sec pm-dev"><h3 class="pm-h" data-en="🛠️ How PDF &amp; ID Card Tools Work (100% On-Device)" data-bn="🛠️ PDF ও আইডি কার্ড টুলস কীভাবে কাজ করে (১০০% অন-ডিভাইস)">🛠️ How PDF &amp; ID Card Tools Work (100% On-Device)</h3><div class="pm-flow" role="list"><div class="pm-st" role="listitem" style="--i:0"><span class="pm-n">1</span><b data-en="📄 Your PDF / Photo" data-bn="📄 আপনার PDF / ছবি">📄 Your PDF / Photo</b><small data-en="Pick a file from your phone or computer" data-bn="ফোন বা কম্পিউটার থেকে ফাইল বেছে নিন">Pick a file from your phone or computer</small></div><div class="pm-ar" aria-hidden="true"><i></i></div><div class="pm-st" role="listitem" style="--i:1"><span class="pm-n">2</span><span class="pm-brbar" aria-hidden="true"><i></i><i></i><i></i><span class="pm-lock">🔒</span></span><b data-en="⚡ Instant Browser Processing" data-bn="⚡ ব্রাউজারেই ঝটপট প্রসেসিং">⚡ Instant Browser Processing</b><small data-en="Merge, Split, Compress, Convert" data-bn="মার্জ, স্প্লিট, কমপ্রেস, কনভার্ট">Merge, Split, Compress, Convert</small></div><div class="pm-ar" aria-hidden="true"><i></i></div><div class="pm-st" role="listitem" style="--i:2"><span class="pm-n">3</span><span class="pm-wipe" aria-hidden="true"><em class="f">⬇️</em><em class="t">✓</em></span><b data-en="✅ Direct Download to Phone" data-bn="✅ সরাসরি ফোনে ডাউনলোড">✅ Direct Download to Phone</b><small data-en="Saved straight to your device" data-bn="ফাইল সরাসরি আপনার ডিভাইসে সেভ হয়">Saved straight to your device</small></div></div><p class="pm-zero" role="note" data-en="🚫 Zero Server Upload · Files NEVER leave your phone or computer!" data-bn="🚫 কোনো সার্ভারে আপলোড নেই · আপনার ফাইল কখনো ফোন বা কম্পিউটারের বাইরে যায় না!">🚫 Zero Server Upload · Files NEVER leave your phone or computer!</p></section><section class="pm-sec pm-web"><h3 class="pm-h" data-en="🌐 Website Print Flow" data-bn="🌐 ওয়েবসাইট প্রিন্ট ফ্লো (আপলোড ও প্রিন্ট)">🌐 Website Print Flow</h3><div class="pm-flow" role="list"><div class="pm-st" role="listitem" style="--i:0"><span class="pm-n">1</span><b data-en="📱 Upload via HTTPS" data-bn="📱 HTTPS-এ আপলোড">📱 Upload via HTTPS</b><small data-en="Encrypted while it travels" data-bn="পাঠানোর সময় এনক্রিপ্টেড">Encrypted while it travels</small></div><div class="pm-ar" aria-hidden="true"><i></i></div><div class="pm-st" role="listitem" style="--i:1"><span class="pm-n">2</span><b data-en="☁️ Encrypted Temp Queue" data-bn="☁️ এনক্রিপ্টেড অস্থায়ী কিউ">☁️ Encrypted Temp Queue</b><small data-en="Held briefly until paid (auto-delete in 60 min if unpaid)" data-bn="পেমেন্ট না হওয়া পর্যন্ত সাময়িক (বাকি থাকলে ৬০ মিনিটে অটো-ডিলিট)">Held briefly until paid (auto-delete in 60 min if unpaid)</small></div><div class="pm-ar" aria-hidden="true"><i></i></div><div class="pm-st" role="listitem" style="--i:2"><span class="pm-n">3</span><span class="pm-wipe" aria-hidden="true"><em class="f">📄</em><em class="t">✓</em></span><b data-en="🖨️ Printed &amp; Instantly Wiped" data-bn="🖨️ প্রিন্ট ও সঙ্গে সঙ্গে মুছে ফেলা">🖨️ Printed &amp; Instantly Wiped</b><small data-en="Deleted from the shop PC and the server right after printing" data-bn="প্রিন্টের পরেই দোকানের পিসি ও সার্ভার থেকে ফাইল মুছে যায়">Deleted from the shop PC and the server right after printing</small></div></div></section><section class="pm-sec pm-wa"><h3 class="pm-h" data-en="💬 WhatsApp Print Bot Flow" data-bn="💬 WhatsApp প্রিন্ট বট ফ্লো">💬 WhatsApp Print Bot Flow</h3><div class="pm-flow" role="list"><div class="pm-st" role="listitem" style="--i:0"><span class="pm-n">1</span><b data-en="💬 Send File on WhatsApp" data-bn="💬 WhatsApp-এ ফাইল পাঠান">💬 Send File on WhatsApp</b><small data-en="Message your file to the shop number" data-bn="দোকানের নম্বরে আপনার ফাইল পাঠান">Message your file to the shop number</small></div><div class="pm-ar" aria-hidden="true"><i></i></div><div class="pm-st" role="listitem" style="--i:1"><span class="pm-n">2</span><b data-en="⚡ Pay UPI QR / Cash Token" data-bn="⚡ UPI QR / ক্যাশ টোকেনে পেমেন্ট">⚡ Pay UPI QR / Cash Token</b><small data-en="Pay by UPI QR or with a cash token" data-bn="UPI QR বা ক্যাশ টোকেনে টাকা দিন">Pay by UPI QR or with a cash token</small></div><div class="pm-ar" aria-hidden="true"><i></i></div><div class="pm-st" role="listitem" style="--i:2"><span class="pm-n">3</span><span class="pm-wipe" aria-hidden="true"><em class="f">📄</em><em class="t">✓</em></span><b data-en="🖨️ Auto-Print &amp; Immediate File Purge" data-bn="🖨️ অটো-প্রিন্ট ও সঙ্গে সঙ্গে ফাইল মুছে ফেলা">🖨️ Auto-Print &amp; Immediate File Purge</b><small data-en="Prints automatically, then the file is purged" data-bn="নিজে থেকেই প্রিন্ট হয়, তারপর ফাইল মুছে যায়">Prints automatically, then the file is purged</small></div></div></section><div class="pm-g"><div class="pm-gc"><b data-en="🗑️ Wiped from Shop PC" data-bn="🗑️ দোকানের পিসি থেকে মুছে যায়">🗑️ Wiped from Shop PC</b><span data-en="Temp copy is erased immediately after print." data-bn="প্রিন্টের সাথে সাথেই অস্থায়ী কপি মুছে ফেলা হয়।">Temp copy is erased immediately after print.</span></div><div class="pm-gc"><b data-en="⏱️ 60-Min Unpaid Expiry" data-bn="⏱️ ৬০ মিনিটে অপরিশোধিত মেয়াদ শেষ">⏱️ 60-Min Unpaid Expiry</b><span data-en="Unpaid or abandoned uploads auto-delete in 60 minutes." data-bn="পেমেন্ট না হওয়া বা অসমাপ্ত আপলোড ৬০ মিনিটে অটো-ডিলিট হয়।">Unpaid or abandoned uploads auto-delete in 60 minutes.</span></div></div><p class="pm-fn" data-en="Visit counter: we log your IP address and approximate city; these logs are deleted after 90 days." data-bn="ভিজিট কাউন্টার: আমরা আপনার IP অ্যাড্রেস ও আনুমানিক শহর লগ করি; এই লগ ৯০ দিন পর মুছে যায়।">Visit counter: we log your IP address and approximate city; these logs are deleted after 90 days.</p></div></div></div>
 
 <div id="modal" role="dialog" aria-modal="true" aria-labelledby="mt">
 <div class="pt-bar">
@@ -842,7 +934,10 @@ T.forEach(t => {
 const tabs = ['All', 'Print Shop', ...Object.keys(CAT)]; let activeTab = 'All';
 const filterGrid = () => { const q = $('sq').value.toLowerCase(); [...grid.children].forEach(b => { const okT = activeTab === 'All' || (activeTab === 'Print Shop' ? !!b.dataset.shop : b.dataset.cat === activeTab); b.style.display = okT && (!q || b.dataset.q.includes(q)) ? '' : 'none'; }); };
 tabs.forEach(c => { const b = T$('button', 'tab' + (c === 'All' ? ' on' : ''), c === 'Print Shop' ? '🖨️ Print Shop' : c); b.type = 'button'; b.onclick = () => { activeTab = c; [...$('tabs').children].forEach(x => x.classList.toggle('on', x === b)); filterGrid(); }; $('tabs').appendChild(b); });
-$('sq').oninput = filterGrid;
+const syncClear = () => { $('sqx').hidden = !$('sq').value; };
+$('sq').oninput = () => { filterGrid(); syncClear(); };
+$('sqx').onclick = () => { $('sq').value = ''; filterGrid(); syncClear(); $('sq').focus(); };
+$('sq').onkeydown = e => { if (e.key === 'Escape' && $('sq').value) { $('sq').value = ''; filterGrid(); syncClear(); } };
 
 /* ====================================================================
    PDF ENCRYPTION  (standard security handler, V4 / R4, AES-128 "AESV2")
