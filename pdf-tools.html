@@ -307,6 +307,83 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 .pt-jc .pt-dl{min-height:40px;font-size:13px;padding:8px}
 #nx{max-width:680px;margin:0 auto}
 .rt{max-height:260px;overflow:auto}
+
+/* ===================== v3: upload screen, cards, lightbox ===================== */
+.pt-bar{justify-content:space-between}
+.tp-head{display:flex!important;align-items:center;gap:12px;text-align:left!important;margin:2px 0 14px!important}
+#mti .ic{width:46px;height:46px;margin:0;border-radius:14px}
+.pt-th{min-width:0}.pt-th h2{margin:0!important;font-size:21px!important;line-height:1.2}.pt-th p{margin:2px 0 0!important;font-size:13px;color:var(--mu)}
+.pt-b.iso{background:#e0f2fe;color:#0369a1}.pt-b.pw{background:#ede9fe;color:#6d28d9}
+
+.pt-dz{border:2px dashed #818cf8;border-radius:24px;padding:36px 20px;text-align:center;background:linear-gradient(145deg,#ffffff 0%,#f5f3ff 50%,#eff6ff 100%);animation:pt-bd 3s ease-in-out infinite;transition:transform .2s,box-shadow .2s}
+.pt-dz.dz{transform:scale(1.015);box-shadow:0 0 0 6px rgba(129,140,248,.22)}
+@keyframes pt-bd{0%,100%{border-color:#818cf8}50%{border-color:#c4b5fd}}
+.pt-float{animation:pt-fl 3.2s ease-in-out infinite;margin:0 auto 6px;width:min(220px,70%)}
+.pt-float svg{width:100%;height:auto;display:block;filter:drop-shadow(0 14px 18px rgba(79,70,229,.22))}
+@keyframes pt-fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.pt-cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;max-width:280px;height:54px;margin:8px auto 4px;border:0;border-radius:99px;font-size:16px;font-weight:700;color:#fff;background:linear-gradient(135deg,#4f46e5,#ec4899);box-shadow:0 10px 25px rgba(79,70,229,.3);cursor:pointer;transition:transform .15s,box-shadow .15s}
+.pt-cta:active{transform:scale(.97)}.pt-cta:hover{box-shadow:0 14px 30px rgba(79,70,229,.4)}
+.pt-dz .orline{margin:6px 0 12px;font-size:13px;color:var(--mu)}
+.pt-pills{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.pt-pl{font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:99px;background:#fff;border:1px solid #c7d2fe;color:#3730a3}
+@media(prefers-reduced-motion:reduce){.pt-dz,.pt-float{animation:none}}
+
+.pt-how{margin-top:16px;background:#fff;border:1px solid var(--brand-line);border-radius:20px;padding:16px}
+.pt-how h3{margin:0 0 12px;font-size:16px}
+.pt-hv{display:flex;align-items:center;gap:12px;background:var(--brand-soft);border-radius:14px;padding:12px}
+.pt-hv .ic{flex:none;width:44px;height:44px;margin:0}.pt-hv p{margin:0;font-size:14px;line-height:1.45}
+.pt-lay{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pt-lo{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 8px;border:2px solid var(--bd);border-radius:16px;background:#fff;cursor:pointer;text-align:center}
+.pt-lo.on{border-color:#6366f1;background:#eef2ff;box-shadow:0 8px 18px -12px rgba(79,70,229,.7)}
+.pt-lo b{font-size:13.5px}.pt-lo span{font-size:12px;color:var(--mu)}
+.sheet{display:grid;gap:4px;padding:5px;background:#fff;border:1px solid #cbd5e1;box-shadow:0 4px 10px rgba(15,23,42,.14);border-radius:3px;margin-bottom:6px}
+.sheet.land{width:98px;height:70px;grid-template-columns:1fr 1fr}.sheet.p4{width:70px;height:98px;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.sheet i{display:block;background:linear-gradient(145deg,#c7d2fe,#e0e7ff);border:1px solid #a5b4fc;border-radius:2px}
+.pt-seg2{display:flex;gap:6px;margin-top:10px;background:#eef1f8;border-radius:12px;padding:3px}
+.pt-seg2 button{flex:1;padding:9px 6px;border-radius:10px;font-size:13px;font-weight:700;background:transparent;color:#475569}
+.pt-seg2 button.on{background:#fff;color:#3730a3;box-shadow:0 2px 6px rgba(15,23,42,.12)}
+.pt-steps{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;margin-top:14px}
+.pt-steps .stp{font-size:12.5px;font-weight:700;padding:7px 12px;border-radius:99px;background:linear-gradient(135deg,#eef2ff,#fdf2f8);border:1px solid #e0e7ff;color:#3730a3}
+.pt-steps .ar{color:#a5b4fc;font-weight:800}
+
+/* thumbnail cards: tinted stage + real paper */
+.fgrid{gap:12px}
+.fc{position:relative;padding:8px;border-radius:18px;background:#fff;border:1px solid var(--bd);box-shadow:0 8px 20px -16px rgba(60,70,200,.55);display:flex;flex-direction:column;will-change:transform}
+.fc.pop .no{animation:pt-pop .35s ease}
+@keyframes pt-pop{0%{transform:scale(1)}50%{transform:scale(1.35)}100%{transform:scale(1)}}
+.fc .th{position:relative;height:180px;padding:10px;border-radius:12px;background:linear-gradient(145deg,#e2e8f0,#eef2ff);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:zoom-in}
+.pt-paper{display:flex;align-items:center;justify-content:center;max-width:100%;max-height:100%;background:#fff;border:1px solid #cbd5e1;box-shadow:0 4px 12px rgba(15,23,42,.12);border-radius:4px;transition:transform .25s;font-size:34px;min-width:60px;min-height:80px}
+.pt-paper img{display:block;max-width:100%;max-height:158px;width:auto;height:auto;border-radius:3px;-webkit-user-drag:none}
+.pt-paper.ld{background:linear-gradient(100deg,#f1f5f9 30%,#fff 50%,#f1f5f9 70%);background-size:200% 100%;animation:pt-sh 1.2s linear infinite}
+@keyframes pt-sh{to{background-position:-200% 0}}
+.pt-zoom{position:absolute;right:8px;bottom:8px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(15,23,42,.72);color:#fff;pointer-events:none}
+.fc .no{position:absolute;top:14px;left:14px;z-index:3;min-width:28px;height:26px;padding:0 8px;border-radius:99px;background:linear-gradient(135deg,#6366f1,#ec4899);color:#fff;font-size:12.5px;font-weight:800;display:grid;place-items:center;box-shadow:0 4px 10px rgba(99,102,241,.45)}
+.fc .x{position:absolute;top:14px;right:14px;z-index:3;width:28px;height:28px;padding:0;border-radius:50%;background:rgba(255,255,255,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.8);color:#334155;font-size:13px;box-shadow:0 2px 8px rgba(15,23,42,.18)}
+.fc .x:hover,.fc .x:active{background:#fee2e2;color:#ef4444}
+.fc .nm{margin-top:8px;font-weight:600;font-size:13px;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fc .mt{margin-top:4px;display:flex;flex-wrap:wrap;gap:4px}
+.pt-pill{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:99px;background:#eef2ff;color:#3730a3}
+.fc .seg{display:flex;margin-top:8px;border:1px solid var(--bd);border-radius:12px;overflow:hidden;background:#f8fafc}
+.fc .seg button{flex:1;padding:8px 0;border:0;border-radius:0;background:transparent;font-size:15px;line-height:1}
+.fc .seg button+button{border-left:1px solid var(--bd)}
+.fc .seg button:disabled{opacity:.35}
+.fc .seg button:not(:disabled):active{background:#e0e7ff}
+.fc.add{align-items:center;justify-content:center;min-height:180px;border:2px dashed #a5b4fc;background:#f5f3ff;color:#4338ca;font-weight:800;font-size:14px;box-shadow:none;cursor:pointer;text-align:center}
+.pt-addm{padding:5px 12px;font-size:12.5px;font-weight:800;border-radius:99px;background:#f5f3ff;border:2px dashed #a5b4fc;color:#4338ca;margin-left:auto}
+/* page grid uses the same paper look */
+.pt-pg .pi{background:linear-gradient(145deg,#e2e8f0,#eef2ff);padding:6px}
+.pt-pg img{width:auto;height:auto;max-width:100%;max-height:100%;background:#fff;border:1px solid #cbd5e1;box-shadow:0 3px 8px rgba(15,23,42,.14);border-radius:3px}
+.pt-pw{display:flex;gap:6px}.pt-pw input{flex:1;min-width:0}.pt-eye{flex:none;padding:0 12px;font-size:12.5px;font-weight:700;border-radius:10px;background:#fff}
+
+/* full-screen lightbox with pinch zoom */
+#pv{padding:0;background:rgba(15,23,42,.94)}
+#pv .pvb{width:100%;height:100%;max-width:none;max-height:none;border-radius:0;background:transparent;color:#fff;padding:10px 10px calc(10px + env(safe-area-inset-bottom,0px))}
+#pv .pvh{align-items:center}#pv .pvh b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+#pv button{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:12px;padding:8px 14px;font-weight:700}
+#pv .pvh button{width:40px;height:40px;padding:0;border-radius:50%}
+#pvc{flex:1;min-height:0;overflow:hidden;touch-action:none;display:flex;align-items:center;justify-content:center;color:#cbd5e1}
+#pvc canvas,#pvc img{max-width:100%;max-height:100%;width:auto;height:auto;border:0;background:#fff;border-radius:4px;box-shadow:0 10px 40px rgba(0,0,0,.5);transform-origin:center center;user-select:none;-webkit-user-drag:none}
+#pv .pvf{display:flex;align-items:center;gap:6px;justify-content:center;flex-wrap:wrap}#pv .pvf .sp{flex:1}#pvn{font-weight:700;font-size:13px;min-width:54px;text-align:center}
 </style>
 </head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -333,7 +410,7 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 </div></nav>
 <div class="hd"><h1>PDF tools</h1><p>Merge, split, compress, rotate, convert and more. Everything runs on your own device.</p></div>
 <div class="bar"><input type="text" id="sq" placeholder="Search all tools…"><div id="tabs"></div></div><div class="grid" id="grid"></div>
-<footer class="cf"><div class="cf-in"><span><strong>therajesh.shop</strong> · Your PDFs never leave your device</span><button type="button" data-wz-modal="pvModal">Privacy &amp; Security Info</button></div><div class="cf-n">Tools marked “Soon” need server-side software and are not available yet.</div></footer>
+<footer class="cf"><div class="cf-in"><span><strong>therajesh.shop</strong> · Your PDFs never leave your device</span><button type="button" data-wz-modal="pvModal">Privacy &amp; Security Info</button></div></footer>
 <div class="wzm" id="pvModal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="pvT"><div class="wzm-s">
 <div class="wzm-h"><b id="pvT">Privacy &amp; Security</b><button class="wz-x" type="button" data-wz-mclose aria-label="Close">✕</button></div>
 <p class="hint" style="margin:0 0 6px">All PDF tools run inside your browser. Nothing is uploaded to our server. Printing orders are different: those files are deleted right after printing.</p>
@@ -358,13 +435,32 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 <div id="modal" role="dialog" aria-modal="true" aria-labelledby="mt">
 <div class="pt-bar">
  <button type="button" class="pt-back" id="back">← Back to All PDF Tools</button>
- <b class="pt-ttl" id="mtb"></b>
  <button id="close" class="tp-x" type="button" aria-label="Close">✕</button>
 </div>
 <div class="tp">
-<div class="tp-head"><span id="mti"></span><h2 id="mt"></h2><p id="md"></p></div>
+<div class="tp-head"><span id="mti"></span><div class="pt-th"><h2 id="mt"></h2><p id="md"></p></div></div>
 
-<div id="s1" class="tp-sel"><button type="button" class="pick" id="drop"><span id="pickT">Select files</span></button><div class="orline">or drop files here</div><div id="msg0" class="pt-note" role="status"></div></div>
+<div id="s1">
+ <div class="pt-dz" id="dz">
+  <div class="pt-float" aria-hidden="true">
+   <svg viewBox="0 0 220 160" width="220" height="160"><defs>
+    <linearGradient id="ptg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#ec4899"/></linearGradient>
+    <linearGradient id="ptg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef2ff"/><stop offset="1" stop-color="#e0e7ff"/></linearGradient>
+    <filter id="ptgl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter></defs>
+   <ellipse cx="110" cy="150" rx="62" ry="6" fill="#4f46e5" opacity=".16"/>
+   <g transform="rotate(-11 80 86)"><rect x="40" y="26" width="86" height="110" rx="10" fill="url(#ptg2)" stroke="#c7d2fe" stroke-width="2"/><rect x="54" y="46" width="42" height="7" rx="3.5" fill="#a5b4fc"/><rect x="54" y="62" width="58" height="6" rx="3" fill="#c7d2fe"/><rect x="54" y="76" width="50" height="6" rx="3" fill="#c7d2fe"/></g>
+   <g transform="rotate(8 135 82)"><rect x="82" y="16" width="88" height="112" rx="10" fill="#fff" stroke="#c7d2fe" stroke-width="2"/><rect x="96" y="32" width="34" height="16" rx="5" fill="url(#ptg1)"/><text x="113" y="44" text-anchor="middle" font-size="10" font-weight="800" fill="#fff" font-family="Arial,sans-serif">PDF</text><rect x="96" y="58" width="60" height="6" rx="3" fill="#e0e7ff"/><rect x="96" y="72" width="52" height="6" rx="3" fill="#e0e7ff"/><rect x="96" y="86" width="58" height="6" rx="3" fill="#e0e7ff"/></g>
+   <circle cx="168" cy="112" r="26" fill="url(#ptg1)" filter="url(#ptgl)" opacity=".55"/>
+   <circle cx="168" cy="112" r="21" fill="url(#ptg1)"/><path d="M168 122V103M160 110l8-8 8 8" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+   </svg>
+  </div>
+  <button type="button" class="pt-cta" id="drop"><span id="pickT">📁 Select PDF Files</span></button>
+  <div class="orline">or drop files here</div>
+  <div class="pt-pills" id="pills"></div>
+  <div id="msg0" class="pt-note" role="status"></div>
+ </div>
+ <div id="how"></div>
+</div>
 
 <div id="s2" class="hidden">
  <div class="tp-work">
@@ -424,11 +520,21 @@ const A4W = 595.28, A4H = 841.89;
 /* ---------------------------------------------------------------- helpers */
 const pad2 = n => String(n).padStart(2, '0');
 
-/** therajesh.shop_<tool-slug>[_<suffix>]_<YYYYMMDD_HHMMSS>.<ext>  (local time) */
-function generateFileName(toolSlug, ext, suffix, date) {
-  const d = date || new Date();
-  const ts = d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '_' + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds());
-  return 'therajesh.shop_' + toolSlug + (suffix ? '_' + suffix : '') + '_' + ts + '.' + ext;
+/** local date-time as YYYYMMDD_HHMMSS */
+const stamp = d => { d = d || new Date(); return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '_' + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds()); };
+/**
+ * <original_base_name>[_suffix]_therajesh.shop_<YYYYMMDD_HHMMSS>.<ext>
+ * originalFiles: array of File (or {name}) / a single file / a name string. The FIRST file's name is used.
+ * The extension is stripped and spaces / special characters become underscores. A previous
+ * "_therajesh.shop_<timestamp>" tail is removed so chained tools never stack it.
+ */
+function buildDownloadFileName(originalFiles, ext, suffix, date, fallback) {
+  const first = Array.isArray(originalFiles) ? originalFiles[0] : originalFiles;
+  let base = first ? (typeof first === 'string' ? first : first.name || '') : '';
+  base = base.replace(/\.[A-Za-z0-9]{1,5}$/, '').replace(/_?therajesh\.shop_.*$/i, '')
+    .replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_+|_+$/g, '').slice(0, 60);
+  if (!base) base = fallback || 'file';
+  return base + (suffix ? '_' + suffix : '') + '_therajesh.shop_' + stamp(date) + '.' + ext;
 }
 const fmtSize = b => b < 1024 ? b + ' B' : b < 1048576 ? Math.round(b / 1024) + ' KB' : (b / 1048576).toFixed(2) + ' MB';
 const fail = key => { const e = new Error(key); e.u = 1; return e; };          // translated, user-facing error
@@ -444,7 +550,7 @@ const loadPdf = async f => {
   try { return await PDFDocument.load(await rd(f)); }
   catch (e) { if (isEnc(e)) throw fail('This PDF is password-protected. Use Unlock PDF first.'); throw e; }
 };
-const pdfOut = async d => ({bytes: await d.save(), ext: 'pdf', type: 'application/pdf'});
+const pdfOut = async (d, o) => ({bytes: await d.save(o), ext: 'pdf', type: 'application/pdf'});
 const txOut = (t, ext, type) => ({bytes: new TextEncoder().encode(t), ext, type: type || 'text/plain'});
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -475,11 +581,12 @@ async function rasterPdf(f, o, prog) {
   return out;
 }
 /** photo -> JPEG bytes (honours EXIF rotation, flattens transparency, caps size for phones) */
-async function imgToJpeg(f, max) {
-  const bm = await createImageBitmap(f);
-  const k = Math.min(1, max / Math.max(bm.width, bm.height)), w = Math.max(1, Math.round(bm.width * k)), h = Math.max(1, Math.round(bm.height * k));
+async function imgToJpeg(f, max, rot) {
+  const bm = await createImageBitmap(f), r = (rot || 0) % 360, sw = r % 180 ? bm.height : bm.width, sh = r % 180 ? bm.width : bm.height;
+  const k = Math.min(1, max / Math.max(sw, sh)), w = Math.max(1, Math.round(sw * k)), h = Math.max(1, Math.round(sh * k));
   const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(bm, 0, 0, w, h);
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h);
+  x.translate(w / 2, h / 2); x.rotate(r * Math.PI / 180); const dw = (r % 180 ? h : w), dh = (r % 180 ? w : h); x.drawImage(bm, -dw / 2, -dh / 2, dw, dh);
   if (bm.close) bm.close();
   const b = await jb(c, .92); c.width = c.height = 0;
   return {bytes: await u8(b), w, h};
@@ -488,7 +595,7 @@ async function imgsToPdf(fs, o, prog) {
   const out = await PDFDocument.create();
   for (let k = 0; k < fs.length; k++) {
     if (prog) prog(k + 1, fs.length);
-    const j = await imgToJpeg(fs[k], 3500), im = await out.embedJpg(j.bytes);
+    const j = await imgToJpeg(fs[k], 3500, fs[k]._rot), im = await out.embedJpg(j.bytes);
     if (o.size === 'orig') { const w = j.w * .75, h = j.h * .75; out.addPage([w, h]).drawImage(im, {x: 0, y: 0, width: w, height: h}); continue; }
     const land = o.orient === 'l' || (o.orient === 'a' && j.w > j.h), pw = land ? A4H : A4W, ph = land ? A4W : A4H;
     const m = o.size === 'margin' ? 36 : 0, s = Math.min((pw - 2 * m) / j.w, (ph - 2 * m) / j.h), w = j.w * s, h = j.h * s;
@@ -538,7 +645,7 @@ const T = [
  run: async (fs, cx) => {
   if (fs.length < 2) throw fail('Add at least 2 PDF files.');
   const o = await PDFDocument.create();
-  for (let k = 0; k < fs.length; k++) { cx.prog(k + 1, fs.length); const d = await loadPdf(fs[k]); (await o.copyPages(d, d.getPageIndices())).forEach(p => o.addPage(p)); }
+  for (let k = 0; k < fs.length; k++) { cx.prog(k + 1, fs.length); const d = await loadPdf(fs[k]); (await o.copyPages(d, d.getPageIndices())).forEach(p => { if (fs[k]._rot) p.setRotation(degrees((p.getRotation().angle + fs[k]._rot) % 360)); o.addPage(p); }); }
   return pdfOut(o);
  }},
 {id: 'split', slug: 'split-pdf', n: 'Split / Extract Pages', d: 'Tap the pages you want and extract them.', cat: 'Organize', ico: 'split', shop: 1, acc: '.pdf', ui: 'pages', pmode: 'split',
@@ -627,8 +734,40 @@ const T = [
  opts: '<div id="ustat" class="pt-hint" style="margin:0 0 6px"></div><label>PDF password (leave empty if none)</label><input type="password" id="o1" autocomplete="off" autocapitalize="off" spellcheck="false"><p class="pt-hint">The password is used only in this browser. It is not saved or sent anywhere. The unlocked copy keeps the page look but text may not be selectable.</p>',
  after: async () => { const f = files[0], b = $('ustat'); if (!f || !b) return; b.textContent = ''; try { const d = await pjs(f); try { d.destroy(); } catch (e) {} b.textContent = '🔓 No password needed to open this file. It will be saved without restrictions.'; } catch (e) { b.textContent = e && e.name === 'PasswordException' ? '🔒 This PDF is password-protected. Enter the password below.' : ''; } },
  run: async (fs, cx) => {
-  try { return pdfOut(await rasterPdf(fs[0], {scale: 2.7, q: .9, password: $('o1').value}, cx.prog)); }
-  catch (e) { if (e && e.name === 'PasswordException') throw fail(e.code === 2 ? 'Wrong password. Please try again.' : 'This PDF needs a password. Enter it above.'); throw e; }
+  const out = await PDFDocument.create();
+  try {
+    for (let k = 0; k < fs.length; k++) { const d = await rasterPdf(fs[k], {scale: 2.7, q: .9, password: $('o1').value}, (i, n) => cx.prog(i, n)); (await out.copyPages(d, d.getPageIndices())).forEach(p => out.addPage(p)); }
+    return pdfOut(out);
+  } catch (e) { if (e && e.name === 'PasswordException') throw fail(e.code === 2 ? 'Wrong password. Please try again.' : 'This PDF needs a password. Enter it above.'); throw e; }
+ }},
+{id: 'encrypt', slug: 'protect-pdf', n: 'Protect PDF', d: 'Lock your PDF with a strong password to prevent unauthorized opening.', cat: 'Security', ico: 'lock', grad: ['#6366f1', '#8b5cf6'], acc: '.pdf', ui: 'files', dlKey: '⬇️ Download Protected PDF',
+ badges: [['cat'], ['pw', '🔒 Password Lock']],
+ how: 'Choose a strong password. The PDF will ask for it every time it is opened.',
+ opts: '<label>Enter password</label><div class="pt-pw"><input type="password" id="o1" autocomplete="new-password" autocapitalize="off" spellcheck="false"><button type="button" class="pt-eye" data-eye="o1" aria-label="Show or hide password">👁️ Show</button></div>' +
+  '<label>Confirm password</label><div class="pt-pw"><input type="password" id="o2" autocomplete="new-password" autocapitalize="off" spellcheck="false"><button type="button" class="pt-eye" data-eye="o2" aria-label="Show or hide password">👁️ Show</button></div>' +
+  '<label>Permissions</label><label class="pt-chk"><input type="checkbox" id="o3" checked><span>Allow Printing</span></label><label class="pt-chk"><input type="checkbox" id="o4"><span>Allow Copying Text</span></label>' +
+  '<p class="pt-hint">AES-128 encryption is applied in your browser. Remember the password: it cannot be recovered. Use letters, numbers and symbols only.</p>',
+ init: () => { document.querySelectorAll('.pt-eye').forEach(b => { b.onclick = () => { const i = $(b.dataset.eye), on = i.type === 'password'; i.type = on ? 'text' : 'password'; b.textContent = on ? '🙈 Hide' : '👁️ Show'; }; }); },
+ run: async fs => {
+  const p1 = $('o1').value, p2 = $('o2').value;
+  if (p1.length < 4) throw fail('Password must be at least 4 characters.');
+  if (!/^[\x20-\x7E\xA0-\xFF]+$/.test(p1)) throw fail('Use letters, numbers and symbols only in the password.');
+  if (p1 !== p2) throw fail('Passwords do not match.');
+  const d = await loadPdf(fs[0]);
+  return {bytes: await encryptPdf(d, p1, {print: $('o3').checked, copy: $('o4').checked}), ext: 'pdf', type: 'application/pdf'};
+ }},
+{id: 'pdfa', slug: 'pdf-to-pdfa', n: 'PDF to PDF/A', d: 'Convert PDF to ISO-standardized PDF/A format for long-term archiving & error-free printing.', cat: 'Convert from PDF', ico: 'arch', grad: ['#0ea5e9', '#2563eb'], acc: '.pdf', ui: 'files', dlKey: '⬇️ Download PDF/A',
+ badges: [['iso', 'ISO Standard'], ['pr', '🖨️ Print-ready']],
+ how: 'Adds PDF/A metadata and an sRGB colour profile. Flattening gives the most reliable printing.',
+ opts: '<label>Conformance level</label>' + SEL('o1', [['1', 'PDF/A-1b (Basic Visual Preservation - Recommended)'], ['2', 'PDF/A-2b']], '1') +
+  '<label class="pt-chk"><input type="checkbox" id="o2" checked><span>Flatten pages for 100% Print Compatibility</span></label>' +
+  '<p class="pt-hint">Flatten renders every page at 300 DPI, so fonts can never break at the print counter. Text will not be selectable and the file gets larger. Please validate with veraPDF if you need certified archival compliance.</p>',
+ run: async (fs, cx) => {
+  const part = $('o1').value === '2' ? 2 : 1, flat = $('o2').checked; let d;
+  if (flat) d = await rasterPdf(fs[0], {scale: 300 / 72, q: .85}, cx.prog);
+  else { d = await loadPdf(fs[0]); try { d.getForm().flatten(); } catch (e) {} }
+  await makePdfA(d, part);
+  return pdfOut(d, {useObjectStreams: false});
  }},
 
 /* ---------- everything else (kept) ---------- */
@@ -674,16 +813,18 @@ const T = [
 {id: 'pptx2pdf', slug: 'powerpoint-to-pdf', n: 'PowerPoint to PDF', d: 'Convert a .pptx to PDF (slide text only).', cat: 'Convert to PDF', ico: 'pres', acc: '.pptx', ui: 'files',
  run: async fs => { const z = await JSZip.loadAsync(await rd(fs[0])), ns = Object.keys(z.files).filter(k => /^ppt\/slides\/slide\d+\.xml$/.test(k)).sort((a, b) => parseInt(a.match(/\d+/)[0]) - parseInt(b.match(/\d+/)[0])), pg = []; for (const k of ns) { const x = await z.files[k].async('string'); pg.push('Slide ' + (pg.length + 1) + '\n\n' + [...x.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map(m => m[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')).join('\n')); } return tPdf(pg); }}
 ];
-const SOON = [['Protect PDF', 'Security', 'lock'], ['PDF to PDF/A', 'Convert from PDF', 'arch']];
+/* every PDF tool accepts several files at once. Single-document tools combine them (in card order) right before running. */
+T.forEach(t => { if (!t.nofile && /pdf/.test(t.acc || '') && t.id !== 'compare') { t.multi = 1; if (t.id !== 'merge' && t.id !== 'unlock') t.combine = 1; } });
+T.forEach(t => { t.rotOK = !!(t.combine || t.id === 'merge' || t.id === 'jpg2pdf' || t.id === 'scan'); });
 
 /* ------------------------------------------------------------- icons & categories */
 const P = {merge: 'm8 6 4-4 4 4M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22M20 22l-5-5', split: 'M16 3h5v5M8 3H3v5M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3M15 9l6-6', grid: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z', rot: 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5', img: 'M3 3h18v18H3zM9 8.5h.01M21 15l-5-5L5 21', hash: 'M4 9h16M4 15h16M10 3 8 21M16 3l-2 18', drop: 'M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z', tag: 'M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42zM7.5 7.5h.01', zip: 'M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7', cam: 'M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', crop: 'M6 2v14a2 2 0 0 0 2 2h14M18 22V8a2 2 0 0 0-2-2H2', wr: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z', pen: 'M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5zM15 5l4 4', sig: 'M12 20h9M16.38 3.62a1 1 0 0 1 3 3L7.37 18.64a2 2 0 0 1-.86.5l-2.87.84a.5.5 0 0 1-.62-.62l.84-2.87a2 2 0 0 1 .5-.86z', eyeoff: 'M9.88 9.88a3 3 0 1 0 4.24 4.24M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68M6.61 6.61A13.5 13.5 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61M2 2l20 20', scan: 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10', form: 'M8 2h8v4H8zM16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01', globe: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z', doc: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8', swap: 'm16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16', cols: 'M3 3h18v18H3zM12 3v18', unlock: 'M3 11h18v11H3zM7 11V7a5 5 0 0 1 9.9-1', lock: 'M3 11h18v11H3zM7 11V7a5 5 0 0 1 10 0v4', arch: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4', pres: 'M2 3h20M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3M12 16v5M8 21h8', table: 'M12 3v18M3 9h18M3 15h18M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z', nup: 'M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z', gray: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 2v20M12 2a10 10 0 0 1 0 20z'};
 const CAT = {'Organize': ['#6366f1', '#8b5cf6'], 'Optimize': ['#10b981', '#0d9488'], 'Convert to PDF': ['#f59e0b', '#ef4444'], 'Convert from PDF': ['#3b82f6', '#06b6d4'], 'Edit & Sign': ['#ec4899', '#f43f5e'], 'Security': ['#64748b', '#334155']};
-const icon = (cat, k) => { const [a, b] = CAT[cat]; return '<i class="ic" style="background:linear-gradient(135deg,' + a + ',' + b + ')"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="' + P[k] + '"/></svg></i>'; };
+const icon = (cat, k, g) => { const [a, b] = g || CAT[cat]; return '<i class="ic" style="background:linear-gradient(135deg,' + a + ',' + b + ')"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="' + P[k] + '"/></svg></i>'; };
 const tById = id => T.find(t => t.id === id);
 
 /* tools whose result is a PDF -> they get the "Send to Counter (Print)" button */
-const PRINT_OUT = new Set(['merge', 'split', 'organize', 'rotate', 'jpg2pdf', 'compress', 'nup', 'gray', 'pagenum', 'watermark', 'unlock', 'protect', 'crop', 'repair', 'editpdf', 'sign', 'redact', 'scan', 'forms', 'html2pdf', 'word2pdf', 'xlsx2pdf', 'pptx2pdf']);
+const PRINT_OUT = new Set(['pdfa', 'encrypt', 'merge', 'split', 'organize', 'rotate', 'jpg2pdf', 'compress', 'nup', 'gray', 'pagenum', 'watermark', 'unlock', 'protect', 'crop', 'repair', 'editpdf', 'sign', 'redact', 'scan', 'forms', 'html2pdf', 'word2pdf', 'xlsx2pdf', 'pptx2pdf']);
 
 /* ------------------------------------------------------------- tool grid */
 T.sort((a, b) => (b.shop ? 1 : 0) - (a.shop ? 1 : 0));                           // print-shop tools first (stable sort keeps their order)
@@ -691,16 +832,12 @@ const grid = $('grid');
 const badge = (cls, txt) => { const e = T$('em', 'pt-b ' + cls, txt); return e; };
 T.forEach(t => {
   const b = T$('button', 'card'); b.type = 'button'; b.dataset.cat = t.cat; b.dataset.shop = t.shop ? '1' : ''; b.dataset.q = (t.n + ' ' + t.d + ' ' + t.cat).toLowerCase();
-  b.innerHTML = icon(t.cat, t.ico);
+  b.innerHTML = icon(t.cat, t.ico, t.grad);
   b.appendChild(T$('b', '', t.n)); b.appendChild(T$('span', 'dd', t.d));
-  const bg = T$('div', 'bg'), cb = badge('', t.cat), [c1] = CAT[t.cat]; cb.style.background = c1 + '1f'; cb.style.color = c1; bg.appendChild(cb);
-  if (t.isNew) bg.appendChild(badge('nw', 'NEW'));
-  if (PRINT_OUT.has(t.id)) bg.appendChild(badge('pr', '🖨️ Print-ready'));
+  const bg = T$('div', 'bg'), catB = () => { const cb = badge('', t.cat), [c1] = CAT[t.cat]; cb.style.background = c1 + '1f'; cb.style.color = c1; return cb; };
+  if (t.badges) t.badges.forEach(x => bg.appendChild(x[0] === 'cat' ? catB() : badge(x[0], x[1])));
+  else { bg.appendChild(catB()); if (t.isNew) bg.appendChild(badge('nw', 'NEW')); if (PRINT_OUT.has(t.id)) bg.appendChild(badge('pr', '🖨️ Print-ready')); }
   b.appendChild(bg); b.onclick = () => open_(t); grid.appendChild(b);
-});
-SOON.forEach(([n, cat, k]) => {
-  const b = T$('button', 'card'); b.type = 'button'; b.disabled = true; b.dataset.cat = cat; b.dataset.q = n.toLowerCase();
-  b.innerHTML = icon(cat, k); b.appendChild(T$('b', '', n)); const bg = T$('div', 'bg'); bg.appendChild(badge('sn', 'Soon')); b.appendChild(bg); grid.appendChild(b);
 });
 const tabs = ['All', 'Print Shop', ...Object.keys(CAT)]; let activeTab = 'All';
 const filterGrid = () => { const q = $('sq').value.toLowerCase(); [...grid.children].forEach(b => { const okT = activeTab === 'All' || (activeTab === 'Print Shop' ? !!b.dataset.shop : b.dataset.cat === activeTab); b.style.display = okT && (!q || b.dataset.q.includes(q)) ? '' : 'none'; }); };
@@ -708,31 +845,172 @@ tabs.forEach(c => { const b = T$('button', 'tab' + (c === 'All' ? ' on' : ''), c
 $('sq').oninput = filterGrid;
 
 /* ====================================================================
+   PDF ENCRYPTION  (standard security handler, V4 / R4, AES-128 "AESV2")
+   Real encryption done in the browser: the saved file asks for the password in
+   Chrome, Acrobat, Preview and mobile viewers. No library needed (MD5 + RC4 are
+   implemented below for the key derivation; AES-CBC uses Web Crypto).
+   ==================================================================== */
+const md5 = (() => {
+  const K = new Uint32Array(64), S = [7, 12, 17, 22, 5, 9, 14, 20, 4, 11, 16, 23, 6, 10, 15, 21];
+  for (let i = 0; i < 64; i++) K[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 4294967296) >>> 0;
+  return msg => {
+    const n = msg.length, len = ((n + 8 >> 6) + 1) << 6, b = new Uint8Array(len); b.set(msg); b[n] = 0x80;
+    const dv = new DataView(b.buffer); dv.setUint32(len - 8, (n << 3) >>> 0, true); dv.setUint32(len - 4, Math.floor(n / 536870912), true);
+    let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+    for (let o = 0; o < len; o += 64) {
+      const M = new Uint32Array(16); for (let i = 0; i < 16; i++) M[i] = dv.getUint32(o + i * 4, true);
+      let A = a0, B = b0, C = c0, D = d0;
+      for (let i = 0; i < 64; i++) {
+        let F, g;
+        if (i < 16) { F = (B & C) | (~B & D); g = i; } else if (i < 32) { F = (D & B) | (~D & C); g = (5 * i + 1) % 16; } else if (i < 48) { F = B ^ C ^ D; g = (3 * i + 5) % 16; } else { F = C ^ (B | ~D); g = (7 * i) % 16; }
+        F = (F + A + K[i] + M[g]) >>> 0; A = D; D = C; C = B; const s = S[(i >> 4) * 4 + (i & 3)]; B = (B + ((F << s) | (F >>> (32 - s)))) >>> 0;
+      }
+      a0 = (a0 + A) >>> 0; b0 = (b0 + B) >>> 0; c0 = (c0 + C) >>> 0; d0 = (d0 + D) >>> 0;
+    }
+    const out = new Uint8Array(16), ov = new DataView(out.buffer); ov.setUint32(0, a0, true); ov.setUint32(4, b0, true); ov.setUint32(8, c0, true); ov.setUint32(12, d0, true); return out;
+  };
+})();
+function rc4(key, data) {
+  const s = new Uint8Array(256), out = new Uint8Array(data.length); for (let i = 0; i < 256; i++) s[i] = i;
+  for (let i = 0, j = 0; i < 256; i++) { j = (j + s[i] + key[i % key.length]) & 255; [s[i], s[j]] = [s[j], s[i]]; }
+  for (let k = 0, i = 0, j = 0; k < data.length; k++) { i = (i + 1) & 255; j = (j + s[i]) & 255; [s[i], s[j]] = [s[j], s[i]]; out[k] = data[k] ^ s[(s[i] + s[j]) & 255]; }
+  return out;
+}
+const cat8 = (...a) => { const o = new Uint8Array(a.reduce((n, x) => n + x.length, 0)); let p = 0; a.forEach(x => { o.set(x, p); p += x.length; }); return o; };
+const hex8 = b => [...b].map(x => x.toString(16).padStart(2, '0')).join('');
+const PW_PAD = Uint8Array.from([0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41, 0x64, 0x00, 0x4E, 0x56, 0xFF, 0xFA, 0x01, 0x08, 0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80, 0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A]);
+const padPw = s => { const b = Uint8Array.from([...s].map(c => c.charCodeAt(0) & 255)).slice(0, 32); return cat8(b, PW_PAD.slice(0, 32 - b.length)); };
+const rc4Rounds = (key, data) => { let x = rc4(key, data); for (let i = 1; i <= 19; i++) x = rc4(key.map(b => b ^ i), x); return x; };
+async function aesCbc(key, data) {
+  const iv = crypto.getRandomValues(new Uint8Array(16)), k = await crypto.subtle.importKey('raw', key, 'AES-CBC', false, ['encrypt']);
+  return cat8(iv, new Uint8Array(await crypto.subtle.encrypt({name: 'AES-CBC', iv}, k, data)));
+}
+const objKey = (fk, n, g) => md5(cat8(fk, Uint8Array.from([n & 255, (n >> 8) & 255, (n >> 16) & 255, g & 255, (g >> 8) & 255]), Uint8Array.from([0x73, 0x41, 0x6C, 0x54]))).slice(0, 16);
+
+async function encryptPdf(doc, userPw, perm) {
+  const L = PDFLib, ctx = doc.context;
+  const ownerPw = hex8(crypto.getRandomValues(new Uint8Array(12)));                       // random owner password so permissions are enforced
+  let P = 0xFFFFF0C0 | 4 | 2048 | 32 | 256 | 512; if (!perm.print) P &= ~(4 | 2048); if (perm.copy) P |= 16;
+  P |= 0; const Pint = P | 0, p4 = Uint8Array.from([P & 255, (P >> 8) & 255, (P >> 16) & 255, (P >> 24) & 255]);
+  const id = crypto.getRandomValues(new Uint8Array(16));
+  let h = md5(padPw(ownerPw)); for (let i = 0; i < 50; i++) h = md5(h); const O = rc4Rounds(h.slice(0, 16), padPw(userPw));
+  let kh = md5(cat8(padPw(userPw), O, p4, id)); for (let i = 0; i < 50; i++) kh = md5(kh.slice(0, 16)); const fileKey = kh.slice(0, 16);
+  const U = cat8(rc4Rounds(fileKey, md5(cat8(PW_PAD, id))), new Uint8Array(16));
+  const enc = async (o, ek) => {
+    if (o instanceof L.PDFString || o instanceof L.PDFHexString) return L.PDFHexString.of(hex8(await aesCbc(ek, o.asBytes())));
+    if (o instanceof L.PDFDict) { for (const [k, v] of o.entries()) { const nv = await enc(v, ek); if (nv !== v) o.set(k, nv); } }
+    else if (o instanceof L.PDFArray) { for (let i = 0; i < o.size(); i++) { const v = o.get(i), nv = await enc(v, ek); if (nv !== v) o.set(i, nv); } }
+    return o;
+  };
+  for (const [ref, obj] of [...ctx.enumerateIndirectObjects()]) {
+    const ek = objKey(fileKey, ref.objectNumber, ref.generationNumber);
+    if (obj instanceof L.PDFStream) {
+      await enc(obj.dict, ek);
+      ctx.assign(ref, L.PDFRawStream.of(obj.dict, await aesCbc(ek, obj.getContents())));
+    } else await enc(obj, ek);
+  }
+  const hexId = L.PDFHexString.of(hex8(id));
+  ctx.trailerInfo.ID = ctx.obj([hexId, hexId]);
+  ctx.trailerInfo.Encrypt = ctx.register(ctx.obj({
+    Filter: 'Standard', V: 4, R: 4, Length: 128,
+    CF: {StdCF: {CFM: 'AESV2', AuthEvent: 'DocOpen', Length: 16}}, StmF: 'StdCF', StrF: 'StdCF',
+    O: L.PDFHexString.of(hex8(O)), U: L.PDFHexString.of(hex8(U)), P: Pint
+  }));
+  return doc.save({useObjectStreams: false});
+}
+
+/* ====================================================================
+   PDF/A helpers: XMP metadata (pdfaid), sRGB output intent (generated ICC profile)
+   ==================================================================== */
+function srgbIcc() {
+  const ascii = s => Uint8Array.from([...s].map(c => c.charCodeAt(0))), u32 = v => Uint8Array.from([v >>> 24, v >>> 16 & 255, v >>> 8 & 255, v & 255]), u16 = v => Uint8Array.from([v >> 8 & 255, v & 255]);
+  const s15 = v => u32(Math.round(v * 65536) >>> 0), xyz = (x, y, z) => cat8(ascii('XYZ '), u32(0), s15(x), s15(y), s15(z));
+  const text = (s) => { const t = cat8(ascii('text'), u32(0), ascii(s), Uint8Array.of(0)); return t; };
+  const name = 'sRGB IEC61966-2.1', d = ascii(name);
+  const desc = cat8(ascii('desc'), u32(0), u32(d.length + 1), d, Uint8Array.of(0), u32(0), u32(0), u16(0), Uint8Array.of(0), new Uint8Array(67));
+  const curv = new Uint8Array(12 + 2 * 1024); curv.set(ascii('curv'), 0); curv.set(u32(1024), 8);
+  for (let i = 0; i < 1024; i++) { const x = i / 1023, y = x <= .04045 ? x / 12.92 : Math.pow((x + .055) / 1.055, 2.4); curv.set(u16(Math.round(y * 65535)), 12 + 2 * i); }
+  const tags = [['desc', desc], ['cprt', text('Public domain')], ['wtpt', xyz(.9642, 1, .8249)], ['rXYZ', xyz(.4360747, .2225045, .0139322)], ['gXYZ', xyz(.3850649, .7168786, .0971045)], ['bXYZ', xyz(.1430804, .0606169, .7141733)], ['rTRC', curv], ['gTRC', curv], ['bTRC', curv]];
+  let off = 128 + 4 + tags.length * 12; const table = [], body = [];
+  const pad4 = b => { const n = (4 - b.length % 4) % 4; return n ? cat8(b, new Uint8Array(n)) : b; };
+  const seen = new Map();
+  tags.forEach(([sig, data]) => { if (seen.has(data)) { table.push(cat8(ascii(sig), u32(seen.get(data)), u32(data.length))); return; } const p = pad4(data); seen.set(data, off); table.push(cat8(ascii(sig), u32(off), u32(data.length))); body.push(p); off += p.length; });
+  const hdr = new Uint8Array(128), dv = new DataView(hdr.buffer);
+  dv.setUint32(0, off); hdr.set([2, 0x10, 0, 0], 8); hdr.set(ascii('mntr'), 12); hdr.set(ascii('RGB '), 16); hdr.set(ascii('XYZ '), 20);
+  dv.setUint16(24, 2024); dv.setUint16(26, 1); dv.setUint16(28, 1); hdr.set(ascii('acsp'), 36);
+  dv.setUint32(68, 0xF6D6); dv.setUint32(72, 0x10000); dv.setUint32(76, 0xD32D);
+  return cat8(hdr, u32(tags.length), ...table, ...body);
+}
+const xmlEsc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+async function makePdfA(doc, part) {
+  const L = PDFLib, ctx = doc.context, now = new Date(), iso = now.toISOString().replace(/\.\d+Z$/, 'Z');
+  const title = (doc.getTitle() || 'Document').trim() || 'Document', author = doc.getAuthor() || '';
+  doc.setTitle(title); doc.setProducer('therajesh.shop'); doc.setCreator('therajesh.shop'); doc.setCreationDate(now); doc.setModificationDate(now);
+  const xmp = '<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>\n<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">' +
+    '<rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"><pdfaid:part>' + part + '</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance></rdf:Description>' +
+    '<rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:format>application/pdf</dc:format><dc:title><rdf:Alt><rdf:li xml:lang="x-default">' + xmlEsc(title) + '</rdf:li></rdf:Alt></dc:title>' +
+    (author ? '<dc:creator><rdf:Seq><rdf:li>' + xmlEsc(author) + '</rdf:li></rdf:Seq></dc:creator>' : '') + '</rdf:Description>' +
+    '<rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/"><xmp:CreatorTool>therajesh.shop</xmp:CreatorTool><xmp:CreateDate>' + iso + '</xmp:CreateDate><xmp:ModifyDate>' + iso + '</xmp:ModifyDate></rdf:Description>' +
+    '<rdf:Description rdf:about="" xmlns:pdf="http://ns.adobe.com/pdf/1.3/"><pdf:Producer>therajesh.shop</pdf:Producer></rdf:Description>' +
+    '</rdf:RDF></x:xmpmeta>\n<?xpacket end="w"?>';
+  const cat = doc.catalog, N = L.PDFName.of;
+  cat.set(N('Metadata'), ctx.register(ctx.stream(new TextEncoder().encode(xmp), {Type: 'Metadata', Subtype: 'XML'})));
+  const icc = ctx.register(ctx.stream(srgbIcc(), {N: 3, Alternate: 'DeviceRGB'}));
+  cat.set(N('OutputIntents'), ctx.obj([ctx.obj({Type: 'OutputIntent', S: 'GTS_PDFA1', OutputConditionIdentifier: L.PDFString.of('sRGB IEC61966-2.1'), Info: L.PDFString.of('sRGB IEC61966-2.1'), RegistryName: L.PDFString.of('http://www.color.org'), DestOutputProfile: icc})]));
+  ['OpenAction', 'AA', 'Names', 'Encrypt'].forEach(k => cat.delete(N(k)));                // no scripts / actions in archival files
+  const id = L.PDFHexString.of(hex8(crypto.getRandomValues(new Uint8Array(16)))); ctx.trailerInfo.ID = ctx.obj([id, id]);
+}
+
+/* ====================================================================
    PREVIEW OVERLAY (page-by-page viewer)
    ==================================================================== */
 const pvEl = document.createElement('div'); pvEl.id = 'pv';
-pvEl.innerHTML = '<div class="pvb"><div class="pvh"><button id="pvb" type="button">← Back</button><b id="pvt"></b><button id="pvx" type="button" aria-label="Close">✕</button></div><div id="pvc"></div><div class="row"><button id="pvp" type="button">◀</button><span id="pvn"></span><button id="pvnx" type="button">▶</button></div></div>';
+pvEl.innerHTML = '<div class="pvb"><div class="pvh"><b id="pvt"></b><button id="pvx" type="button" aria-label="Close">✕</button></div><div id="pvc"></div><div class="pvf"><button id="pvp" type="button" aria-label="Previous page">◀</button><span id="pvn"></span><button id="pvnx" type="button" aria-label="Next page">▶</button><span class="sp"></span><button id="pvm" type="button" aria-label="Zoom out">➖</button><button id="pvz" type="button" aria-label="Reset zoom">100%</button><button id="pvpl" type="button" aria-label="Zoom in">➕</button></div></div>';
 document.body.appendChild(pvEl);
-let pvd = null, pvi = 1, pvUrl = null;
-async function pvPage() { const c = $('pvc'); if (!pvd) return; const {c: k} = await pageCanvas(pvd, pvi, 1.3); c.textContent = ''; c.appendChild(k); $('pvn').textContent = pvi + ' / ' + pvd.numPages; }
-async function openPv(title, x, page) {
-  $('pvt').textContent = title; const c = $('pvc'); c.textContent = 'Loading…'; $('pvn').textContent = ''; pvEl.classList.add('on'); pvd = null; pvi = page || 1;
+let pvd = null, pvi = 1, pvUrl = null, pvRot = 0;
+/* pinch / wheel / double-tap zoom + drag-to-pan */
+const Z = {s: 1, x: 0, y: 0, r: 0, el: null, pts: new Map(), d0: 0, s0: 1};
+const zClamp = v => Math.max(1, Math.min(6, v));
+function zApply() { if (Z.el) Z.el.style.transform = 'translate(' + Z.x + 'px,' + Z.y + 'px) scale(' + Z.s + ')' + (Z.r ? ' rotate(' + Z.r + 'deg)' : ''); $('pvz').textContent = Math.round(Z.s * 100) + '%'; }
+function zSet(el, r) { Z.el = el; Z.s = 1; Z.x = Z.y = 0; Z.r = r || 0; zApply(); }
+function zScale(v) { Z.s = zClamp(v); if (Z.s === 1) Z.x = Z.y = 0; zApply(); }
+(() => {
+  const pc = $('pvc');
+  pc.addEventListener('pointerdown', e => { try { pc.setPointerCapture(e.pointerId); } catch (x) {} Z.pts.set(e.pointerId, [e.clientX, e.clientY]); if (Z.pts.size === 2) { const [a, b] = [...Z.pts.values()]; Z.d0 = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1; Z.s0 = Z.s; } });
+  pc.addEventListener('pointermove', e => {
+    const p = Z.pts.get(e.pointerId); if (!p) return;
+    if (Z.pts.size === 2) { Z.pts.set(e.pointerId, [e.clientX, e.clientY]); const [a, b] = [...Z.pts.values()]; Z.s = zClamp(Z.s0 * Math.hypot(a[0] - b[0], a[1] - b[1]) / Z.d0); }
+    else if (Z.s > 1) { Z.x += e.clientX - p[0]; Z.y += e.clientY - p[1]; Z.pts.set(e.pointerId, [e.clientX, e.clientY]); }
+    zApply();
+  });
+  const up = e => { Z.pts.delete(e.pointerId); if (Z.s <= 1.02) { Z.s = 1; Z.x = Z.y = 0; zApply(); } };
+  pc.addEventListener('pointerup', up); pc.addEventListener('pointercancel', up);
+  pc.addEventListener('wheel', e => { e.preventDefault(); zScale(Z.s * (e.deltaY < 0 ? 1.15 : .87)); }, {passive: false});
+  pc.addEventListener('dblclick', () => zScale(Z.s > 1 ? 1 : 2.5));
+  $('pvm').onclick = () => zScale(Z.s / 1.4); $('pvpl').onclick = () => zScale(Z.s * 1.4); $('pvz').onclick = () => zScale(1);
+})();
+async function pvPage() {
+  const c = $('pvc'); if (!pvd) return; const {c: k} = await pageCanvas(pvd, pvi, Math.max(1.6, Math.min(3, (window.devicePixelRatio || 1) * 1.4)));
+  c.textContent = ''; c.appendChild(k); zSet(k, pvRot); $('pvn').textContent = pvi + ' / ' + pvd.numPages;
+}
+async function openPv(title, x, page, rot) {
+  $('pvt').textContent = title; const c = $('pvc'); c.textContent = 'Loading…'; $('pvn').textContent = ''; pvEl.classList.add('on'); pvd = null; pvi = page || 1; pvRot = rot || 0; Z.el = null;
   if (pvUrl) { URL.revokeObjectURL(pvUrl); pvUrl = null; }
   try {
-    if ((x.type || '').startsWith('image/')) { c.textContent = ''; const i = new Image(); pvUrl = URL.createObjectURL(x); i.src = pvUrl; c.appendChild(i); }
+    if ((x.type || '').startsWith('image/')) { c.textContent = ''; const i = new Image(); pvUrl = URL.createObjectURL(x); i.src = pvUrl; i.alt = ''; c.appendChild(i); zSet(i, pvRot); }
     else if (/\.(txt|md)$/.test(title)) { c.textContent = ''; const pre = document.createElement('pre'); pre.textContent = (await x.text()).slice(0, 6000); c.appendChild(pre); }
     else { pvd = await pjs(x); await pvPage(); }
   } catch (e) { c.textContent = 'No preview available for this file type.'; }
 }
 const closePv = () => pvEl.classList.remove('on');
-$('pvx').onclick = $('pvb').onclick = closePv; pvEl.onclick = e => { if (e.target === pvEl) closePv(); };
+$('pvx').onclick = closePv; pvEl.onclick = e => { if (e.target === pvEl) closePv(); };
 $('pvp').onclick = async () => { if (pvd && pvi > 1) { pvi--; await pvPage(); } };
 $('pvnx').onclick = async () => { if (pvd && pvi < pvd.numPages) { pvi++; await pvPage(); } };
 
 /* ====================================================================
    WORKSPACE STATE
    ==================================================================== */
-let cur = null, files = [], results = [], pgState = [], view = 's1', busy = false, runDate = null, pushed = false, dragI = null, gBase = null, wmBase = null;
+let uid = 0, srcUsed = [], cur = null, files = [], results = [], pgState = [], view = 's1', busy = false, runDate = null, pushed = false, dragI = null, gBase = null, wmBase = null;
 const modal = $('modal');
 
 const show = v => { view = v; ['s1', 's2', 's3'].forEach(k => $(k).classList.toggle('hidden', k !== v)); modal.scrollTop = 0; };
@@ -755,14 +1033,14 @@ function resetState() {
 /* ---------------------------------------------------------------- open / close / history */
 function open_(t, preload) {
   cur = t; resetState();
-  $('mt').textContent = t.n; $('mtb').textContent = t.n; $('md').textContent = t.d; $('mti').innerHTML = icon(t.cat, t.ico);
+  $('mt').textContent = t.n; $('md').textContent = t.d; $('mti').innerHTML = icon(t.cat, t.ico, t.grad);
   $('opts').innerHTML = t.opts || ''; $('optT').style.display = t.opts ? '' : 'none';
   const fi = $('fi'); fi.accept = t.acc || ''; fi.multiple = !!t.multi; if (t.scan) fi.setAttribute('capture', 'environment'); else fi.removeAttribute('capture');
   const a = t.acc || '', img = a.includes('image');
-  $('pickT').textContent = a.includes('pdf') ? (t.multi ? 'Select PDF files' : 'Select PDF file') : img ? (t.multi ? 'Select images' : 'Select image') : (t.multi ? 'Select files' : 'Select file');
-  $('addmore').style.display = t.multi ? '' : 'none'; $('go').textContent = t.n; setMsg('');
+  $('pickT').textContent = a.includes('pdf') ? '📁 Select PDF Files' : img ? (t.multi ? '📁 Select Images' : '📁 Select Image') : '📁 Select File';
+  $('addmore').style.display = 'none'; $('go').textContent = t.n; setMsg('');
   if (!modal.classList.contains('on')) { modal.classList.add('on'); try { history.pushState({pt: 1}, ''); pushed = true; } catch (e) { pushed = false; } }
-  show('s1'); busy = false; if (t.init) t.init(); render();
+  show('s1'); busy = false; if (t.init) t.init(); renderHow(t); render();
   if (preload && preload.length) addFiles(preload);
 }
 function hideTool() { modal.classList.remove('on'); closePv(); resetState(); pushed = false; }
@@ -782,39 +1060,61 @@ const okType = f => {
   const a = cur.acc || ''; if (!a) return true; const n = f.name.toLowerCase(), t = f.type || '';
   return a.split(',').some(k => k.startsWith('.') ? n.endsWith(k) : k.endsWith('/*') ? t.startsWith(k.slice(0, -1)) : t === k || (k === 'image/jpeg' && /\.jpe?g$/.test(n)) || (k === 'image/png' && /\.png$/.test(n)) || (k === 'image/webp' && /\.webp$/.test(n)));
 };
+async function combineFiles(fs) {
+  const o = await PDFDocument.create();
+  for (const f of fs) { const d = await loadPdf(f); (await o.copyPages(d, d.getPageIndices())).forEach(p => { if (f._rot) p.setRotation(degrees((p.getRotation().angle + f._rot) % 360)); o.addPage(p); }); }
+  return new File([await o.save()], fs[0].name, {type: 'application/pdf'});
+}
 async function addFiles(a) {
   a = a.filter(okType);
   if (!a.length) { setMsg('This file type is not supported for this tool.', null, 1); return; }
   setMsg('');
   if (!cur.multi) files.forEach(freeFile);
   files = cur.multi ? files.concat(a) : a.slice(0, 1);
+  if (cur.ui === 'pages' && files.length > 1) {                              // page tools: all files become one document, in order
+    try { const c = await combineFiles(files); files.forEach(freeFile); files = [c]; }
+    catch (e) { files = []; render(); setMsg(e && e.u ? e.message : 'Could not read this PDF.', null, 1); return; }
+  }
   render();
   if (cur.ui === 'pages') await buildPages();
   if (cur.after) { try { await cur.after(); } catch (e) {} }
 }
 $('drop').onclick = () => $('fi').click(); $('addmore').onclick = () => $('fi').click();
 $('fi').onchange = e => { addFiles([...e.target.files]); e.target.value = ''; };
-['dragover', 'dragenter'].forEach(ev => modal.addEventListener(ev, e => { e.preventDefault(); if (e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files')) $('s1').classList.add('dz'); }));
-['dragleave', 'drop'].forEach(ev => modal.addEventListener(ev, e => { e.preventDefault(); $('s1').classList.remove('dz'); if (ev === 'drop' && cur && !cur.nofile && e.dataTransfer && e.dataTransfer.files.length) addFiles([...e.dataTransfer.files]); }));
+['dragover', 'dragenter'].forEach(ev => modal.addEventListener(ev, e => { e.preventDefault(); if (e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files')) $('dz').classList.add('dz'); }));
+['dragleave', 'drop'].forEach(ev => modal.addEventListener(ev, e => { e.preventDefault(); $('dz').classList.remove('dz'); if (ev === 'drop' && cur && !cur.nofile && e.dataTransfer && e.dataTransfer.files.length) addFiles([...e.dataTransfer.files]); }));
 
 /* ---------------------------------------------------------------- file cards */
+const DPR = Math.min(window.devicePixelRatio || 1, 3);
 function fillMeta(f) {
   const m = f._mt; if (!m) return; m.textContent = '';
-  if (f._pages) { m.append(T$('b', '', String(f._pages)), ' ', T$('span', '', f._pages === 1 ? 'page' : 'pages'), ' · '); }
-  m.appendChild(T$('span', '', fmtSize(f.size)));
-  if (f._enc) { m.appendChild(document.createElement('br')); m.appendChild(T$('span', 'pt-lock', '🔒 Password protected')); }
+  const pill = T$('span', 'pt-pill'); pill.append('📄 ');
+  if (f._pages) pill.append(T$('b', '', String(f._pages)), ' ', T$('span', '', f._pages === 1 ? 'page' : 'pages'), ' · ');
+  pill.append(fmtSize(f.size)); m.appendChild(pill);
+  if (f._enc) m.appendChild(T$('span', 'pt-lock', '🔒 Password protected'));
 }
-async function thumb(f, el) {
-  el.textContent = '📄'; el.onclick = () => openPv(f.name, f);
+const fitRot = (paper, stage, r) => { if (!r) { paper.style.transform = ''; return; } const w = paper.offsetWidth || 1, h = paper.offsetHeight || 1, k = r % 180 ? Math.min(1, (stage.clientWidth - 16) / h, (stage.clientHeight - 16) / w) : 1; paper.style.transform = 'rotate(' + r + 'deg) scale(' + k + ')'; };
+async function thumb(f, paper, stage) {
+  paper.classList.add('ld'); const show1 = u => { const i = new Image(); i.src = u; i.alt = ''; i.draggable = false; paper.classList.remove('ld'); paper.textContent = ''; paper.appendChild(i); i.onload = () => fitRot(paper, stage, f._rot || 0); if (i.complete) fitRot(paper, stage, f._rot || 0); };
   try {
-    if ((f.type || '').startsWith('image/')) { if (!f._tu) f._tu = URL.createObjectURL(f); const i = new Image(); i.src = f._tu; i.alt = ''; el.textContent = ''; el.appendChild(i); return; }
+    if ((f.type || '').startsWith('image/')) { if (!f._tu) f._tu = URL.createObjectURL(f); show1(f._tu); return; }
     if (/\.pdf$/i.test(f.name)) {
-      if (!f._tu) { const d = await pjs(f); f._pages = d.numPages; const {c} = await pageCanvas(d, 1, .4); f._tu = c.toDataURL('image/jpeg', .7); c.width = c.height = 0; try { d.destroy(); } catch (e) {} }
-      const i = new Image(); i.src = f._tu; i.alt = ''; el.textContent = ''; el.appendChild(i); fillMeta(f); updateSum();
+      if (!f._tu) { const d = await pjs(f); f._pages = d.numPages; const pg = await d.getPage(1), w1 = pg.getViewport({scale: 1}).width, {c} = await pageCanvas(d, 1, Math.max(400, 190 * DPR) / w1); f._tu = c.toDataURL('image/jpeg', .85); c.width = c.height = 0; try { d.destroy(); } catch (e) {} }
+      show1(f._tu); fillMeta(f); updateSum(); return;
     }
-  } catch (e) { if (e && e.name === 'PasswordException') { f._enc = true; fillMeta(f); if (cur && cur.id !== 'unlock') setMsg('This PDF is password-protected. Use Unlock PDF first.', null, 1); } }
+    paper.classList.remove('ld'); paper.textContent = '📄';
+  } catch (e) { paper.classList.remove('ld'); paper.textContent = '📄'; if (e && e.name === 'PasswordException') { f._enc = true; fillMeta(f); if (cur && cur.id !== 'unlock') setMsg('This PDF is password-protected. Use Unlock PDF first.', null, 1); } }
 }
-function moveFile(i, k) { const j = i + k; if (j < 0 || j >= files.length) return; [files[i], files[j]] = [files[j], files[i]]; render(); }
+function flipRender(fn) {
+  const pos = new Map(); document.querySelectorAll('#fl .fc[data-id]').forEach(c => pos.set(c.dataset.id, c.getBoundingClientRect()));
+  fn();
+  document.querySelectorAll('#fl .fc[data-id]').forEach(c => {
+    const o = pos.get(c.dataset.id); if (!o) return; const n = c.getBoundingClientRect(), dx = o.left - n.left, dy = o.top - n.top; if (!dx && !dy) return;
+    c.style.transition = 'none'; c.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; c.classList.add('pop');
+    requestAnimationFrame(() => requestAnimationFrame(() => { c.style.transition = 'transform .3s cubic-bezier(.2,.8,.2,1)'; c.style.transform = ''; }));
+  });
+}
+function moveFile(i, k) { const j = i + k; if (j < 0 || j >= files.length) return; flipRender(() => { [files[i], files[j]] = [files[j], files[i]]; render(); }); }
 function dragSort(el, i, arr, done) {
   el.draggable = true;
   el.ondragstart = e => { dragI = i; el.classList.add('drag', 'dragging'); try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); } catch (x) {} };
@@ -823,14 +1123,22 @@ function dragSort(el, i, arr, done) {
   el.ondrop = e => { if (dragI == null) return; e.preventDefault(); e.stopPropagation(); if (dragI === i) return; const [it] = arr.splice(dragI, 1); arr.splice(i, 0, it); dragI = null; done(); };
 }
 function fileCard(f, i) {
-  const d = T$('div', 'fc'), th = T$('div', 'th'); d.appendChild(th);
-  if (cur.multi && files.length > 1) d.appendChild(T$('span', 'no', String(i + 1)));
-  thumb(f, th); d.appendChild(T$('div', 'nm', f.name)); f._mt = T$('div', 'mt'); d.appendChild(f._mt); fillMeta(f);
+  f._id = f._id || ++uid;
+  const d = T$('div', 'fc'), stage = T$('div', 'th'), paper = T$('div', 'pt-paper'); d.dataset.id = f._id;
+  stage.append(paper, T$('span', 'pt-zoom', '🔍 Tap to Preview')); d.appendChild(stage); stage.onclick = () => openPv(f.name, f, 1, f._rot || 0);
+  const many = cur.multi && files.length > 1;
+  if (many) d.appendChild(T$('span', 'no', '#' + (i + 1)));
+  thumb(f, paper, stage);
   const x = T$('button', 'x', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Remove'); x.onclick = () => { freeFile(f); files.splice(i, 1); render(); }; d.appendChild(x);
-  if (cur.multi && files.length > 1) {
-    const mv = T$('div', 'mv'); [['◀', -1, 'Move earlier'], ['▶', 1, 'Move later']].forEach(([c, k, l]) => { const b = T$('button', '', c); b.type = 'button'; b.setAttribute('aria-label', l); b.disabled = (i + k < 0 || i + k >= files.length); b.onclick = () => moveFile(i, k); mv.appendChild(b); });
-    d.appendChild(mv); dragSort(d, i, files, render);
+  const nm = T$('div', 'nm', f.name); nm.title = f.name; d.appendChild(nm); f._mt = T$('div', 'mt'); d.appendChild(f._mt); fillMeta(f);
+  if (many || cur.rotOK) {
+    const seg = T$('div', 'seg'), mk = (label, aria, fn, dis) => { const b = T$('button', '', label); b.type = 'button'; b.setAttribute('aria-label', aria); b.disabled = !!dis; b.onclick = fn; seg.appendChild(b); };
+    if (many) mk('◀', 'Move earlier', () => moveFile(i, -1), i === 0);
+    if (cur.rotOK) mk('🔄', 'Rotate', () => { f._rot = ((f._rot || 0) + 90) % 360; fitRot(paper, stage, f._rot); });
+    if (many) mk('▶', 'Move later', () => moveFile(i, 1), i === files.length - 1);
+    d.appendChild(seg);
   }
+  if (many) dragSort(d, i, files, () => flipRender(render));
   return d;
 }
 function updateSum() {
@@ -841,10 +1149,49 @@ function updateSum() {
 function render() {
   const pages = cur.ui === 'pages';
   $('fl').classList.toggle('hidden', pages); $('pgw').classList.toggle('hidden', !pages); $('lv').classList.toggle('hidden', cur.ui !== 'live');
-  const l = $('fl'); l.textContent = ''; if (!pages) files.forEach((f, i) => l.appendChild(fileCard(f, i)));
+  const l = $('fl'); l.textContent = '';
+  if (!pages) {
+    files.forEach((f, i) => l.appendChild(fileCard(f, i)));
+    if (cur.multi && files.length) { const a = T$('button', 'fc add', '➕ Add More Files'); a.type = 'button'; a.onclick = () => $('fi').click(); l.appendChild(a); }
+  }
   updateSum();
   if (view !== 's3') { const want = (files.length || cur.nofile) ? 's2' : 's1'; if (want !== view) show(want); }
-  setGo();
+  setGo(); fitPad();
+}
+/* keep the last row of cards scrollable above the fixed action bar */
+const tpEl = document.querySelector('#modal .tp'), sideEl = document.querySelector('.tp-side');
+function fitPad() { const mob = matchMedia('(max-width:860px)').matches; tpEl.style.setProperty('padding-bottom', Math.max(140, mob && view === 's2' ? sideEl.offsetHeight + 28 : 0) + 'px', 'important'); }
+if (window.ResizeObserver) new ResizeObserver(fitPad).observe(sideEl); window.addEventListener('resize', fitPad);
+
+/* ---------------------------------------------------------------- upload screen: pills + "how it works" */
+const HOWTIP = {
+  merge: 'Add several PDFs, then drag them or use ◀ ▶ to set the order.', split: 'Tap page thumbnails to pick pages, or type a range like 1-3, 5.',
+  organize: 'Delete, rotate and reorder pages before printing.', rotate: 'Tap a page to rotate it, or rotate all pages at once.',
+  jpg2pdf: 'Add photos, arrange them, then pick A4 size and orientation.', pdf2jpg: 'Every page becomes a sharp JPG. Download one page or all as a ZIP.',
+  compress: 'Pick a quality level. We show how much space you save.', gray: 'See exactly how your page looks in black & white before printing.',
+  pagenum: 'Add Page 1 of X, plus optional header and footer text.', watermark: 'Type your text and watch it appear on page 1 live.',
+  unlock: 'Enter the password once and get an unlocked copy, ready to print.', nup: 'Put 2 or 4 pages on each A4 sheet to save paper and money.'
+};
+let howSync = null;
+$('opts').addEventListener('change', () => { if (howSync) howSync(); });
+function renderHow(t) {
+  howSync = null;
+  const pills = $('pills'); pills.textContent = '';
+  if (t.multi) pills.appendChild(T$('span', 'pt-pl', '✨ Multiple Files Supported'));
+  pills.append(T$('span', 'pt-pl', '🔒 100% Private'), T$('span', 'pt-pl', '🖨️ Direct Counter Print'));
+  const h = $('how'); h.textContent = ''; const c = T$('div', 'pt-how'); c.appendChild(T$('h3', '', 'How this tool works'));
+  if (t.id === 'nup') {
+    const lay = T$('div', 'pt-lay'), mk = (n, cls, title, sub) => { const b = T$('button', 'pt-lo'); b.type = 'button'; b.dataset.n = n; const sh = T$('div', 'sheet ' + cls); for (let i = 0; i < n; i++) sh.appendChild(document.createElement('i')); b.append(sh, T$('b', '', title), T$('span', '', sub)); return b; };
+    lay.append(mk(2, 'land', '2-in-1 A4 Layout', '2 pages on 1 sheet'), mk(4, 'p4', '4-in-1 A4 Layout', '4 pages in a 2×2 grid'));
+    const sync = () => { lay.querySelectorAll('.pt-lo').forEach(b => b.classList.toggle('on', b.dataset.n === $('o1').value)); bd.querySelectorAll('button').forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === $('o3').checked)); };
+    const bd = T$('div', 'pt-seg2'); [['1', 'Page Border ON'], ['0', 'Page Border OFF']].forEach(([v, l]) => { const b = T$('button', '', l); b.type = 'button'; b.dataset.v = v; b.onclick = () => { $('o3').checked = v === '1'; sync(); }; bd.appendChild(b); });
+    lay.querySelectorAll('.pt-lo').forEach(b => b.onclick = () => { $('o1').value = b.dataset.n; $('o1').dispatchEvent(new Event('change')); sync(); });
+    c.append(lay, bd); howSync = sync; sync();
+  } else {
+    const v = T$('div', 'pt-hv'); v.innerHTML = icon(t.cat, t.ico, t.grad); v.appendChild(T$('p', '', t.how || HOWTIP[t.id] || t.d)); c.appendChild(v);
+  }
+  const st = T$('div', 'pt-steps'); ['1. Select Files', '2. Customize', '3. Download or Send to Counter 🖨️'].forEach((x, i) => { if (i) st.appendChild(T$('span', 'ar', '→')); st.appendChild(T$('span', 'stp', x)); });
+  c.appendChild(st); h.appendChild(c);
 }
 
 /* ====================================================================
@@ -861,7 +1208,7 @@ function observe(el) {
 }
 function thumbOf(f, i) {
   f._tp = f._tp || {};
-  return f._tp[i] || (f._tp[i] = new Promise((res, rej) => qRender(async () => { try { const {c} = await pageCanvas(f._pj, i + 1, .4); const u = c.toDataURL('image/jpeg', .6); c.width = c.height = 0; (f._tu2 = f._tu2 || {})[i] = u; res(u); } catch (e) { rej(e); } })));
+  return f._tp[i] || (f._tp[i] = new Promise((res, rej) => qRender(async () => { try { const pg = await f._pj.getPage(i + 1), w1 = pg.getViewport({scale: 1}).width, {c} = await pageCanvas(f._pj, i + 1, Math.max(320, 150 * DPR) / w1); const u = c.toDataURL('image/jpeg', .8); c.width = c.height = 0; (f._tu2 = f._tu2 || {})[i] = u; res(u); } catch (e) { rej(e); } })));
 }
 async function buildPages() {
   const f = files[0]; ['pg', 'pgt', 'pgc', 'pgh'].forEach(id => $(id).textContent = ''); ioReset();
@@ -871,6 +1218,7 @@ async function buildPages() {
   pgState = [...Array(n).keys()].map(i => ({i, rot: 0, sel: false, del: false}));
   const h = $('pgh'); h.append(T$('b', '', f.name), ' · ', T$('b', '', String(n)), ' ', T$('span', '', n === 1 ? 'page' : 'pages'));
   const x = T$('button', 'x', '✕'); x.type = 'button'; x.style.cssText = 'position:static;width:28px;height:28px'; x.setAttribute('aria-label', 'Remove'); x.onclick = () => { freeFile(f); files = []; pgState = []; ioReset(); render(); }; h.appendChild(x);
+  const am = T$('button', 'pt-addm', '➕ Add More Files'); am.type = 'button'; am.onclick = () => $('fi').click(); h.appendChild(am);
   const tb = (label, fn) => { const b = T$('button', '', label); b.type = 'button'; b.onclick = () => { fn(); drawPages(); }; $('pgt').appendChild(b); return b; };
   const m = cur.pmode;
   if (m === 'split') {
@@ -946,9 +1294,12 @@ function grayUpdate() { if (!gBase || !$('gc1')) return; const c = $('gc1'); c.w
    ==================================================================== */
 async function runTool() {
   if (busy || !cur) return; busy = true; setGo(); setMsg('Processing…'); runDate = new Date();
+  const src = files.slice(); srcUsed = src;                                      // names of the ORIGINAL uploads are used for the output name
   try {
-    const out = [].concat(await cur.run(files, {prog: (i, n) => setMsg('Processing…', i + ' / ' + n)}));
-    const rs = out.map(r => { const type = r.type || 'application/pdf', name = generateFileName(cur.slug, r.ext || 'pdf', r.suffix, runDate), blob = r.blob || new Blob([r.bytes], {type}); return {file: new File([blob], name, {type}), stat: r.stat, warn: r.warn}; });
+    let fs = files;
+    if (cur.combine && (files.length > 1 || files.some(f => f._rot))) { setMsg('Combining files…'); fs = [await combineFiles(files)]; setMsg('Processing…'); }
+    const out = [].concat(await cur.run(fs, {prog: (i, n) => setMsg('Processing…', i + ' / ' + n)}));
+    const rs = out.map(r => { const type = r.type || 'application/pdf', name = buildDownloadFileName(src, r.ext || 'pdf', r.suffix, runDate, cur.slug), blob = r.blob || new Blob([r.bytes], {type}); return {file: new File([blob], name, {type}), stat: r.stat, warn: r.warn}; });
     setMsg(''); showResult(rs);                                                  // NOTE: showing the result never downloads anything
   } catch (e) { if (e && e.u) setMsg(e.message, null, 1); else setMsg('Error:', (e && e.message) || 'could not process this file.', 1); console.error(e); }
   finally { busy = false; setGo(); }
@@ -1000,15 +1351,15 @@ function showResult(rs) {
   } else rs.forEach(r => box.appendChild(resultRow(r)));
   if (rs.length > 1) {
     const z = T$('button', 'pt-dl pt-all', '⬇️ Download All (ZIP)'); z.type = 'button';
-    z.onclick = async () => { z.disabled = true; try { const zip = new JSZip(); rs.forEach(r => zip.file(r.file.name, r.file)); const b = await zip.generateAsync({type: 'blob', compression: 'STORE'}); saveFile(new File([b], generateFileName(cur.slug, 'zip', null, runDate), {type: 'application/zip'})); } finally { z.disabled = false; } };
+    z.onclick = async () => { z.disabled = true; try { const zip = new JSZip(); rs.forEach(r => zip.file(r.file.name, r.file)); const b = await zip.generateAsync({type: 'blob', compression: 'STORE'}); saveFile(new File([b], buildDownloadFileName(srcUsed, 'zip', null, runDate, cur.slug), {type: 'application/zip'})); } finally { z.disabled = false; } };
     box.appendChild(z);
   }
   /* "continue with this file" chips (single PDF result) */
   const nx = $('nx'); nx.textContent = '';
   if (rs.length === 1 && rs[0].file.type === 'application/pdf') {
     nx.appendChild(T$('h3', '', 'Continue with this file')); const w = T$('div', 'nxw');
-    ['merge', 'split', 'organize', 'rotate', 'compress', 'nup', 'gray', 'pagenum', 'watermark', 'sign'].filter(id => id !== cur.id).slice(0, 6).forEach(id => {
-      const t = tById(id), b = T$('button', 'nxb'); b.type = 'button'; b.innerHTML = icon(t.cat, t.ico); b.appendChild(T$('span', '', t.n)); const f = rs[0].file; b.onclick = () => open_(t, [f]); w.appendChild(b);
+    ['merge', 'split', 'organize', 'rotate', 'compress', 'nup', 'gray', 'pagenum', 'watermark', 'sign', 'encrypt'].filter(id => id !== cur.id).slice(0, 6).forEach(id => {
+      const t = tById(id), b = T$('button', 'nxb'); b.type = 'button'; b.innerHTML = icon(t.cat, t.ico, t.grad); b.appendChild(T$('span', '', t.n)); const f = rs[0].file; b.onclick = () => open_(t, [f]); w.appendChild(b);
     });
     nx.appendChild(w);
   }
