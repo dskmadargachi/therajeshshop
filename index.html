@@ -393,16 +393,7 @@ h1,.hd h1{animation:none!important}
 .hx-orb.o2,.outro-bg i:nth-child(2){background:radial-gradient(circle,rgba(46,196,255,.8),transparent 68%)!important}
 .outro-bg i:nth-child(3){background:radial-gradient(circle,rgba(46,230,168,.8),transparent 68%)!important}
 
-/* ===== v7: bigger, livelier upload dropzone (home screen only) ===== */
-#docSplit .drop{position:relative;min-height:185px;padding:26px 18px!important;border-width:2px!important;border-radius:22px!important;overflow:hidden;background:linear-gradient(135deg,#f3f5ff,#fbf3ff 60%,#fff1f7)!important;border-color:#a9b2ff!important;box-shadow:0 18px 34px -24px rgba(79,91,255,.75)}
-#docSplit .drop-icon{position:relative;width:56px!important;height:56px!important;margin-bottom:12px!important;border-radius:18px!important;background:var(--rgb2)!important;color:#fff!important;border:0!important;animation:dzFloat 2.8s ease-in-out infinite}
-#docSplit .drop-icon svg{width:28px!important;height:28px!important}
-#docSplit .drop-icon:after{content:"";position:absolute;inset:0;border-radius:inherit;border:2px solid #7c6bff;opacity:0;pointer-events:none;animation:dzPulse 2.8s ease-out infinite}
-@keyframes dzFloat{50%{transform:translateY(-5px)}}
 @keyframes dzPulse{0%{transform:scale(1);opacity:.55}100%{transform:scale(1.7);opacity:0}}
-#docSplit .drop strong{font-size:17.5px!important;font-weight:800!important;margin-bottom:4px!important}
-#docSplit .drop span{font-size:13px!important;line-height:1.4!important}
-#docSplit .drop-btn{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:10px 22px;border-radius:999px;font-style:normal;font-weight:800;font-size:14px;color:#fff;background:var(--rgb2);box-shadow:0 12px 22px -12px rgba(79,91,255,.9)}
 
 /* ===== v7: Privacy & Security modal ===== */
 #pvModal .wzm-s.pm{max-width:520px;width:100%;overflow-x:hidden;padding:0 0 calc(18px + env(safe-area-inset-bottom,0px))}
@@ -464,6 +455,50 @@ h1,.hd h1{animation:none!important}
 @keyframes pmFile{0%,45%{opacity:1;transform:scale(1)}62%,100%{opacity:0;transform:scale(.3)}}
 @keyframes pmTick{0%,50%{opacity:0;transform:scale(.3)}66%,90%{opacity:1;transform:scale(1)}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){#pvModal .pm-ar i,#pvModal .pm-st,#pvModal .pm-st:after,#pvModal .pm-shield:after{animation:none!important}#pvModal .pm-wipe .t{opacity:1}#pvModal .pm-wipe .f{opacity:0}}
+
+/* ===== v8: bigger brand header (selectors out-rank wizard.css) ===== */
+body .topbar .topbar-in{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 10px;padding:10px 14px 8px!important}
+body .topbar .brand{gap:10px;min-width:0;grid-column:1;grid-row:1}
+body .topbar .topbar-in .sg{grid-column:2;grid-row:1}
+body .topbar .brand-mark{width:44px!important;height:44px!important;border-radius:12px!important;background:var(--rgb2)!important;box-shadow:0 8px 18px -8px rgba(79,91,255,.8)}
+body .topbar .brand-mark svg{width:24px!important;height:24px!important}
+body .topbar .brand-name{font-size:clamp(21px,5.5vw,25px)!important;font-weight:900;letter-spacing:-.5px;line-height:1.05;color:#1e1b6e;white-space:nowrap}
+body .topbar .brand-name b{font-weight:900;background:var(--rgb2);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:shopShift 6s ease-in-out infinite alternate}
+@keyframes shopShift{to{background-position:100% 0}}
+body .topbar .brand-sub{display:block!important;margin-top:2px;font-size:10.5px!important;font-weight:700;letter-spacing:.1px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body .topbar .chips{grid-column:1/-1;grid-row:2;order:0;width:auto;margin:0;display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:flex-start;gap:6px}
+body .topbar .chip{padding:2px 9px!important;font-size:11px!important;line-height:1.35;white-space:nowrap}
+@media(min-width:700px){body .topbar .topbar-in{grid-template-columns:minmax(0,1fr) auto auto}body .topbar .chips{grid-column:2;grid-row:1;margin:0}body .topbar .topbar-in .sg{grid-column:3}}
+
+/* ===== v8: one shared upload card for Documents + Passport ===== */
+:is(#docSplit,#ppSplit) .drop{position:relative;min-height:186px;padding:18px 14px!important;border-width:2px!important;border-radius:22px!important;overflow:hidden;background:linear-gradient(135deg,#f3f5ff,#fbf3ff 60%,#fff1f7)!important;border-color:#a9b2ff!important;box-shadow:0 18px 34px -24px rgba(79,91,255,.75)}
+:is(#docSplit,#ppSplit) .drop-icon{position:relative;width:56px!important;height:56px!important;margin-bottom:10px!important;border-radius:18px!important;background:var(--rgb2)!important;color:#fff!important;border:0!important;box-shadow:0 10px 22px -8px rgba(124,107,255,.75)!important;animation:floatGlow 2.8s ease-in-out infinite}
+:is(#docSplit,#ppSplit) .drop-icon svg{width:28px!important;height:28px!important}
+:is(#docSplit,#ppSplit) .drop-icon:after{content:"";position:absolute;inset:0;border-radius:inherit;border:2px solid #7c6bff;opacity:0;pointer-events:none;animation:dzPulse 2.8s ease-out infinite}
+@keyframes floatGlow{50%{transform:translateY(-5px)}}
+:is(#docSplit,#ppSplit) .drop strong{font-size:17.5px!important;font-weight:800!important;margin-bottom:3px!important}
+:is(#docSplit,#ppSplit) .drop span{font-size:clamp(10.5px,2.95vw,13px)!important;line-height:1.35!important;max-width:100%;white-space:nowrap}
+:is(#docSplit,#ppSplit) .drop-btn,#ppSplit .pbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 18px;border-radius:999px;font-style:normal;font-weight:800;font-size:13.5px;line-height:1}
+#ppSplit .pbtn{border:1.5px solid #a9b2ff;background:#fff;color:#3338d6}
+#ppSplit .pbtn.cam{border:0;color:#fff}
+:is(#docSplit,#ppSplit) .drop-btn{margin-top:10px;color:#fff;background:var(--rgb2);box-shadow:0 12px 22px -12px rgba(79,91,255,.9)}
+#ppSplit .pp-btns{display:flex;flex-wrap:nowrap;gap:10px;justify-content:center;margin-top:10px}
+[data-wz-resume]:not([hidden]){animation:resumeIn .35s var(--ease2) both}
+@keyframes resumeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ===== v8: tighter vertical rhythm so one phone screen holds everything ===== */
+body .flow{height:auto!important;padding:5px 12px!important;margin:6px auto!important;font-size:11.5px!important}
+body .tabs{margin-bottom:8px}
+body .wrap{padding-top:0!important}
+body .panel{padding:14px 16px!important}
+body .panel-h{font-size:17px!important;margin-bottom:2px!important}
+body .panel-s{margin:0 0 8px!important;font-size:12.5px!important}
+body .wa-or{margin:6px 4px!important;font-size:11px!important}
+body .wa-card{padding:11px 14px!important}
+body .wa-s{margin:4px 0 8px!important}
+body .wa-acts a,body .wa-acts button{padding:9px 12px!important}
+body .cf{margin-top:8px;padding-top:4px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));font-size:12px}
+body .cf-n{margin-top:2px;font-size:11px}
 
 </style>
 <style id="v5">
@@ -578,7 +613,7 @@ h1,.hd h1{animation:none!important}
 </defs></svg>
 
 <div class="topbar"><div class="topbar-in">
- <a href="/" class="brand" aria-label="therajesh.shop home"><span class="brand-mark"><svg width="22" height="22" style="color:#fff"><use href="#i-print"/></svg></span>
+ <a href="/" class="brand" aria-label="therajesh.shop home"><span class="brand-mark"><svg width="24" height="24" style="color:#fff"><use href="#i-print"/></svg></span>
   <span><div class="brand-name">therajesh<b>.shop</b></div><div class="brand-sub" id="shop">Digital Seva Kendra · Instant Print Studio</div></span></a>
  <div class="chips"><span class="chip" id="rbw">B&amp;W ₹5/page</span><span class="chip" id="rcolor">Color ₹10/page</span></div>
 </div></div>
@@ -664,16 +699,16 @@ h1,.hd h1{animation:none!important}
 
   <!-- ================= PASSPORT PHOTO — main screen: upload only ================= -->
   <div class="panel hidden" id="ppForm">
-    <h2 class="panel-h">Passport photo sheet</h2>
-    <p class="panel-s">Upload one portrait. We fit as many photos as possible on a 4×6 or A4 sheet.</p>
+    <h2 class="panel-h" data-en="Passport photo sheet" data-bn="পাসপোর্ট ছবির শিট">Passport photo sheet</h2>
+    <p class="panel-s" data-en="One portrait → full 4×6 or A4 sheet" data-bn="একটি ছবি → পুরো 4×6 বা A4 শিট">One portrait → full 4×6 or A4 sheet</p>
     <div id="ppSplit">
       <div class="drop pp-drop" id="ppDrop">
         <div class="drop-icon"><svg><use href="#i-user"/></svg></div>
-        <strong>Upload a portrait</strong>
-        <span>Clear front-facing photo (JPG, PNG or WebP). Background removal is built in.</span>
+        <strong data-en="Upload a portrait" data-bn="পাসপোর্ট ছবি আপলোড করুন">Upload a portrait</strong>
+        <span data-en="Clear front-facing photo · Auto background removal" data-bn="পরিষ্কার সামনে-মুখী ছবি · অটো ব্যাকগ্রাউন্ড রিমুভ">Clear front-facing photo · Auto background removal</span>
         <div class="pp-btns">
-          <label class="pbtn cam" for="ppCam"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg>Take photo (Camera)</label>
-          <label class="pbtn" for="ppPick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Choose from files</label>
+          <label class="pbtn cam" for="ppCam" data-en="📷 Camera" data-bn="📷 ক্যামেরা">📷 Camera</label>
+          <label class="pbtn" for="ppPick" data-en="📂 Files" data-bn="📂 ফাইল">📂 Files</label>
         </div>
       </div>
       <input type="file" id="ppPick" accept="image/jpeg,image/png,image/webp">
@@ -687,21 +722,13 @@ h1,.hd h1{animation:none!important}
   <style>
   /* --- compact header + step strip + tabs + upload card: everything fits one phone screen --- */
   .sui{padding:3px 12px!important;font-size:12px!important;min-height:0!important}
-  .topbar-in{padding:8px 14px!important;gap:6px 8px!important;flex-wrap:wrap!important}
   .topbar::before,.topbar:before{height:3px!important}
-  .brand-mark{width:34px!important;height:34px!important;border-radius:10px!important}.brand-mark svg{width:18px;height:18px}
-  .brand-name{font-size:16px!important}.brand-sub{font-size:11px!important;white-space:nowrap}
-  .chips{gap:5px!important;flex-wrap:wrap!important}.chip{padding:3px 9px!important;font-size:11.5px!important}
-  @media(max-width:640px){.brand-sub{display:none}.topbar-in{padding:8px 12px!important}.brand-name{font-size:15px!important}.chip{padding:3px 7px!important;font-size:10.5px!important}.chips{gap:4px!important}}
-  .flow{height:28px!important;margin:6px auto 8px!important;padding:0 12px!important;font-size:12px!important;border-radius:999px!important;gap:5px!important;width:fit-content;max-width:calc(100% - 24px)}
+  .flow{border-radius:999px!important;gap:5px!important;width:fit-content;max-width:calc(100% - 24px)}
   .flow b{width:17px!important;height:17px!important;font-size:10px!important}
   .tabs button,.tabs a{padding:8px 12px!important;font-size:13px!important;gap:6px!important}.tabs svg{width:16px!important;height:16px!important}
-  .wrap{padding:10px 12px 40px!important}
-  .panel{padding:14px!important}.panel-h{font-size:17px!important}.panel-s{margin:0 0 10px!important;font-size:12.5px!important}
-  #ppForm .drop{padding:18px 16px!important}#ppForm .drop-icon{width:40px!important;height:40px!important;margin-bottom:8px!important}#ppForm .drop-icon svg{width:22px!important;height:22px!important}
-  #ppForm .drop strong{font-size:15.5px!important;margin-bottom:2px!important}#ppForm .drop span{font-size:12.5px!important;line-height:1.35!important}
+  .wrap{padding-left:12px!important;padding-right:12px!important;padding-bottom:24px!important}
   /* --- OR divider + WhatsApp quick card --- */
-  .wa-or{display:flex;align-items:center;gap:10px;margin:10px 4px;color:#64748b;font-size:12px;font-weight:800;letter-spacing:.08em}
+  .wa-or{display:flex;align-items:center;gap:10px;margin:6px 4px;color:#64748b;font-size:11px;font-weight:800;letter-spacing:.08em}
   .wa-or:before,.wa-or:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,#c7d2fe,transparent)}
   .wa-or[hidden]{display:none}
   .wa-card{margin:0;padding:12px 14px;border-radius:16px;color:#fff;background:linear-gradient(135deg,#065f46 0%,#059669 100%);box-shadow:0 12px 24px -16px rgba(5,95,70,.9)}
@@ -712,7 +739,7 @@ h1,.hd h1{animation:none!important}
   .wa-live{display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,.25);padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:800;letter-spacing:.5px;flex:none}
   .wa-live i{width:7px;height:7px;border-radius:50%;background:#7CFF9E;animation:waDot 1.6s ease-in-out infinite}
   @keyframes waDot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.5);opacity:.35}}
-  .wa-s{margin:5px 0 10px;font-size:12.5px;font-weight:600;opacity:.95;line-height:1.35}
+  .wa-s{margin:4px 0 8px;font-size:12.5px;font-weight:600;opacity:.95;line-height:1.35}
   .wa-acts{display:flex;gap:8px}
   .wa-acts a,.wa-acts button{font:inherit;font-weight:800;font-size:13.5px;padding:10px 12px;border-radius:12px;border:0;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;transition:transform .25s}
   .wa-acts a:active,.wa-acts button:active{transform:scale(.96)}
