@@ -15,9 +15,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>(function(){var K='cfg-v2',C=null;try{C=JSON.parse(sessionStorage.getItem(K)||'null')}catch(e){}window.__cfgCached=C;var p;window.getCfg=function(){return p||(p=fetch('/api/config').then(function(r){return r.json()}).then(function(c){try{sessionStorage.setItem(K,JSON.stringify(c))}catch(e){}return c}))};window.paintRates=function(c){try{if(!c||!c.rate)return;var a=document.getElementById('rbw'),b=document.getElementById('rcolor'),s=document.getElementById('shop');if(a&&c.rate.bw!=null)a.textContent='B&W ₹'+c.rate.bw+'/page';if(b&&c.rate.color!=null)b.textContent='Color ₹'+c.rate.color+'/page';if(s&&c.shop)s.textContent=c.shop+' · Instant Print Studio'}catch(e){}}})();</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>:root{--brand-dk:#062f27;--brand-md:#0b5a49;--brand-lt:#7ee2c4;--brand-lt2:#a7f3d0;--brand-pale:#cdeee4}
 :root{
   --bg:#f3f5f8;--panel:#fff;--ink:#0f1b2d;--mute:#5b6778;--line:#dde3ea;--line-2:#eef1f5;
@@ -193,7 +193,7 @@ input[type=range]{width:100%;accent-color:var(--brand)}
 :root{--blue:#2563eb;--violet:#7c3aed;--pink:#db2777;--orange:#ea580c;--amber:#f59e0b;--teal:#0891b2;
  --rainbow:linear-gradient(90deg,var(--brand),#0891b2,#2563eb,#7c3aed,#db2777,#f59e0b);
  --grad:linear-gradient(135deg,var(--brand) 0%,#0891b2 55%,#2563eb 100%);--grad-hot:linear-gradient(135deg,#f97316,#db2777)}
-body{background:radial-gradient(900px 460px at 0% -8%,#dbeafe99,transparent 70%),radial-gradient(800px 420px at 100% -4%,#fce7f399,transparent 70%),radial-gradient(800px 460px at 50% 112%,#d1fae599,transparent 70%),#f4f6fb;background-attachment:fixed}
+body{background:radial-gradient(900px 460px at 0% -8%,#dbeafe99,transparent 70%),radial-gradient(800px 420px at 100% -4%,#fce7f399,transparent 70%),radial-gradient(800px 460px at 50% 112%,#d1fae599,transparent 70%),#f4f6fb}
 .topbar{position:relative}
 .topbar::before{content:'';display:block;height:5px;background:var(--rainbow)}
 .brand-mark{background:linear-gradient(135deg,var(--brand),#2563eb 60%,#7c3aed);box-shadow:0 6px 14px #2563eb44}
@@ -275,7 +275,7 @@ html{scroll-behavior:smooth}body{background:radial-gradient(900px 420px at 88% -
 .panel,.card{border-radius:var(--r)!important;border:1px solid var(--line)!important;box-shadow:var(--sh)!important;background:#fff}
 button,.btn,input,select,textarea{border-radius:12px}button{transition:transform .15s,box-shadow .2s,background .2s}button:active{transform:scale(.97)}
 input:focus,select:focus,textarea:focus{outline:3px solid color-mix(in srgb,var(--brand) 22%,transparent);outline-offset:1px;border-color:var(--brand)}
-.tabs{backdrop-filter:saturate(1.4) blur(14px);background:rgba(255,255,255,.82)!important}
+.tabs{background:rgba(255,255,255,.94)!important}
 .qp-sec{max-width:1160px;margin:18px auto 4px;padding:22px 20px 14px;border-radius:24px;background:linear-gradient(135deg,var(--brand-dk),var(--brand-md) 60%,var(--brand));color:#fff;box-shadow:0 24px 48px -20px rgba(6,47,39,.55);position:relative;overflow:hidden}
 .qp-sec:before{content:"";position:absolute;inset:-40% -10% auto auto;width:420px;height:420px;border-radius:50%;background:radial-gradient(var(--brand-lt)44,transparent 65%)}
 .qp-sec h2{margin:0;font-size:clamp(22px,4vw,34px);letter-spacing:-.8px;font-weight:800;position:relative}.qp-sec p{margin:6px 0 10px;color:#c9eee3;font-weight:600;position:relative}
@@ -337,20 +337,6 @@ input:focus,select:focus,textarea:focus{outline:3px solid color-mix(in srgb,var(
 .pv-c b{display:block;font-size:16.5px;letter-spacing:-.2px;margin-bottom:6px}.pv-c span{font-size:14px;color:var(--mute);line-height:1.5}
 .pv-c i{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;margin-bottom:12px;background:var(--brand-soft);color:var(--brand)}.pv-c i svg{width:20px;height:20px}
 @media(max-width:820px){.pv{padding:28px 18px 20px;border-radius:20px}.pv-flow{grid-template-columns:repeat(2,1fr)}.pv-flow li:last-child{grid-column:span 2}.pv-cards{grid-template-columns:1fr}}
-.pvd{margin:22px 0 16px;background:#fff;color:#0f1b2d;border-radius:18px;padding:16px 14px 12px}
-.pvd figcaption{font-weight:800;font-size:15px;margin:0 6px 6px}
-.pvd svg{display:block;width:100%;height:auto}
-.pvd .n{fill:var(--brand-soft);stroke:var(--brand);stroke-width:2}
-.pvd .nt{font:800 14px Figtree,system-ui,sans-serif;fill:#0f1b2d;text-anchor:middle}
-.pvd .ns{font:600 11px Figtree,system-ui,sans-serif;fill:#5b6778;text-anchor:middle}
-.pvd .lt{font:800 12px Figtree,system-ui,sans-serif;letter-spacing:.08em;fill:var(--brand-ink)}
-.pvd .al{font:700 10.5px Figtree,system-ui,sans-serif;fill:var(--brand-ink);text-anchor:middle}
-.pvd .ln{stroke:var(--brand);stroke-width:2.5;marker-end:url(#pvar)}
-.pvd .dl{stroke:#c62828;stroke-width:2;stroke-dasharray:5 4;marker-end:url(#pvar2)}
-.pvd .d{fill:#fdecec;stroke:#e8a2a2;stroke-width:1.5}
-.pvd .dt{font:700 11.5px Figtree,system-ui,sans-serif;fill:#c62828;text-anchor:middle}
-.pvd .ok{fill:var(--brand-ink);font:800 12px Figtree,system-ui,sans-serif;text-anchor:middle}
-.pvd .sep{stroke:#dde3ea;stroke-width:1.5}
 .pvp{margin:34px auto 10px;max-width:1100px;border-radius:24px;background:linear-gradient(135deg,var(--brand-dk),var(--brand-md) 62%,var(--brand));color:#fff;padding:32px 24px 14px}
 .pvp .k{font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--brand-lt)}
 .pvp h2{margin:8px 0 8px;font-size:clamp(26px,5vw,40px);line-height:1.05;letter-spacing:-1px}
@@ -368,8 +354,7 @@ body{background:#f6f7ff!important;background-attachment:scroll!important}
 body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(520px 420px at 6% 4%,rgba(79,91,255,.15),transparent 70%),radial-gradient(560px 460px at 96% 10%,rgba(255,95,162,.13),transparent 70%),radial-gradient(640px 520px at 50% 104%,rgba(46,230,168,.12),transparent 70%)}
 .topbar,.tabs{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(255,255,255,.92)!important}
 .topbar{box-shadow:0 1px 0 #e6eaf8}
-.brand-mark{background:var(--rgb2)!important;animation:glow 3.4s ease-in-out infinite}
-@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(79,91,255,.35)}50%{box-shadow:0 0 0 9px rgba(79,91,255,0)}}
+.brand-mark{background:var(--rgb2)!important}
 .chip{background:#fff!important;border:1px solid var(--brand-line)!important;color:var(--brand-ink)!important}
 .tabs button,.tabs a{position:relative;border-radius:12px 12px 0 0!important}
 .tabs .on{border-bottom-color:transparent!important;background:var(--brand-soft)!important}
@@ -384,7 +369,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;bac
 .btn,.b,.chip,.tile,.tool-link,.file,.ci,.seg button,.drop,.up,.card{transition:transform .28s var(--ease2),box-shadow .28s var(--ease2),border-color .2s,background .2s!important}
 .ic{box-shadow:0 10px 18px -8px rgba(60,60,200,.55)!important;transition:transform .35s var(--ease2)}
 .card:hover .ic,.tile:hover .ca,.tool-link:hover svg{transform:scale(1.1) rotate(-4deg)}
-h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent;background-size:200% 100%;animation:hshift 9s ease-in-out infinite alternate}
+h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent;background-size:200% 100%;}
 .hd h1{background-image:var(--rgb);display:inline-block}
 @keyframes hshift{to{background-position:100% 0}}
 .drop,.up{border-color:var(--brand-line)!important;background:linear-gradient(135deg,#f7f8ff,#fdf6ff)!important}
@@ -397,6 +382,88 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 .js-rv .rv{opacity:0;transform:translateY(20px) scale(.985)}
 .js-rv .rv.in{opacity:1;transform:none;transition:opacity .65s ease,transform .7s var(--ease2);transition-delay:var(--d,0s)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.js-rv .rv{opacity:1;transform:none}}
+
+/* ===== v7: perf fixes (GPU-friendly, no animated paint/filters) ===== */
+.brand-mark{position:relative;animation:none!important}
+.brand-mark:after{content:"";position:absolute;inset:0;border-radius:inherit;border:2px solid rgba(79,91,255,.5);opacity:0;pointer-events:none;animation:bmRing 3.4s ease-out infinite}
+@keyframes bmRing{0%{transform:scale(1);opacity:.6}70%,100%{transform:scale(1.55);opacity:0}}
+h1,.hd h1{animation:none!important}
+.hx-orb,.outro-bg i{filter:none!important}
+.hx-orb.o1,.outro-bg i:nth-child(1){background:radial-gradient(circle,rgba(255,95,162,.85),transparent 68%)!important}
+.hx-orb.o2,.outro-bg i:nth-child(2){background:radial-gradient(circle,rgba(46,196,255,.8),transparent 68%)!important}
+.outro-bg i:nth-child(3){background:radial-gradient(circle,rgba(46,230,168,.8),transparent 68%)!important}
+
+/* ===== v7: bigger, livelier upload dropzone (home screen only) ===== */
+#docSplit .drop{position:relative;min-height:185px;padding:26px 18px!important;border-width:2px!important;border-radius:22px!important;overflow:hidden;background:linear-gradient(135deg,#f3f5ff,#fbf3ff 60%,#fff1f7)!important;border-color:#a9b2ff!important;box-shadow:0 18px 34px -24px rgba(79,91,255,.75)}
+#docSplit .drop-icon{position:relative;width:56px!important;height:56px!important;margin-bottom:12px!important;border-radius:18px!important;background:var(--rgb2)!important;color:#fff!important;border:0!important;animation:dzFloat 2.8s ease-in-out infinite}
+#docSplit .drop-icon svg{width:28px!important;height:28px!important}
+#docSplit .drop-icon:after{content:"";position:absolute;inset:0;border-radius:inherit;border:2px solid #7c6bff;opacity:0;pointer-events:none;animation:dzPulse 2.8s ease-out infinite}
+@keyframes dzFloat{50%{transform:translateY(-5px)}}
+@keyframes dzPulse{0%{transform:scale(1);opacity:.55}100%{transform:scale(1.7);opacity:0}}
+#docSplit .drop strong{font-size:17.5px!important;font-weight:800!important;margin-bottom:4px!important}
+#docSplit .drop span{font-size:13px!important;line-height:1.4!important}
+#docSplit .drop-btn{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:10px 22px;border-radius:999px;font-style:normal;font-weight:800;font-size:14px;color:#fff;background:var(--rgb2);box-shadow:0 12px 22px -12px rgba(79,91,255,.9)}
+
+/* ===== v7: Privacy & Security modal ===== */
+#pvModal .wzm-s.pm{max-width:520px;width:100%;overflow-x:hidden;padding:0 0 calc(18px + env(safe-area-inset-bottom,0px))}
+#pvModal .wzm-h{position:sticky;top:0;z-index:2;margin:0;padding:14px 16px 10px;background:#fff;border-bottom:1px solid #eef0fa}
+#pvModal .pm-body{padding:12px 14px 0;display:grid;gap:12px;min-width:0}
+#pvModal .pm-body *{min-width:0;overflow-wrap:anywhere;box-sizing:border-box}
+.pm-hero{display:flex;gap:12px;align-items:center;padding:14px;border-radius:18px;color:#fff;background:linear-gradient(135deg,#14163f,#2c2a8f 65%,#4b36c4)}
+.pm-shield{position:relative;flex:none;width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:rgba(255,255,255,.14)}
+.pm-shield svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.pm-shield:after{content:"";position:absolute;inset:0;border-radius:inherit;border:2px solid #7ee2c4;opacity:0}
+.pm-badge{display:block;font-weight:800;font-size:15px;line-height:1.25}
+.pm-sub{margin:4px 0 0;font-size:12.5px;line-height:1.45;color:#d3d8ff}
+.pm-sec{--pc:#4f5bff;--pb:#f0f2ff;padding:12px;border:1px solid #e3e8f2;border-radius:18px}
+.pm-wa{--pc:#059669;--pb:#ecfdf5}
+.pm-h{margin:0 0 10px;font-size:14.5px;font-weight:800;line-height:1.3}
+.pm-flow{display:grid;grid-template-columns:1fr;align-items:stretch}
+.pm-st{position:relative;padding:10px 10px 11px;border-radius:14px;background:var(--pb);border:1px solid color-mix(in srgb,var(--pc) 25%,#fff);display:grid;gap:3px;align-content:start}
+.pm-st:after{content:"";position:absolute;inset:-1px;border-radius:inherit;border:2px solid var(--pc);opacity:0;pointer-events:none}
+.pm-st b{font-size:13px;font-weight:800;line-height:1.3}
+.pm-st small{font-size:11.5px;line-height:1.4;color:#5b6778}
+.pm-n{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--pc);color:#fff;font-size:11px;font-weight:800}
+.pm-ar{position:relative;height:28px;color:var(--pc)}
+.pm-ar:before{content:"";position:absolute;left:50%;top:3px;bottom:3px;width:2px;margin-left:-1px;background:currentColor;opacity:.25}
+.pm-ar i{position:absolute;left:50%;top:3px;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:currentColor;opacity:0}
+.pm-ar:after{content:"";position:absolute;left:50%;bottom:3px;width:7px;height:7px;margin-left:-3.5px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg)}
+.pm-wipe{position:absolute;top:8px;right:8px;width:22px;height:22px;display:block}
+.pm-wipe em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-size:15px;line-height:1}
+.pm-wipe .t{color:var(--pc);font-weight:800;opacity:0}
+.pm-tool{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:14px;background:#f5f3ff;border:1px solid #ddd6fe}
+.pm-tool>span{flex:none;font-size:22px;line-height:1}
+.pm-tool b{display:block;font-size:13.5px;font-weight:800}
+.pm-tool p{margin:3px 0 0;font-size:12.5px;line-height:1.45;color:#475569}
+.pm-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pm-gc{padding:11px;border-radius:14px;border:1px solid #e3e8f2;background:#fff}
+.pm-gc b{display:block;font-size:12.5px;font-weight:800;line-height:1.3}
+.pm-gc span{display:block;margin-top:3px;font-size:11.5px;line-height:1.4;color:#5b6778}
+.pm-fn{margin:0;font-size:11px;line-height:1.45;color:#94a3b8;text-align:center}
+@media(min-width:480px){
+ .pm-flow{grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr) 22px minmax(0,1fr)}
+ .pm-ar{height:auto;min-height:20px}
+ .pm-ar:before{left:0;right:0;top:50%;bottom:auto;width:auto;height:2px;margin:-1px 0 0}
+ .pm-ar i{left:0;top:50%;margin:-4px 0 0}
+ .pm-ar:after{left:auto;right:1px;top:50%;bottom:auto;margin:-3.5px 0 0;transform:rotate(-45deg)}
+}
+/* animations run only while the modal is open; transform + opacity only */
+#pvModal.on .pm-shield:after{animation:pmShield 2.4s ease-out infinite}
+#pvModal.on .pm-ar i{animation:pmY 1.5s linear infinite}
+#pvModal.on .pm-ar:nth-child(4) i{animation-delay:.5s}
+#pvModal.on .pm-st{animation:pmLift 6s ease-in-out infinite;animation-delay:calc(var(--i)*2s)}
+#pvModal.on .pm-st:after{animation:pmRingHi 6s ease-in-out infinite;animation-delay:calc(var(--i)*2s)}
+#pvModal.on .pm-wipe .f{animation:pmFile 4s ease-in-out infinite}
+#pvModal.on .pm-wipe .t{animation:pmTick 4s ease-in-out infinite}
+@keyframes pmShield{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.6);opacity:0}}
+@keyframes pmY{0%{transform:translateY(0);opacity:0}15%,80%{opacity:1}100%{transform:translateY(16px);opacity:0}}
+@keyframes pmX{0%{transform:translateX(0);opacity:0}15%,80%{opacity:1}100%{transform:translateX(16px);opacity:0}}
+@media(min-width:480px){#pvModal.on .pm-ar i{animation-name:pmX}}
+@keyframes pmLift{0%,34%,100%{transform:none}8%,28%{transform:translateY(-2px)}}
+@keyframes pmRingHi{0%,34%,100%{opacity:0}8%,28%{opacity:1}}
+@keyframes pmFile{0%,45%{opacity:1;transform:scale(1)}62%,100%{opacity:0;transform:scale(.3)}}
+@keyframes pmTick{0%,50%{opacity:0;transform:scale(.3)}66%,90%{opacity:1;transform:scale(1)}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){#pvModal .pm-ar i,#pvModal .pm-st,#pvModal .pm-st:after,#pvModal .pm-shield:after{animation:none!important}#pvModal .pm-wipe .t{opacity:1}#pvModal .pm-wipe .f{opacity:0}}
 
 </style>
 <style id="v5">
@@ -515,6 +582,7 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
   <span><div class="brand-name">therajesh<b>.shop</b></div><div class="brand-sub" id="shop">Digital Seva Kendra · Instant Print Studio</div></span></a>
  <div class="chips"><span class="chip" id="rbw">B&amp;W ₹5/page</span><span class="chip" id="rcolor">Color ₹10/page</span></div>
 </div></div>
+<script>paintRates(window.__cfgCached)</script>
 <div class="flow" role="list" aria-label="How it works"><span role="listitem"><b>1</b>Scan QR</span><i>→</i><span role="listitem"><b>2</b>Upload &amp; Pay</span><i>→</i><span role="listitem"><b>3</b>Print Ready</span></div>
 <nav class="tabs" aria-label="Tools"><div class="tabs-in">
  <button id="tabDoc" class="on" type="button"><svg><use href="#i-doc"/></svg>Documents &amp; photos</button>
@@ -587,6 +655,7 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
         <div class="drop-icon"><svg><use href="#i-up"/></svg></div>
         <strong data-en="Upload documents or photos" data-bn="ডকুমেন্ট বা ছবি আপলোড করুন">Upload documents or photos</strong>
         <span data-en="PDF, JPG, PNG, Word, Excel · up to 10 files" data-bn="PDF, JPG, PNG, Word, Excel · সর্বোচ্চ ১০টি ফাইল">PDF, JPG, PNG, Word, Excel · up to 10 files</span>
+        <em class="drop-btn" data-en="📂 Choose Files" data-bn="📂 ফাইল সিলেক্ট করুন">📂 Choose Files</em>
       </label>
       <input type="file" id="pick" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
       <button class="wz-btn pri hidden" type="button" data-wz-resume="doc" hidden style="width:100%;margin-top:10px">Continue your order →</button>
@@ -629,8 +698,8 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
   .tabs button,.tabs a{padding:8px 12px!important;font-size:13px!important;gap:6px!important}.tabs svg{width:16px!important;height:16px!important}
   .wrap{padding:10px 12px 40px!important}
   .panel{padding:14px!important}.panel-h{font-size:17px!important}.panel-s{margin:0 0 10px!important;font-size:12.5px!important}
-  .drop{padding:18px 16px!important}.drop-icon{width:40px!important;height:40px!important;margin-bottom:8px!important}.drop-icon svg{width:22px!important;height:22px!important}
-  .drop strong{font-size:15.5px!important;margin-bottom:2px!important}.drop span{font-size:12.5px!important;line-height:1.35!important}
+  #ppForm .drop{padding:18px 16px!important}#ppForm .drop-icon{width:40px!important;height:40px!important;margin-bottom:8px!important}#ppForm .drop-icon svg{width:22px!important;height:22px!important}
+  #ppForm .drop strong{font-size:15.5px!important;margin-bottom:2px!important}#ppForm .drop span{font-size:12.5px!important;line-height:1.35!important}
   /* --- OR divider + WhatsApp quick card --- */
   .wa-or{display:flex;align-items:center;gap:10px;margin:10px 4px;color:#64748b;font-size:12px;font-weight:800;letter-spacing:.08em}
   .wa-or:before,.wa-or:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,#c7d2fe,transparent)}
@@ -674,7 +743,7 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
   <script>
   (function () {
     var PLACEHOLDER = '91XXXXXXXXXX';            // <- or set WA_NUMBER in Cloudflare (digits with country code); the site reads it from /api/config
-    var card = document.getElementById('waCard'), or = document.getElementById('waOr'), drawn = false;
+    var card = document.getElementById('waCard'), or = document.getElementById('waOr'), drawn = false, bound = false;
     /* language: follows the site's English / বাংলা switch (site-ui.js sets <html lang> and saves 'site-lang') */
     function curLang() {
       if (document.documentElement.lang === 'bn') return 'bn';
@@ -695,13 +764,16 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
       document.getElementById('waNum').textContent = '+' + num.replace(/^(\d{2})(\d{5})(\d+)$/, '$1 $2 $3'); card.hidden = false; or.hidden = false;
       document.getElementById('waQrBtn').onclick = function () {
         document.getElementById('waMod').hidden = false;
-        if (!drawn && window.QRCode) { drawn = true; new QRCode(document.getElementById('waQrBox'), { text: link, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M }); }
+        if (drawn) return;
+        var draw = function () { if (drawn || !window.QRCode) return; drawn = true; new QRCode(document.getElementById('waQrBox'), { text: link, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M }); };
+        if (window.QRCode) draw(); else { var s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'; s.onload = draw; document.head.appendChild(s); }
       };
       document.getElementById('waModX').onclick = close;
       document.getElementById('waMod').onclick = function (e) { if (e.target.id === 'waMod') close(); };
-      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+      if (!bound) { bound = true; document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); }); }
     }
-    fetch('/api/config').then(function (r) { return r.json(); }).then(function (c) { setup(c.waNumber || PLACEHOLDER); }).catch(function () { setup(PLACEHOLDER); });
+    var cc = window.__cfgCached; if (cc && cc.waNumber) setup(cc.waNumber);
+    window.getCfg().then(function (c) { setup(c.waNumber || PLACEHOLDER); }).catch(function () { if (!(cc && cc.waNumber)) setup(PLACEHOLDER); });
   })();
   </script>
 
@@ -719,31 +791,25 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 
 <!-- ================= PRIVACY & SECURITY MODAL ================= -->
 <div class="wzm" id="pvModal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="pvT">
-  <div class="wzm-s">
+  <div class="wzm-s pm">
     <div class="wzm-h"><b id="pvT">Privacy &amp; Security</b><button class="wz-x" type="button" data-wz-mclose aria-label="Close">✕</button></div>
-    <p class="hint" style="margin:0 0 6px">Document is deleted the moment printing finishes — from the shop’s computer and from our server. Unpaid uploads expire in 60 minutes.</p>
-    <figure class="pvd"><figcaption>Where your file goes</figcaption>
-<svg viewBox="0 0 760 340" role="img" aria-label="Print orders: your phone uploads to our server, then to the shop PC and printer, and the file is deleted from the server and the PC afterwards. PDF tools: your file is processed inside your own browser and is never uploaded.">
-<defs><marker id="pvar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10z" style="fill:var(--brand)"/></marker><marker id="pvar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10z" fill="#c62828"/></marker></defs>
-<text class="lt" x="20" y="26">1 · PRINT ORDER — your file travels to the shop</text>
-<rect class="n" x="20" y="44" width="120" height="64" rx="12"/><text class="nt" x="80" y="72">Your phone</text><text class="ns" x="80" y="90">upload file</text><rect class="n" x="215" y="44" width="140" height="64" rx="12"/><text class="nt" x="285" y="72">Our server</text><text class="ns" x="285" y="90">held until paid</text><rect class="n" x="430" y="44" width="130" height="64" rx="12"/><text class="nt" x="495" y="72">Shop PC</text><text class="ns" x="495" y="90">temporary copy</text><rect class="n" x="635" y="44" width="105" height="64" rx="12"/><text class="nt" x="687" y="72">Printer</text><text class="ns" x="687" y="90">prints it</text>
-<line class="ln" x1="142" y1="76" x2="213" y2="76"/><line class="ln" x1="357" y1="76" x2="428" y2="76"/><line class="ln" x1="562" y1="76" x2="633" y2="76"/>
-<text class="al" x="177" y="66">HTTPS</text><text class="al" x="392" y="66">after pay</text><text class="al" x="597" y="66">print</text>
-<line class="dl" x1="285" y1="110" x2="285" y2="146"/><line class="dl" x1="495" y1="110" x2="495" y2="146"/>
-<rect class="d" x="215" y="148" width="140" height="34" rx="9"/><text class="dt" x="285" y="170">Deleted after print</text>
-<rect class="d" x="430" y="148" width="130" height="34" rx="9"/><text class="dt" x="495" y="170">Deleted after print</text>
-<line class="sep" x1="20" y1="204" x2="740" y2="204"/>
-<text class="lt" x="20" y="232">2 · PDF TOOLS — your file never leaves your device</text>
-<rect class="n" x="20" y="250" width="120" height="64" rx="12"/><text class="nt" x="80" y="278">Your file</text><text class="ns" x="80" y="296">PDF or image</text><rect class="n" x="215" y="250" width="345" height="64" rx="12"/><text class="nt" x="387" y="278">Your own browser</text><text class="ns" x="387" y="296">merge · split · compress · convert all happen here</text><rect class="n" x="635" y="250" width="105" height="64" rx="12"/><text class="nt" x="687" y="278">Download</text><text class="ns" x="687" y="296">result file</text>
-<line class="ln" x1="142" y1="282" x2="213" y2="282"/><line class="ln" x1="562" y1="282" x2="633" y2="282"/>
-<text class="ok" x="387" y="334">No upload · no server · no copy kept</text>
-</svg></figure>
-    <div class="pv-cards">
-      <div class="pv-c"><i><svg><use href="#i-trash"/></svg></i><b>Deleted from the shop’s PC</b><span>The temporary file is wiped from the shop computer as soon as the print comes out.</span></div>
-      <div class="pv-c"><i><svg><use href="#i-trash"/></svg></i><b>Deleted from our server</b><span>The same job is removed from our server right after. No copy is left behind.</span></div>
-      <div class="pv-c"><i><svg><use href="#i-pdf"/></svg></i><b>PDF tools stay on your device</b><span>Merging, splitting and converting happen inside your browser. Those files are never uploaded.</span></div>
-      <div class="pv-c"><i><svg><use href="#i-scan"/></svg></i><b>Visit counter</b><span>To count visitors we log your IP address and approximate city. These logs are deleted after 90 days.</span></div>
-      <div class="pv-c"><i><svg><use href="#i-scan"/></svg></i><b>You can watch it happen</b><span>The customer’s tracker shows every step live — including both delete steps.</span></div>
+    <div class="pm-body">
+      <div class="pm-hero">
+        <div class="pm-shield" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.6-3 8.3-7 10-4-1.7-7-5.4-7-10V6z"/><rect x="9" y="10.5" width="6" height="4.5" rx="1"/><path d="M10.5 10.5V9a1.5 1.5 0 0 1 3 0v1.5"/></svg></div>
+        <div><span class="pm-badge" data-en="🔒 100% Private &amp; Auto-Deleted" data-bn="🔒 ১০০% গোপনীয় ও অটো-ডিলিট">🔒 100% Private &amp; Auto-Deleted</span>
+        <p class="pm-sub" data-en="Your files are automatically wiped the moment printing finishes—both from our shop PC and cloud server." data-bn="প্রিন্ট শেষ হওয়ার সাথে সাথেই আপনার ফাইল আমাদের দোকানের পিসি ও ক্লাউড সার্ভার—দুই জায়গা থেকেই অটোমেটিক মুছে যায়।">Your files are automatically wiped the moment printing finishes—both from our shop PC and cloud server.</p></div>
+      </div>
+      <section class="pm-sec pm-web"><h3 class="pm-h" data-en="🌐 How Website Upload &amp; Print Works" data-bn="🌐 ওয়েবসাইট থেকে আপলোড ও প্রিন্ট কীভাবে কাজ করে">🌐 How Website Upload &amp; Print Works</h3><div class="pm-flow" role="list"><div class="pm-st" role="listitem" style="--i:0"><span class="pm-n">1</span><b data-en="📱 Your Phone" data-bn="📱 আপনার ফোন">📱 Your Phone</b><small data-en="Upload PDF/Photo via HTTPS" data-bn="HTTPS দিয়ে PDF/ছবি আপলোড">Upload PDF/Photo via HTTPS</small></div><div class="pm-ar" aria-hidden="true"><i></i></div><div class="pm-st" role="listitem" style="--i:1"><span class="pm-n">2</span><b data-en="☁️ Encrypted Server" data-bn="☁️ এনক্রিপ্টেড সার্ভার">☁️ Encrypted Server</b><small data-en="Held temporarily until paid" data-bn="পেমেন্ট না হওয়া পর্যন্ত সাময়িক জমা থাকে">Held temporarily until paid</small></div><div class="pm-ar" aria-hidden="true"><i></i></div><div class="pm-st" role="listitem" style="--i:2"><span class="pm-n">3</span><span class="pm-wipe" aria-hidden="true"><em class="f">📄</em><em class="t">✓</em></span><b data-en="🖨️ Shop Printer &amp; Instant Wipe" data-bn="🖨️ দোকানের প্রিন্টার ও সাথে সাথে মোছা">🖨️ Shop Printer &amp; Instant Wipe</b><small data-en="Prints automatically → File is permanently deleted from PC &amp; Server!" data-bn="অটো প্রিন্ট হয় → ফাইল পিসি ও সার্ভার থেকে চিরতরে মুছে যায়!">Prints automatically → File is permanently deleted from PC &amp; Server!</small></div></div></section>
+      <section class="pm-sec pm-wa"><h3 class="pm-h" data-en="💬 How WhatsApp Print Bot Works" data-bn="💬 WhatsApp প্রিন্ট বট কীভাবে কাজ করে">💬 How WhatsApp Print Bot Works</h3><div class="pm-flow" role="list"><div class="pm-st" role="listitem" style="--i:0"><span class="pm-n">1</span><b data-en="💬 Send File on WhatsApp" data-bn="💬 WhatsApp-এ ফাইল পাঠান">💬 Send File on WhatsApp</b><small data-en="Send PDF/Image to shop WhatsApp" data-bn="দোকানের WhatsApp-এ PDF/ছবি পাঠান">Send PDF/Image to shop WhatsApp</small></div><div class="pm-ar" aria-hidden="true"><i></i></div><div class="pm-st" role="listitem" style="--i:1"><span class="pm-n">2</span><b data-en="⚡ Reply 1 (B&amp;W) or 2 (Color) &amp; Pay" data-bn="⚡ ১ (সাদাকালো) বা ২ (কালার) লিখে পেমেন্ট করুন">⚡ Reply 1 (B&amp;W) or 2 (Color) &amp; Pay</b><small data-en="Pay via UPI QR for instant print, or Cash at counter" data-bn="সাথে সাথে প্রিন্টের জন্য UPI QR-এ পেমেন্ট করুন, অথবা কাউন্টারে ক্যাশ">Pay via UPI QR for instant print, or Cash at counter</small></div><div class="pm-ar" aria-hidden="true"><i></i></div><div class="pm-st" role="listitem" style="--i:2"><span class="pm-n">3</span><span class="pm-wipe" aria-hidden="true"><em class="f">📄</em><em class="t">✓</em></span><b data-en="🖨️ Auto-Print &amp; Privacy Purge" data-bn="🖨️ অটো-প্রিন্ট ও প্রাইভেসি পার্জ">🖨️ Auto-Print &amp; Privacy Purge</b><small data-en="Prints with Token # → File &amp; chat media are auto-deleted after print!" data-bn="টোকেন # সহ প্রিন্ট হয় → প্রিন্টের পর ফাইল ও চ্যাট মিডিয়া অটো-ডিলিট!">Prints with Token # → File &amp; chat media are auto-deleted after print!</small></div></div></section>
+      <section class="pm-sec"><h3 class="pm-h" data-en="🛠️ Free Browser Tools (PDF &amp; ID Card Tools)" data-bn="🛠️ ফ্রি ব্রাউজার টুলস (PDF ও আইডি কার্ড টুলস)">🛠️ Free Browser Tools (PDF &amp; ID Card Tools)</h3>
+        <div class="pm-tool"><span aria-hidden="true">💻</span><div><b data-en="100% On-Device Processing" data-bn="১০০% ডিভাইসেই প্রসেসিং">100% On-Device Processing</b>
+        <p data-en="When you use PDF Tools, ID Card Crop, or Passport Photo Maker, your files never even leave your phone/browser. Zero server upload!" data-bn="PDF Tools, ID Card Crop বা Passport Photo Maker ব্যবহার করলে আপনার ফাইল ফোন/ব্রাউজারের বাইরে যায়ই না। সার্ভারে কোনো আপলোড নেই!">When you use PDF Tools, ID Card Crop, or Passport Photo Maker, your files never even leave your phone/browser. Zero server upload!</p></div></div>
+      </section>
+      <div class="pm-g">
+        <div class="pm-gc"><b data-en="🗑️ Wiped from Shop PC" data-bn="🗑️ দোকানের পিসি থেকে মুছে যায়">🗑️ Wiped from Shop PC</b><span data-en="Temp copy is erased immediately after print." data-bn="প্রিন্টের সাথে সাথেই অস্থায়ী কপি মুছে ফেলা হয়।">Temp copy is erased immediately after print.</span></div>
+        <div class="pm-gc"><b data-en="⏱️ 60-Min Unpaid Expiry" data-bn="⏱️ ৬০ মিনিটে অপরিশোধিত মেয়াদ শেষ">⏱️ 60-Min Unpaid Expiry</b><span data-en="Unpaid or abandoned uploads auto-delete in 60 minutes." data-bn="পেমেন্ট না হওয়া বা অসমাপ্ত আপলোড ৬০ মিনিটে অটো-ডিলিট হয়।">Unpaid or abandoned uploads auto-delete in 60 minutes.</span></div>
+      </div>
+      <p class="pm-fn" data-en="Visit counter: we log your IP address and approximate city; these logs are deleted after 90 days." data-bn="ভিজিট কাউন্টার: আমরা আপনার IP অ্যাড্রেস ও আনুমানিক শহর লগ করি; এই লগ ৯০ দিন পর মুছে যায়।">Visit counter: we log your IP address and approximate city; these logs are deleted after 90 days.</p>
     </div>
   </div>
 </div>
@@ -899,11 +965,12 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 const $ = (id) => document.getElementById(id);
 let cfg = { rate: { bw: 5, color: 10 }, a3: 2, photo4x6: 20, passport: { '4x6': 30, A4: 50 } };
 
-fetch('/api/config').then((r) => r.json()).then((c) => {
+/* config is cached in sessionStorage (see <head>): paint instantly from cache, then refresh quietly */
+if (window.__cfgCached && window.__cfgCached.rate) { cfg = { ...cfg, ...window.__cfgCached }; window.paintRates(window.__cfgCached); setTimeout(() => { try { recalc(); ppRecalc(); } catch {} }, 0); }
+window.getCfg().then((c) => {
+  if (!c || !c.rate) return;
   cfg = { ...cfg, ...c };
-  $('shop').textContent = `${c.shop} · Instant Print Studio`;
-  $('rbw').textContent = `B&W ₹${c.rate.bw}/page`;
-  $('rcolor').textContent = `Color ₹${c.rate.color}/page`;
+  window.paintRates(c);
   recalc(); ppRecalc();
 }).catch(() => {});
 

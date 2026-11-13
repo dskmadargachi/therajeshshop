@@ -7,8 +7,7 @@ body{background:#f6f7ff!important;background-attachment:scroll!important}
 body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(520px 420px at 6% 4%,rgba(79,91,255,.15),transparent 70%),radial-gradient(560px 460px at 96% 10%,rgba(255,95,162,.13),transparent 70%),radial-gradient(640px 520px at 50% 104%,rgba(46,230,168,.12),transparent 70%)}
 .topbar,.tabs{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(255,255,255,.92)!important}
 .topbar{box-shadow:0 1px 0 #e6eaf8}
-.brand-mark{background:var(--rgb2)!important;animation:glow 3.4s ease-in-out infinite}
-@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(79,91,255,.35)}50%{box-shadow:0 0 0 9px rgba(79,91,255,0)}}
+.brand-mark{background:var(--rgb2)!important}
 .chip{background:#fff!important;border:1px solid var(--brand-line)!important;color:var(--brand-ink)!important}
 .tabs button,.tabs a{position:relative;border-radius:12px 12px 0 0!important}
 .tabs .on{border-bottom-color:transparent!important;background:var(--brand-soft)!important}
@@ -23,7 +22,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;bac
 .btn,.b,.chip,.tile,.tool-link,.file,.ci,.seg button,.drop,.up,.card{transition:transform .28s var(--ease2),box-shadow .28s var(--ease2),border-color .2s,background .2s!important}
 .ic{box-shadow:0 10px 18px -8px rgba(60,60,200,.55)!important;transition:transform .35s var(--ease2)}
 .card:hover .ic,.tile:hover .ca,.tool-link:hover svg{transform:scale(1.1) rotate(-4deg)}
-h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent;background-size:200% 100%;animation:hshift 9s ease-in-out infinite alternate}
+h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent;background-size:200% 100%;}
 .hd h1{background-image:var(--rgb);display:inline-block}
 @keyframes hshift{to{background-position:100% 0}}
 .drop,.up{border-color:var(--brand-line)!important;background:linear-gradient(135deg,#f7f8ff,#fdf6ff)!important}
@@ -36,3 +35,85 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 .js-rv .rv{opacity:0;transform:translateY(20px) scale(.985)}
 .js-rv .rv.in{opacity:1;transform:none;transition:opacity .65s ease,transform .7s var(--ease2);transition-delay:var(--d,0s)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.js-rv .rv{opacity:1;transform:none}}
+
+/* ===== v7: perf fixes (GPU-friendly, no animated paint/filters) ===== */
+.brand-mark{position:relative;animation:none!important}
+.brand-mark:after{content:"";position:absolute;inset:0;border-radius:inherit;border:2px solid rgba(79,91,255,.5);opacity:0;pointer-events:none;animation:bmRing 3.4s ease-out infinite}
+@keyframes bmRing{0%{transform:scale(1);opacity:.6}70%,100%{transform:scale(1.55);opacity:0}}
+h1,.hd h1{animation:none!important}
+.hx-orb,.outro-bg i{filter:none!important}
+.hx-orb.o1,.outro-bg i:nth-child(1){background:radial-gradient(circle,rgba(255,95,162,.85),transparent 68%)!important}
+.hx-orb.o2,.outro-bg i:nth-child(2){background:radial-gradient(circle,rgba(46,196,255,.8),transparent 68%)!important}
+.outro-bg i:nth-child(3){background:radial-gradient(circle,rgba(46,230,168,.8),transparent 68%)!important}
+
+/* ===== v7: bigger, livelier upload dropzone (home screen only) ===== */
+#docSplit .drop{position:relative;min-height:185px;padding:26px 18px!important;border-width:2px!important;border-radius:22px!important;overflow:hidden;background:linear-gradient(135deg,#f3f5ff,#fbf3ff 60%,#fff1f7)!important;border-color:#a9b2ff!important;box-shadow:0 18px 34px -24px rgba(79,91,255,.75)}
+#docSplit .drop-icon{position:relative;width:56px!important;height:56px!important;margin-bottom:12px!important;border-radius:18px!important;background:var(--rgb2)!important;color:#fff!important;border:0!important;animation:dzFloat 2.8s ease-in-out infinite}
+#docSplit .drop-icon svg{width:28px!important;height:28px!important}
+#docSplit .drop-icon:after{content:"";position:absolute;inset:0;border-radius:inherit;border:2px solid #7c6bff;opacity:0;pointer-events:none;animation:dzPulse 2.8s ease-out infinite}
+@keyframes dzFloat{50%{transform:translateY(-5px)}}
+@keyframes dzPulse{0%{transform:scale(1);opacity:.55}100%{transform:scale(1.7);opacity:0}}
+#docSplit .drop strong{font-size:17.5px!important;font-weight:800!important;margin-bottom:4px!important}
+#docSplit .drop span{font-size:13px!important;line-height:1.4!important}
+#docSplit .drop-btn{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:10px 22px;border-radius:999px;font-style:normal;font-weight:800;font-size:14px;color:#fff;background:var(--rgb2);box-shadow:0 12px 22px -12px rgba(79,91,255,.9)}
+
+/* ===== v7: Privacy & Security modal ===== */
+#pvModal .wzm-s.pm{max-width:520px;width:100%;overflow-x:hidden;padding:0 0 calc(18px + env(safe-area-inset-bottom,0px))}
+#pvModal .wzm-h{position:sticky;top:0;z-index:2;margin:0;padding:14px 16px 10px;background:#fff;border-bottom:1px solid #eef0fa}
+#pvModal .pm-body{padding:12px 14px 0;display:grid;gap:12px;min-width:0}
+#pvModal .pm-body *{min-width:0;overflow-wrap:anywhere;box-sizing:border-box}
+.pm-hero{display:flex;gap:12px;align-items:center;padding:14px;border-radius:18px;color:#fff;background:linear-gradient(135deg,#14163f,#2c2a8f 65%,#4b36c4)}
+.pm-shield{position:relative;flex:none;width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:rgba(255,255,255,.14)}
+.pm-shield svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.pm-shield:after{content:"";position:absolute;inset:0;border-radius:inherit;border:2px solid #7ee2c4;opacity:0}
+.pm-badge{display:block;font-weight:800;font-size:15px;line-height:1.25}
+.pm-sub{margin:4px 0 0;font-size:12.5px;line-height:1.45;color:#d3d8ff}
+.pm-sec{--pc:#4f5bff;--pb:#f0f2ff;padding:12px;border:1px solid #e3e8f2;border-radius:18px}
+.pm-wa{--pc:#059669;--pb:#ecfdf5}
+.pm-h{margin:0 0 10px;font-size:14.5px;font-weight:800;line-height:1.3}
+.pm-flow{display:grid;grid-template-columns:1fr;align-items:stretch}
+.pm-st{position:relative;padding:10px 10px 11px;border-radius:14px;background:var(--pb);border:1px solid color-mix(in srgb,var(--pc) 25%,#fff);display:grid;gap:3px;align-content:start}
+.pm-st:after{content:"";position:absolute;inset:-1px;border-radius:inherit;border:2px solid var(--pc);opacity:0;pointer-events:none}
+.pm-st b{font-size:13px;font-weight:800;line-height:1.3}
+.pm-st small{font-size:11.5px;line-height:1.4;color:#5b6778}
+.pm-n{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--pc);color:#fff;font-size:11px;font-weight:800}
+.pm-ar{position:relative;height:28px;color:var(--pc)}
+.pm-ar:before{content:"";position:absolute;left:50%;top:3px;bottom:3px;width:2px;margin-left:-1px;background:currentColor;opacity:.25}
+.pm-ar i{position:absolute;left:50%;top:3px;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:currentColor;opacity:0}
+.pm-ar:after{content:"";position:absolute;left:50%;bottom:3px;width:7px;height:7px;margin-left:-3.5px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg)}
+.pm-wipe{position:absolute;top:8px;right:8px;width:22px;height:22px;display:block}
+.pm-wipe em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-size:15px;line-height:1}
+.pm-wipe .t{color:var(--pc);font-weight:800;opacity:0}
+.pm-tool{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:14px;background:#f5f3ff;border:1px solid #ddd6fe}
+.pm-tool>span{flex:none;font-size:22px;line-height:1}
+.pm-tool b{display:block;font-size:13.5px;font-weight:800}
+.pm-tool p{margin:3px 0 0;font-size:12.5px;line-height:1.45;color:#475569}
+.pm-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pm-gc{padding:11px;border-radius:14px;border:1px solid #e3e8f2;background:#fff}
+.pm-gc b{display:block;font-size:12.5px;font-weight:800;line-height:1.3}
+.pm-gc span{display:block;margin-top:3px;font-size:11.5px;line-height:1.4;color:#5b6778}
+.pm-fn{margin:0;font-size:11px;line-height:1.45;color:#94a3b8;text-align:center}
+@media(min-width:480px){
+ .pm-flow{grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr) 22px minmax(0,1fr)}
+ .pm-ar{height:auto;min-height:20px}
+ .pm-ar:before{left:0;right:0;top:50%;bottom:auto;width:auto;height:2px;margin:-1px 0 0}
+ .pm-ar i{left:0;top:50%;margin:-4px 0 0}
+ .pm-ar:after{left:auto;right:1px;top:50%;bottom:auto;margin:-3.5px 0 0;transform:rotate(-45deg)}
+}
+/* animations run only while the modal is open; transform + opacity only */
+#pvModal.on .pm-shield:after{animation:pmShield 2.4s ease-out infinite}
+#pvModal.on .pm-ar i{animation:pmY 1.5s linear infinite}
+#pvModal.on .pm-ar:nth-child(4) i{animation-delay:.5s}
+#pvModal.on .pm-st{animation:pmLift 6s ease-in-out infinite;animation-delay:calc(var(--i)*2s)}
+#pvModal.on .pm-st:after{animation:pmRingHi 6s ease-in-out infinite;animation-delay:calc(var(--i)*2s)}
+#pvModal.on .pm-wipe .f{animation:pmFile 4s ease-in-out infinite}
+#pvModal.on .pm-wipe .t{animation:pmTick 4s ease-in-out infinite}
+@keyframes pmShield{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.6);opacity:0}}
+@keyframes pmY{0%{transform:translateY(0);opacity:0}15%,80%{opacity:1}100%{transform:translateY(16px);opacity:0}}
+@keyframes pmX{0%{transform:translateX(0);opacity:0}15%,80%{opacity:1}100%{transform:translateX(16px);opacity:0}}
+@media(min-width:480px){#pvModal.on .pm-ar i{animation-name:pmX}}
+@keyframes pmLift{0%,34%,100%{transform:none}8%,28%{transform:translateY(-2px)}}
+@keyframes pmRingHi{0%,34%,100%{opacity:0}8%,28%{opacity:1}}
+@keyframes pmFile{0%,45%{opacity:1;transform:scale(1)}62%,100%{opacity:0;transform:scale(.3)}}
+@keyframes pmTick{0%,50%{opacity:0;transform:scale(.3)}66%,90%{opacity:1;transform:scale(1)}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){#pvModal .pm-ar i,#pvModal .pm-st,#pvModal .pm-st:after,#pvModal .pm-shield:after{animation:none!important}#pvModal .pm-wipe .t{opacity:1}#pvModal .pm-wipe .f{opacity:0}}

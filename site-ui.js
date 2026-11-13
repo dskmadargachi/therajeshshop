@@ -398,11 +398,16 @@ function walk(root) {
     var n; while ((n = tw.nextNode())) { if (n.nodeType === 3) trNode(n); else trEl(n); }
   } finally { busy = false; }
 }
+/* elements with data-en / data-bn (leaf text) switch language here, so it works on every page without extra scripts */
+function dataLang(root) {
+  var n = (root || document).querySelectorAll('[data-en][data-bn]');
+  for (var i = 0; i < n.length; i++) { var t = n[i].getAttribute('data-' + lang); if (t != null && n[i].textContent !== t) n[i].textContent = t; }
+}
 function setLang(l) {
   lang = l; LS.set('site-lang', l);
   document.documentElement.lang = l === 'bn' ? 'bn' : 'en';
   syncUI();
-  requestAnimationFrame(function () { walk(document.body); });
+  requestAnimationFrame(function () { walk(document.body); dataLang(); });
 }
 var mo = new MutationObserver(function (ms) {
   if (busy) return;
@@ -437,7 +442,7 @@ function buildUI() {
 }
 
 /* ---------------- scroll reveal ---------------- */
-var RV_SEL = '.tile,.tool-link,.card,.pv-c,.pvd,.sect,.st,.fc,.pv,.pvp,.outro,.hx-sec,.tp-sel,.shopcard';
+var RV_SEL = '.tile,.tool-link,.card,.pv-c,.sect,.st,.fc,.pv,.pvp,.outro,.hx-sec,.tp-sel,.shopcard';
 var rvIO = null;
 function reveal(root) {
   if (!('IntersectionObserver' in window) || (window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches)) return;
@@ -471,6 +476,7 @@ function init() {
   trackVisit();
   if (lang === 'bn') { document.documentElement.lang = 'bn'; }
   walk(document.body);
+  dataLang();
   reveal(document.body);
   mo.observe(document.body, {childList: true, subtree: true, characterData: true});
   var warm = function () { var w = document.createElement('span'); w.setAttribute('aria-hidden', 'true'); w.style.cssText = 'position:absolute;left:-9999px;top:0;font:700 14px "Noto Sans Bengali",sans-serif'; w.textContent = 'বাংলা অআইউ কখগ'; document.body.appendChild(w); };
