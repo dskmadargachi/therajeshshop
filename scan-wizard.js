@@ -1,75 +1,65 @@
-/* therajesh.shop — scan-wizard.js  (v2 · light theme)
-   Smart Scanner popup wizard — matches the site's light UI.
-   Steps: 1 type -> 2 source -> 3 auto 4-corner detect + perspective crop -> 4 side confirmation (filters / rotate / back side)
-          -> 5 A4 sheet composition (300 DPI) -> hand-over to the print flow.
-   No dependencies. OpenCV.js is used for edge detection only when the page already loaded it (window.cv / window.cvReady);
+/* therajesh.shop — scan-wizard.js
+   Full-screen dark Smart Scanner popup wizard.
+   Steps: 1 type -> 2 source -> 3 perspective crop (auto 4-corner detection + homography warp) -> 4 side confirmation -> A4 composition.
+   No dependencies. OpenCV.js is used for edge detection only when the page already loaded it (window.cv);
    otherwise a built-in canvas edge finder runs. The warp itself is pure JS (works everywhere).
 
    Usage:  SmartScan.open();
            SmartScan.onDone = function (res) { res.pages  -> array of A4 canvases (2480 x 3508, .eff = 300)
                                                res.label  -> 'ID card' | 'Certificate' | 'Admit card / Marksheet'
-                                               res.layout -> 'id' | 'cert' | 'admit'
-                                               res.hasBack -> boolean } */
+                                               res.layout -> 'id' | 'cert' | 'admit' } */
 (function () {
   'use strict';
 
   /* ------------------------------------------------------------------ text (English / বাংলা) */
   var TXT = {
     en: {
-      title: 'Smart Scanner', step: 'Step',
+      title: 'Auto Crop Aadhaar PAN Voter',
       'type.q': 'What are you scanning?',
       'type.s': 'Pick the right type. After the crop, your document is placed in a ready-to-print layout.',
       'id.t': 'ID Card', 'id.s': 'Aadhaar · PAN · Voter · DL — front & back side-by-side on one A4 page',
       'cert.t': 'Certificate', 'cert.s': 'Full A4 document — marksheet, certificate, letter',
       'admit.t': 'Admit Card / Marksheet', 'admit.s': 'Half page — front on top half, back on bottom half of one A4 page',
-      'auto.t': 'Auto Detect', 'auto.s': 'System automatically detects document proportions',
-      'src.q': 'Choose photo source',
+      'auto.t': 'Auto', 'auto.s': 'System automatically detects document proportions',
+      'src.q': 'Where to take the photo from?',
       'src.s': 'A flat, well-lit photo gives the cleanest result. Both ways are straightened automatically.',
       'cam.t': 'Camera', 'cam.s': 'Take a photo now — keep the document in front of you',
-      'file.t': 'Upload from Files', 'file.s': 'Choose a photo already saved on your phone or computer',
-      back: '← Back', close: 'Close',
-      'crop.t': 'Fit the 4 corners',
-      'crop.s': 'Drag any corner to the document’s corner — even a tilted photo becomes straight',
-      cancel: '✕ Cancel', full: '↔ Full Image', crop: '✓ Crop & Straighten',
-      detecting: 'Finding the edges…', processing: 'Straightening…', building: 'Building your A4 sheet…', applying: 'Applying filter…',
-      'ok.front': 'Front side ready', 'ok.back': 'Back side ready', 'ok.both': 'Both sides ready',
-      'ok.hint': 'Looks good? Generate the print preview. If the other side is printed too, add it first.',
-      'f.orig': 'Original', 'f.clean': 'Clean Scan', 'f.bw': 'B&W High Contrast',
-      rotate: '🔄 Rotate 90°', rotF: '🔄 Rotate front', rotB: '🔄 Rotate back',
-      done: '✅ Done — Generate Print Preview', addback: '➕ Add Back Side',
+      'file.t': 'Files', 'file.s': 'Choose a photo already saved on your phone or computer',
+      back: '‹ Back', close: 'Close',
+      'crop.t': '📐 Perspective Crop',
+      'crop.s': 'Drag the 4 corners to the document’s corners — even a tilted photo becomes straight',
+      cancel: '✕ Cancel', full: '↔ Full Photo', crop: '✓ Crop',
+      detecting: 'Finding the edges…', processing: 'Straightening…',
+      'ok.front': 'Front side done', 'ok.back': 'Back side done', 'ok.both': 'Both sides ready',
+      'ok.hint': 'That’s all? Tap Print. If the other side is printed too, add it below.',
+      rotate: '🔄 Rotate (90°)', rotF: '🔄 Rotate front', rotB: '🔄 Rotate back',
+      done: '✅ Done — Go to Print', addback: '➕ Add Back Side',
       side_front: 'Front', side_back: 'Back', backFor: 'Back side',
-      'a4.t': 'Your A4 sheet is ready', 'a4.s': 'Check the layout — this exact page goes to print.',
-      'a4.info': 'A4 · 300 DPI', page: 'Page', pages: 'pages',
-      cont: '✅ Continue to Print Options', edit: '← Edit',
       readErr: 'Could not read this image. Try another photo.',
       lblid: 'ID card', lblcert: 'Certificate', lbladmit: 'Admit card / Marksheet'
     },
     bn: {
-      title: 'স্মার্ট স্ক্যানার', step: 'ধাপ',
+      title: 'অটো ক্রপ আধার প্যান ভোটার',
       'type.q': 'আপনি কী স্ক্যান করছেন?',
       'type.s': 'সঠিক টাইপ বাছুন। ক্রপের পর ডকুমেন্ট প্রিন্টের উপযোগী লেআউটে বসে যাবে।',
       'id.t': 'আইডি কার্ড', 'id.s': 'আধার · প্যান · ভোটার · ডিএল — সামনে ও পেছন একই A4 পাতায় পাশাপাশি',
       'cert.t': 'সার্টিফিকেট', 'cert.s': 'পুরো A4 ডকুমেন্ট — মার্কশিট, সার্টিফিকেট, চিঠি',
       'admit.t': 'অ্যাডমিট কার্ড / মার্কশিট', 'admit.s': 'আধা পাতা — সামনে উপরের অর্ধেকে, পেছন নিচের অর্ধেকে',
-      'auto.t': 'অটো ডিটেক্ট', 'auto.s': 'সিস্টেম নিজেই ডকুমেন্টের মাপ চিনে নেবে',
+      'auto.t': 'অটো', 'auto.s': 'সিস্টেম নিজেই ডকুমেন্টের মাপ চিনে নেবে',
       'src.q': 'ছবি কোথা থেকে নেবেন?',
       'src.s': 'সমান জায়গায়, ভালো আলোয় তোলা ছবিতে ফলাফল সবচেয়ে পরিষ্কার হয়। দুই পথেই ছবি নিজে সোজা হয়ে যায়।',
       'cam.t': 'ক্যামেরা', 'cam.s': 'এখনই ছবি তুলুন — ডকুমেন্ট সামনে রাখুন',
-      'file.t': 'ফাইল থেকে আপলোড', 'file.s': 'ফোন বা কম্পিউটারে আগে থেকে রাখা ছবি বাছুন',
-      back: '← পেছনে', close: 'বন্ধ করুন',
-      'crop.t': '৪টি কোনা ঠিক করুন',
-      'crop.s': 'যেকোনো কোনা টেনে ডকুমেন্টের কোনায় বসান — ছবি বাঁকা হলেও সোজা হয়ে যাবে',
-      cancel: '✕ বাতিল', full: '↔ পুরো ছবি', crop: '✓ ক্রপ ও সোজা করুন',
-      detecting: 'কিনারা খোঁজা হচ্ছে…', processing: 'সোজা করা হচ্ছে…', building: 'A4 শিট তৈরি হচ্ছে…', applying: 'ফিল্টার বসানো হচ্ছে…',
-      'ok.front': 'সামনের অংশ তৈরি', 'ok.back': 'পেছনের অংশ তৈরি', 'ok.both': 'দুই দিকই তৈরি',
-      'ok.hint': 'ঠিক আছে? প্রিন্ট প্রিভিউ তৈরি করুন। উল্টো পাশেও ছাপা থাকলে আগে সেটি যোগ করুন।',
-      'f.orig': 'আসল', 'f.clean': 'ক্লিন স্ক্যান', 'f.bw': 'সাদা-কালো (হাই কনট্রাস্ট)',
-      rotate: '🔄 ৯০° ঘোরান', rotF: '🔄 সামনে ঘোরান', rotB: '🔄 পেছন ঘোরান',
-      done: '✅ হয়ে গেছে — প্রিন্ট প্রিভিউ তৈরি করুন', addback: '➕ পেছনের দিক যোগ করুন',
+      'file.t': 'ফাইল', 'file.s': 'ফোন বা কম্পিউটারে আগে থেকে রাখা ছবি বাছুন',
+      back: '‹ পেছনে', close: 'বন্ধ করুন',
+      'crop.t': '📐 পার্সপেক্টিভ ক্রপ',
+      'crop.s': 'ডকুমেন্টের ৪টি কোনা টেনে ঠিক জায়গায় বসান — ছবি বাঁকা হলেও সোজা হয়ে যাবে',
+      cancel: '✕ বাতিল', full: '↔ পুরো ছবি', crop: '✓ ক্রপ',
+      detecting: 'কিনারা খোঁজা হচ্ছে…', processing: 'সোজা করা হচ্ছে…',
+      'ok.front': 'সামনের দিক হয়ে গেছে', 'ok.back': 'পেছনের দিক হয়ে গেছে', 'ok.both': 'দুই দিকই তৈরি',
+      'ok.hint': 'এটুকুই হলে প্রিন্ট বাটন চাপুন। উল্টো পাশেও ছাপা থাকলে নিচ থেকে যোগ করুন।',
+      rotate: '🔄 ঘোরান (৯০°)', rotF: '🔄 সামনে ঘোরান', rotB: '🔄 পেছন ঘোরান',
+      done: '✅ হয়ে গেছে — প্রিন্ট করুন', addback: '➕ পেছনের দিক যোগ করুন',
       side_front: 'সামনে', side_back: 'পেছন', backFor: 'পেছনের দিক',
-      'a4.t': 'আপনার A4 শিট তৈরি', 'a4.s': 'লেআউট দেখে নিন — ঠিক এই পাতাটিই প্রিন্ট হবে।',
-      'a4.info': 'A4 · ৩০০ DPI', page: 'পাতা', pages: 'পাতা',
-      cont: '✅ প্রিন্ট অপশনে যান', edit: '← সম্পাদনা',
       readErr: 'এই ছবিটি পড়া গেল না। অন্য ছবি চেষ্টা করুন।',
       lblid: 'আইডি কার্ড', lblcert: 'সার্টিফিকেট', lbladmit: 'অ্যাডমিট কার্ড / মার্কশিট'
     }
@@ -379,209 +369,107 @@
     return pages;
   }
 
-  /* ------------------------------------------------------------------ filters */
-  /* B&W: paper-normalised first (enhanceDoc), then a hard S-curve so text is solid black on pure white */
-  function bwFilter(c) {
-    var ctx = c.getContext('2d'), id = ctx.getImageData(0, 0, c.width, c.height), d = id.data, n = c.width * c.height, i;
-    for (i = 0; i < n; i++) {
-      var p = i * 4, g = d[p] * 0.3 + d[p + 1] * 0.59 + d[p + 2] * 0.11;
-      g = g < 105 ? g * 0.35 : g > 175 ? 255 : 37 + (g - 105) * 3.1;
-      g = g < 0 ? 0 : g > 255 ? 255 : g; d[p] = d[p + 1] = d[p + 2] = g;
-    }
-    ctx.putImageData(id, 0, 0); return c;
-  }
-  function copyCanvas(c) { var o = newCanvas(c.width, c.height); o.getContext('2d').drawImage(c, 0, 0); return o; }
-  function makeFiltered(raw, filter) {
-    var c = copyCanvas(raw), idMode = isIdLike(raw);
-    if (filter === 'orig') return c;
-    if (filter === 'bw') return bwFilter(enhanceDoc(c));
-    return idMode ? enhanceId(c) : enhanceDoc(c);
-  }
-
   /* ------------------------------------------------------------------ UI */
-  var ORDER = ['type', 'src', 'crop', 'ok', 'a4'];
-  var PAD = 20;
-
-  var CSS = `
-html.sw-lock,html.sw-lock body{overflow:hidden!important}
-#sw{position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.35);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font-family:inherit;color:#0f172a;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;opacity:0;transition:opacity .3s ease}
-#sw.on{display:flex}
-#sw.show{opacity:1}
-#sw *{box-sizing:border-box}
-#sw .sw-m{position:relative;display:flex;flex-direction:column;width:min(580px,100%);height:min(740px,100%);background:#fff;border-radius:20px;box-shadow:0 20px 50px rgba(37,99,235,.12),0 2px 8px rgba(15,23,42,.06);overflow:hidden;transform:scale(.94);opacity:0;transition:transform .35s cubic-bezier(.16,1,.3,1),opacity .35s cubic-bezier(.16,1,.3,1)}
-#sw.show .sw-m{transform:none;opacity:1}
-#sw .sw-m:before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:linear-gradient(90deg,#3b82f6,#8b5cf6,#ec4899);z-index:6}
-#sw .sw-h{flex:none;display:flex;align-items:center;gap:10px;padding:19px 18px 10px 22px;background:#fff}
-#sw .sw-hb{flex:1;min-width:0}
-#sw .sw-hb b{display:block;font-size:17px;font-weight:700;color:#0f172a;line-height:1.2}
-#sw .sw-hb span{display:block;margin-top:2px;font-size:12px;font-weight:600;color:#64748b}
-#sw .sw-x{all:unset;cursor:pointer;width:38px;height:38px;display:grid;place-items:center;border-radius:12px;font-size:17px;color:#64748b;transition:background .15s,transform .15s}
-#sw .sw-x:hover{background:#f1f5f9;color:#0f172a}
-#sw .sw-x:active{transform:scale(.94)}
-#sw .sw-prog{flex:none;height:4px;margin:0 22px;background:#e2e8f0;border-radius:4px;overflow:hidden}
-#sw .sw-prog i{display:block;height:100%;width:20%;border-radius:4px;background:linear-gradient(90deg,#3b82f6,#8b5cf6,#ec4899);transition:width .4s cubic-bezier(.16,1,.3,1)}
-#sw .sw-body{position:relative;flex:1;min-height:0;overflow:hidden;background:linear-gradient(135deg,#eef2ff 0%,#f8fafc 50%,#fdf2f8 100%);margin-top:12px}
-#sw .sw-v{position:absolute;inset:0;display:none;flex-direction:column}
-#sw .sw-v.on,#sw .sw-v.out{display:flex}
-#sw .sw-v.on{animation:swIn .25s ease-out both}
-#sw .sw-v.on.rev{animation-name:swInR}
-#sw .sw-v.out{animation:swOut .25s ease-out both;pointer-events:none}
-#sw .sw-v.out.rev{animation-name:swOutR}
-@keyframes swIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
-@keyframes swInR{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
-@keyframes swOut{from{opacity:1;transform:none}to{opacity:0;transform:translateX(-28px)}}
-@keyframes swOutR{from{opacity:1;transform:none}to{opacity:0;transform:translateX(28px)}}
-#sw .sw-sc{flex:1;min-height:0;overflow:auto;padding:22px 20px calc(22px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;-webkit-overflow-scrolling:touch}
-#sw .sw-in{width:100%;max-width:500px;margin:auto 0}
-#sw h2{margin:0 0 6px;text-align:center;font-size:22px;font-weight:700;color:#0f172a;line-height:1.25}
-#sw .sw-p{margin:0 0 20px;text-align:center;color:#64748b;font-size:14px;line-height:1.5}
-#sw .sw-opt{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:14px;width:100%;padding:13px 14px;margin-bottom:11px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:16px;cursor:pointer;transition:border-color .2s,background .2s,transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s}
-#sw .sw-opt:hover,#sw .sw-opt:focus-visible{border-color:#3b82f6;background:#eff6ff;transform:translateY(-2px);box-shadow:0 10px 22px -12px rgba(37,99,235,.35)}
-#sw .sw-opt:active{transform:scale(.98)}
-#sw .sw-opt b{display:block;font-size:16px;font-weight:700;color:#0f172a}
-#sw .sw-opt small{display:block;margin-top:3px;color:#64748b;font-size:12.5px;line-height:1.4}
-#sw .sw-ic{flex:none;width:46px;height:54px}
-#sw .sw-ico{flex:none;width:52px;height:52px;display:grid;place-items:center;border-radius:15px;font-size:26px;background:linear-gradient(135deg,#dbeafe,#e0e7ff);box-shadow:inset 0 0 0 1px #c7d2fe}
-#sw .sw-btn{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border-radius:999px;background:#f1f5f9;color:#475569;font-weight:700;font-size:14.5px;text-align:center;border:1.5px solid transparent;transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s,background .2s,border-color .2s,filter .2s}
-#sw .sw-btn:hover{transform:translateY(-2px)}
-#sw .sw-btn:active{transform:scale(.98)}
-#sw .sw-btn:disabled{opacity:.5;pointer-events:none}
-#sw .sw-btn.soft:hover{background:#e2e8f0}
-#sw .sw-btn.line{background:#fff;color:#2563eb;border-color:#2563eb}
-#sw .sw-btn.line:hover{background:#eff6ff}
-#sw .sw-btn.ind{background:#fff;color:#4f46e5;border-color:#6366f1}
-#sw .sw-btn.ind:hover{background:#eef2ff}
-#sw .sw-btn.pri{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;box-shadow:0 8px 20px rgba(37,99,235,.25)}
-#sw .sw-btn.pri:hover{box-shadow:0 12px 26px rgba(37,99,235,.33)}
-#sw .sw-btn.ok{background:linear-gradient(135deg,#2563eb,#10b981);color:#fff;box-shadow:0 8px 20px rgba(16,185,129,.25)}
-#sw .sw-btn.ok:hover{box-shadow:0 12px 26px rgba(16,185,129,.32)}
-#sw .sw-btn:focus-visible,#sw .sw-pill:focus-visible,#sw .sw-x:focus-visible{outline:3px solid rgba(37,99,235,.35);outline-offset:2px}
-#sw .sw-row{display:flex;justify-content:center;margin-top:8px}
-#sw .sw-ct{flex:none;text-align:center;padding:4px 20px 8px}
-#sw .sw-ct b{display:block;font-size:17px;font-weight:700;color:#0f172a}
-#sw .sw-ct span{display:block;margin-top:3px;color:#64748b;font-size:12.5px;line-height:1.4}
-#sw .sw-stage{position:relative;flex:1;min-height:0;margin:0 16px;display:flex;align-items:center;justify-content:center;padding:8px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:16px;touch-action:none;overflow:hidden}
-#sw .sw-cw{position:relative;display:block;line-height:0}
-#sw canvas.sw-c{display:block;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:crosshair}
-#sw .sw-laser{position:absolute;left:${PAD}px;right:${PAD}px;top:${PAD}px;bottom:${PAD}px;overflow:hidden;pointer-events:none;display:none;border-radius:6px}
-#sw .sw-cw.scan .sw-laser{display:block}
-#sw .sw-laser i{position:absolute;left:0;right:0;top:0;height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,#3b82f6 20%,#8b5cf6 80%,transparent);box-shadow:0 0 16px 4px rgba(99,102,241,.55),0 0 42px 12px rgba(59,130,246,.25);animation:swLaser 1.05s ease-in-out infinite alternate}
-#sw .sw-laser:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(99,102,241,.07),transparent 40%,rgba(59,130,246,.07))}
-@keyframes swLaser{from{top:0}to{top:calc(100% - 3px)}}
-#sw .sw-lp{position:absolute;width:104px;height:104px;border-radius:50%;border:3px solid #2563eb;overflow:hidden;box-shadow:0 10px 26px rgba(37,99,235,.35);pointer-events:none;display:none;background:#fff;z-index:3}
-#sw .sw-lp canvas{width:100%;height:100%;display:block}
-#sw .sw-bar{flex:none;display:flex;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px))}
-#sw .sw-bar .sw-btn{flex:1;padding:13px 6px;font-size:13px;white-space:nowrap;min-width:0}
-#sw .sw-bar .sw-btn.pri{flex:1.7}
-#sw .sw-busy{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:none;align-items:center;gap:9px;padding:9px 16px;border-radius:999px;background:#fff;color:#334155;font-weight:700;font-size:13.5px;box-shadow:0 10px 26px rgba(37,99,235,.18);z-index:4;white-space:nowrap}
-#sw .sw-busy.on{display:flex}
-#sw .sw-busy:before{content:"";width:14px;height:14px;border-radius:50%;border:2.5px solid #c7d2fe;border-top-color:#2563eb;animation:swSpin .7s linear infinite}
-@keyframes swSpin{to{transform:rotate(360deg)}}
-#sw .sw-frame{background:#fff;border-radius:16px;padding:14px;box-shadow:0 12px 32px -12px rgba(15,23,42,.22),0 0 0 1px #e2e8f0;margin:6px 0 16px}
-#sw .sw-pv{display:flex;gap:12px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
-#sw .sw-pv figure{margin:0;text-align:center;max-width:100%}
-#sw .sw-pv img{display:block;max-width:100%;max-height:36vh;border-radius:6px;background:#fff;box-shadow:0 0 0 1px #e2e8f0;animation:swPop .35s cubic-bezier(.16,1,.3,1)}
-#sw .sw-pv.two img{max-width:min(38vw,230px)}
-#sw .sw-pv.a4 img{max-height:40vh;max-width:min(60vw,260px)}
-@keyframes swPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
-#sw .sw-pv figcaption{margin-top:7px;color:#64748b;font-size:12px;font-weight:700}
-#sw .sw-pills{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 14px}
-#sw .sw-pill{all:unset;box-sizing:border-box;cursor:pointer;padding:8px 14px;border-radius:999px;background:#f8fafc;border:1.5px solid #e2e8f0;color:#475569;font-size:13px;font-weight:700;transition:transform .2s cubic-bezier(.16,1,.3,1),background .2s,border-color .2s,color .2s}
-#sw .sw-pill:hover{border-color:#3b82f6;background:#eff6ff;transform:translateY(-2px)}
-#sw .sw-pill:active{transform:scale(.98)}
-#sw .sw-pill.on{background:linear-gradient(135deg,#2563eb,#7c3aed);border-color:transparent;color:#fff;box-shadow:0 6px 16px rgba(37,99,235,.25)}
-#sw .sw-stk{display:flex;flex-direction:column;align-items:center;gap:10px}
-#sw .sw-stk .sw-btn{min-width:min(100%,290px)}
-#sw .sw-rots{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
-#sw .sw-rots .sw-btn{min-width:0;padding:10px 16px;background:#fff;color:#475569;border-color:#cbd5e1}
-#sw .sw-rots .sw-btn:hover{border-color:#3b82f6;color:#2563eb;background:#eff6ff}
-#sw .sw-info{text-align:center;color:#64748b;font-size:12.5px;font-weight:600;margin:-6px 0 16px}
-@media (max-width:640px){
- #sw{align-items:flex-end;padding:0}
- #sw .sw-m{width:100%;height:min(96vh,96dvh,760px);border-radius:20px 20px 0 0;transform:translateY(60px)}
- #sw.show .sw-m{transform:none}
- #sw .sw-pv.two img{max-width:42vw}
-}
-@media (prefers-reduced-motion:reduce){#sw,#sw .sw-m,#sw .sw-v,#sw .sw-laser i{transition:none!important;animation:none!important}}
-`;
+  var CSS = [
+    'html.sw-lock,html.sw-lock body{overflow:hidden!important}',
+    '#sw{position:fixed;inset:0;z-index:2000;background:#0f1117;color:#fff;display:none;flex-direction:column;font-family:inherit;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}',
+    '#sw.on{display:flex}',
+    '#sw *{box-sizing:border-box}',
+    '#sw .sw-h{flex:none;display:flex;align-items:center;gap:10px;min-height:52px;padding:calc(env(safe-area-inset-top,0px) + 6px) 16px 6px;border-bottom:1px solid #1f2330;font-weight:700;font-size:15px}',
+    '#sw .sw-h b{flex:1;font-weight:700}',
+    '#sw .sw-x{all:unset;cursor:pointer;width:36px;height:36px;display:grid;place-items:center;border-radius:10px;font-size:18px;color:#cbd2e0}',
+    '#sw .sw-x:hover{background:#1c2030}',
+    '#sw .sw-v{display:none;flex:1;min-height:0;flex-direction:column}',
+    '#sw .sw-v.on{display:flex}',
+    '#sw .sw-sc{flex:1;min-height:0;overflow:auto;padding:22px 16px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center}',
+    '#sw .sw-in{width:100%;max-width:520px;margin:auto 0}',
+    '#sw h2{margin:0 0 8px;text-align:center;font-size:22px;font-weight:800;color:#fff}',
+    '#sw .sw-p{margin:0 0 20px;text-align:center;color:#a5adbf;font-size:14.5px;line-height:1.5}',
+    '#sw .sw-opt{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:14px;width:100%;padding:13px 14px;margin-bottom:10px;background:#171a24;border:1px solid #272c3b;border-radius:16px;cursor:pointer;transition:border-color .15s,background .15s,transform .15s}',
+    '#sw .sw-opt:hover,#sw .sw-opt:focus-visible{border-color:#8b5cf6;background:#1b1f2d}',
+    '#sw .sw-opt:active{transform:scale(.985)}',
+    '#sw .sw-opt b{display:block;font-size:16px;font-weight:800;color:#fff}',
+    '#sw .sw-opt small{display:block;margin-top:3px;color:#a5adbf;font-size:12.5px;line-height:1.4}',
+    '#sw .sw-ic{flex:none;width:44px;height:52px}',
+    '#sw .sw-ico{flex:none;font-size:30px;width:44px;text-align:center}',
+    '#sw .sw-btn{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 18px;border-radius:12px;background:#1c2030;color:#e6e9f2;font-weight:700;font-size:14.5px;border:1px solid #2a3044;text-align:center;transition:transform .15s,filter .15s}',
+    '#sw .sw-btn:active{transform:scale(.97)}',
+    '#sw .sw-btn.pri{background:linear-gradient(135deg,#6d4df5,#a855f7);border-color:transparent;color:#fff}',
+    '#sw .sw-btn.ok{background:#22a35a;border-color:transparent;color:#fff}',
+    '#sw .sw-btn.gold{background:transparent;border:1.5px solid #5a4a1c;color:#f5c542}',
+    '#sw .sw-row{display:flex;justify-content:center;margin-top:8px}',
+    '#sw .sw-ct{flex:none;text-align:center;padding:12px 16px 4px}',
+    '#sw .sw-ct b{display:block;font-size:17px;font-weight:800}',
+    '#sw .sw-ct span{display:block;margin-top:3px;color:#a5adbf;font-size:12.5px;line-height:1.4}',
+    '#sw .sw-stage{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px;touch-action:none}',
+    '#sw .sw-stage canvas.sw-c{display:block;touch-action:none;-webkit-user-select:none;user-select:none;border-radius:6px;background:#000}',
+    '#sw .sw-lp{position:absolute;width:104px;height:104px;border-radius:50%;border:3px solid #8b5cf6;overflow:hidden;box-shadow:0 8px 24px #000a;pointer-events:none;display:none;background:#000;z-index:3}',
+    '#sw .sw-lp canvas{width:100%;height:100%;display:block}',
+    '#sw .sw-bar{flex:none;display:flex;gap:10px;padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid #1f2330;background:#0f1117}',
+    '#sw .sw-bar .sw-btn{flex:1;padding:14px 8px}',
+    '#sw .sw-bar .sw-btn.pri{flex:1.3}',
+    '#sw .sw-busy{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#0f1117cc;font-weight:700;z-index:4;font-size:15px}',
+    '#sw .sw-busy.on{display:flex}',
+    '#sw .sw-pv{display:flex;gap:12px;justify-content:center;align-items:flex-start;margin:6px 0 14px;flex-wrap:wrap}',
+    '#sw .sw-pv figure{margin:0;text-align:center;max-width:100%}',
+    '#sw .sw-pv img{display:block;max-width:100%;max-height:44vh;border-radius:8px;box-shadow:0 10px 30px #0008;background:#fff}',
+    '#sw .sw-pv.two img{max-width:min(44vw,260px)}',
+    '#sw .sw-pv figcaption{margin-top:6px;color:#a5adbf;font-size:12px;font-weight:700}',
+    '#sw .sw-stk{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:6px}',
+    '#sw .sw-stk .sw-btn{min-width:230px}'
+  ].join('\n');
 
   var ICONS = {
-    id: '<svg class="sw-ic" viewBox="0 0 46 54" fill="none"><rect x="1.5" y="3" width="43" height="22" rx="5" fill="#fff" stroke="#3b82f6" stroke-width="2"/><rect x="6" y="8" width="10" height="12" rx="2" fill="#bfdbfe"/><path d="M21 10h17M21 15h12" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round"/><rect x="1.5" y="29" width="43" height="22" rx="5" fill="#fff" stroke="#8b5cf6" stroke-width="2"/><path d="M7 36h22M7 42h30M7 46h18" stroke="#c4b5fd" stroke-width="2" stroke-linecap="round"/></svg>',
-    cert: '<svg class="sw-ic" viewBox="0 0 46 54" fill="none"><rect x="5" y="1.5" width="36" height="51" rx="5" fill="#fff" stroke="#3b82f6" stroke-width="2"/><path d="M12 12h22M12 19h22M12 26h14" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/><circle cx="31" cy="39" r="6" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/><path d="M28 44l-2 6 5-2 5 2-2-6" stroke="#8b5cf6" stroke-width="2" stroke-linejoin="round"/></svg>',
-    admit: '<svg class="sw-ic" viewBox="0 0 46 54" fill="none"><rect x="5" y="1.5" width="36" height="51" rx="5" fill="#fff" stroke="#3b82f6" stroke-width="2"/><path d="M5 27h36" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="3 3"/><rect x="11" y="7" width="12" height="14" rx="2" fill="#bfdbfe"/><path d="M28 9h7M28 14h7M11 33h24M11 39h24M11 45h14" stroke="#c4b5fd" stroke-width="2" stroke-linecap="round"/></svg>',
-    auto: '<svg class="sw-ic" viewBox="0 0 46 54" fill="none"><path d="M6 17V8a3 3 0 0 1 3-3h9M28 5h9a3 3 0 0 1 3 3v9M40 37v9a3 3 0 0 1-3 3h-9M18 49H9a3 3 0 0 1-3-3v-9" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round"/><rect x="13" y="15" width="20" height="24" rx="3" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/><path d="M18 23h10M18 29h10M18 34h6" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round"/></svg>'
+    id: '<svg class="sw-ic" viewBox="0 0 44 52"><rect x="1" y="1" width="42" height="50" rx="6" fill="#fff"/><rect x="6" y="6" width="14" height="9" rx="2" fill="#6d4df5"/><rect x="24" y="6" width="14" height="9" rx="2" fill="#a78bfa"/></svg>',
+    cert: '<svg class="sw-ic" viewBox="0 0 44 52"><rect x="1" y="1" width="42" height="50" rx="6" fill="#fff"/><rect x="6" y="6" width="32" height="40" rx="3" fill="#6d4df5"/></svg>',
+    admit: '<svg class="sw-ic" viewBox="0 0 44 52"><rect x="1" y="1" width="42" height="50" rx="6" fill="#fff"/><rect x="6" y="6" width="32" height="19" rx="3" fill="#6d4df5"/><rect x="6" y="27" width="32" height="19" rx="3" fill="#a78bfa"/></svg>',
+    auto: '<svg class="sw-ic" viewBox="0 0 44 52"><rect x="1" y="1" width="42" height="50" rx="6" fill="#fff"/><rect x="6" y="6" width="32" height="40" rx="3" fill="none" stroke="#6d4df5" stroke-width="2" stroke-dasharray="4 3"/><text x="22" y="34" text-anchor="middle" font-size="20" font-weight="800" fill="#6d4df5" font-family="sans-serif">?</text></svg>'
   };
 
-  var root = null, S = {}, els = {}, drag = -1, dragOff = null, geo = null, animId = 0, closeTimer = 0, outTimers = {};
-  var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var root = null, S = {}, els = {}, drag = -1, dragOff = null, geo = null, ready = false;
 
-  function reset() {
-    S = { layout: 'id', side: 'front', src: null, quad: null, raw: { front: null, back: null }, cache: {}, filter: 'clean', pages: null, view: null, tok: 0, rtok: 0, busy: false };
-  }
+  function reset() { S = { layout: 'id', side: 'front', src: null, quad: null, sides: { front: null, back: null } }; }
   reset();
 
   function build() {
     if (root) return;
     var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
-    root = document.createElement('div'); root.id = 'sw'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-labelledby', 'sw-ttl');
+    root = document.createElement('div'); root.id = 'sw'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true');
     root.innerHTML =
-      '<div class="sw-m">' +
-      '<div class="sw-h"><div class="sw-hb"><b id="sw-ttl" data-i="title"></b><span id="sw-stp"></span></div><button class="sw-x" type="button" data-a="close" aria-label="Close">✕</button></div>' +
-      '<div class="sw-prog" role="progressbar" aria-valuemin="1" aria-valuemax="5"><i id="sw-pf"></i></div>' +
-      '<div class="sw-body">' +
-      /* 1 type */
+      '<div class="sw-h"><b data-i="title"></b><button class="sw-x" type="button" data-a="close" aria-label="Close">✕</button></div>' +
       '<div class="sw-v" id="sw-type"><div class="sw-sc"><div class="sw-in">' +
         '<h2 data-i="type.q"></h2><p class="sw-p" data-i="type.s"></p>' +
         ['id', 'cert', 'admit', 'auto'].map(function (k) {
           return '<button class="sw-opt" type="button" data-type="' + k + '">' + ICONS[k] + '<span><b data-i="' + k + '.t"></b><small data-i="' + k + '.s"></small></span></button>';
         }).join('') +
       '</div></div></div>' +
-      /* 2 source */
       '<div class="sw-v" id="sw-src"><div class="sw-sc"><div class="sw-in">' +
-        '<h2 id="sw-srcq"></h2><p class="sw-p" data-i="src.s"></p>' +
+        '<h2 id="sw-srcq" data-i="src.q"></h2><p class="sw-p" data-i="src.s"></p>' +
         '<button class="sw-opt" type="button" data-a="cam"><span class="sw-ico">📷</span><span><b data-i="cam.t"></b><small data-i="cam.s"></small></span></button>' +
         '<button class="sw-opt" type="button" data-a="file"><span class="sw-ico">📁</span><span><b data-i="file.t"></b><small data-i="file.s"></small></span></button>' +
-        '<div class="sw-row"><button class="sw-btn soft" type="button" data-a="srcback" data-i="back"></button></div>' +
+        '<div class="sw-row"><button class="sw-btn" type="button" data-a="srcback" data-i="back"></button></div>' +
         '<input id="sw-fcam" type="file" accept="image/*" capture="environment" hidden>' +
         '<input id="sw-ffile" type="file" accept="image/*" hidden>' +
       '</div></div></div>' +
-      /* 3 crop */
       '<div class="sw-v" id="sw-crop">' +
         '<div class="sw-ct"><b data-i="crop.t"></b><span data-i="crop.s"></span></div>' +
-        '<div class="sw-stage" id="sw-stage"><div class="sw-cw" id="sw-cw"><canvas class="sw-c" id="sw-cv"></canvas><div class="sw-laser"><i></i></div></div>' +
-          '<div class="sw-lp" id="sw-lp"><canvas id="sw-lpc" width="208" height="208"></canvas></div><div class="sw-busy" id="sw-busy"></div></div>' +
-        '<div class="sw-bar"><button class="sw-btn soft" type="button" data-a="cancel" data-i="cancel"></button><button class="sw-btn line" type="button" data-a="fullphoto" data-i="full"></button><button class="sw-btn pri" type="button" data-a="docrop" id="sw-docrop" data-i="crop"></button></div>' +
+        '<div class="sw-stage" id="sw-stage"><canvas class="sw-c" id="sw-cv"></canvas><div class="sw-lp" id="sw-lp"><canvas id="sw-lpc" width="208" height="208"></canvas></div><div class="sw-busy" id="sw-busy"></div></div>' +
+        '<div class="sw-bar"><button class="sw-btn" type="button" data-a="cancel" data-i="cancel"></button><button class="sw-btn" type="button" data-a="fullphoto" data-i="full"></button><button class="sw-btn pri" type="button" data-a="docrop" data-i="crop"></button></div>' +
       '</div>' +
-      /* 4 side confirmation */
       '<div class="sw-v" id="sw-ok"><div class="sw-sc"><div class="sw-in">' +
-        '<h2 id="sw-okt"></h2><p class="sw-p" data-i="ok.hint"></p>' +
-        '<div class="sw-frame"><div class="sw-pv" id="sw-pv"></div></div>' +
-        '<div class="sw-pills" role="radiogroup">' +
-          '<button class="sw-pill" type="button" role="radio" data-f="orig" data-i="f.orig"></button>' +
-          '<button class="sw-pill" type="button" role="radio" data-f="clean" data-i="f.clean"></button>' +
-          '<button class="sw-pill" type="button" role="radio" data-f="bw" data-i="f.bw"></button>' +
-        '</div>' +
-        '<div class="sw-stk"><div class="sw-rots" id="sw-rots"></div>' +
-          '<button class="sw-btn ok" type="button" data-a="done" data-i="done"></button>' +
-          '<button class="sw-btn ind" type="button" data-a="addback" id="sw-addback" data-i="addback"></button></div>' +
-      '</div></div><div class="sw-busy" id="sw-busy2"></div></div>' +
-      /* 5 A4 sheet */
-      '<div class="sw-v" id="sw-a4"><div class="sw-sc"><div class="sw-in">' +
-        '<h2 data-i="a4.t"></h2><p class="sw-p" data-i="a4.s"></p>' +
-        '<div class="sw-frame"><div class="sw-pv a4" id="sw-a4pv"></div></div><div class="sw-info" id="sw-a4info"></div>' +
-        '<div class="sw-stk"><button class="sw-btn pri" type="button" data-a="cont" data-i="cont"></button>' +
-        '<button class="sw-btn soft" type="button" data-a="edit" data-i="edit"></button></div>' +
-      '</div></div><div class="sw-busy" id="sw-busy3"></div></div>' +
-      '</div></div>';
+        '<h2 id="sw-okt"></h2><div class="sw-pv" id="sw-pv"></div><p class="sw-p" data-i="ok.hint"></p>' +
+        '<div class="sw-stk"><div id="sw-rots" class="sw-stk" style="flex-direction:row;flex-wrap:wrap;justify-content:center"></div>' +
+        '<button class="sw-btn ok" type="button" data-a="done" data-i="done"></button>' +
+        '<button class="sw-btn gold" type="button" data-a="addback" id="sw-addback" data-i="addback"></button></div>' +
+      '</div></div></div>';
     document.body.appendChild(root);
-    ['stage', 'cw', 'cv', 'lp', 'lpc', 'busy', 'busy2', 'busy3', 'okt', 'pv', 'rots', 'addback', 'fcam', 'ffile', 'srcq', 'stp', 'pf', 'a4pv', 'a4info', 'docrop'].forEach(function (k) { els[k] = document.getElementById('sw-' + k); });
+    ['stage', 'cv', 'lp', 'lpc', 'busy', 'okt', 'pv', 'rots', 'addback', 'fcam', 'ffile', 'srcq'].forEach(function (k) { els[k] = document.getElementById('sw-' + k); });
 
     root.addEventListener('click', onClick);
     els.fcam.onchange = els.ffile.onchange = function (e) { var f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) onPhoto(f); };
     bindCanvas();
-    function refit() { if (root.classList.contains('on') && S.view === 'crop' && S.src) { fit(); draw(); } }
-    window.addEventListener('resize', refit);
-    window.addEventListener('orientationchange', function () { setTimeout(refit, 250); });
+    window.addEventListener('resize', function () { if (root.classList.contains('on') && S.view === 'crop') { fit(); draw(); } });
+    window.addEventListener('orientationchange', function () { setTimeout(function () { if (S.view === 'crop') { fit(); draw(); } }, 250); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && root.classList.contains('on')) close(); });
     new MutationObserver(applyLang).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
     root.addEventListener('touchmove', function (e) { if (e.target.closest && e.target.closest('.sw-stage')) e.preventDefault(); }, { passive: false });
@@ -590,71 +478,45 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
   function applyLang() {
     if (!root) return;
     [].forEach.call(root.querySelectorAll('[data-i]'), function (n) { n.textContent = t(n.getAttribute('data-i')); });
-    root.querySelector('.sw-x').setAttribute('aria-label', t('close'));
-    setSrcTitle(); setStep();
+    if (S.view === 'type' || S.view === 'src') setSrcTitle();
     if (S.view === 'ok') renderOk();
-    if (S.view === 'a4') renderA4();
   }
   function setSrcTitle() { if (els.srcq) els.srcq.textContent = S.side === 'back' ? t('backFor') + ' — ' + t('src.q') : t('src.q'); }
-  function setStep() {
-    var n = ORDER.indexOf(S.view) + 1; if (n < 1) n = 1;
-    els.stp.textContent = t('step') + ' ' + n + ' / 5';
-    els.pf.style.width = (n * 20) + '%';
-    root.querySelector('.sw-prog').setAttribute('aria-valuenow', n);
-  }
 
-  /* step switch: horizontal slide + cross-fade (250ms) */
   function show(v) {
-    var prev = S.view, rev = prev ? ORDER.indexOf(v) < ORDER.indexOf(prev) : false;
-    var nw = root.querySelector('#sw-' + v), old = prev && prev !== v ? root.querySelector('#sw-' + prev) : null;
-    [].forEach.call(root.querySelectorAll('.sw-v.out'), function (n) { if (n !== nw) { n.classList.remove('out', 'rev'); } });
-    if (old) {
-      old.classList.remove('on'); old.classList.toggle('rev', rev);
-      if (!reduced) { old.classList.add('out'); clearTimeout(outTimers[prev]); outTimers[prev] = setTimeout(function () { old.classList.remove('out', 'rev'); }, 260); }
-    }
-    nw.classList.remove('out'); nw.classList.toggle('rev', rev); nw.classList.add('on');
-    S.view = v; setStep();
+    S.view = v;
+    [].forEach.call(root.querySelectorAll('.sw-v'), function (n) { n.classList.toggle('on', n.id === 'sw-' + v); });
     if (v === 'src') setSrcTitle();
-    var sc = nw.querySelector('.sw-sc'); if (sc) sc.scrollTop = 0;
+    var sc = root.querySelector('#sw-' + v + ' .sw-sc'); if (sc) sc.scrollTop = 0;
   }
 
   function open() {
-    build(); clearTimeout(closeTimer); reset(); S.view = null;
-    [].forEach.call(root.querySelectorAll('.sw-v'), function (n) { n.classList.remove('on', 'out', 'rev'); });
-    applyLang();
+    build(); reset(); applyLang();
     root.classList.add('on'); document.documentElement.classList.add('sw-lock');
     show('type');
-    requestAnimationFrame(function () { requestAnimationFrame(function () { root.classList.add('show'); }); });
-    try { root.querySelector('.sw-x').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
     if (typeof window.cvReady === 'function') { try { window.cvReady().catch(function () {}); } catch (e) { /* ignore */ } }
   }
   function close() {
-    if (!root || !root.classList.contains('on')) return;
-    S.tok++; animId++; root.classList.remove('show'); document.documentElement.classList.remove('sw-lock');
+    if (!root) return;
+    root.classList.remove('on'); document.documentElement.classList.remove('sw-lock');
     S.src = null; S.view = null;
-    clearTimeout(closeTimer); closeTimer = setTimeout(function () { root.classList.remove('on'); }, reduced ? 0 : 280);
   }
 
   function onClick(e) {
-    if (e.target === root) { if (S.view === 'type' || S.view === 'src') close(); return; }
-    var pill = e.target.closest && e.target.closest('[data-f]');
-    if (pill) { if (S.filter !== pill.dataset.f && !S.busy) { S.filter = pill.dataset.f; renderOk(); } return; }
     var a = e.target.closest && e.target.closest('[data-a],[data-type]'); if (!a) return;
     if (a.dataset.type) { S.layout = a.dataset.type; S.side = 'front'; show('src'); return; }
     switch (a.dataset.a) {
       case 'close': close(); break;
-      case 'srcback': if (S.side === 'back') { S.side = 'front'; show('ok'); renderOk(); } else show('type'); break;
+      case 'srcback': if (S.side === 'back') { S.side = 'front'; showOk(); } else show('type'); break;
       case 'cam': els.fcam.click(); break;
       case 'file': els.ffile.click(); break;
-      case 'cancel': S.tok++; animId++; S.src = null; setBusy(''); laser(false); show('src'); break;
-      case 'fullphoto': if (S.src) { S.tok++; laser(false); setBusy(''); animateQuad(fullQuad(S.src.width, S.src.height), 350); } break;
+      case 'cancel': S.src = null; show('src'); break;
+      case 'fullphoto': if (S.src) { S.quad = fullQuad(S.src.width, S.src.height); draw(); } break;
       case 'docrop': doCrop(); break;
-      case 'rotF': rotateSide('front'); break;
-      case 'rotB': rotateSide('back'); break;
-      case 'done': toA4(); break;
+      case 'rotF': S.sides.front = rotateCW(S.sides.front); renderOk(); break;
+      case 'rotB': S.sides.back = rotateCW(S.sides.back); renderOk(); break;
+      case 'done': finish(); break;
       case 'addback': S.side = 'back'; show('src'); break;
-      case 'cont': finish(); break;
-      case 'edit': show('ok'); renderOk(); break;
     }
   }
 
@@ -678,44 +540,23 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
     if (bmp && bmp.close) bmp.close();
     return c;
   }
-  function setBusy(msg, el) { el = el || els.busy; el.textContent = msg || ''; el.classList.toggle('on', !!msg); }
-  function laser(on) { els.cw.classList.toggle('scan', !!on); }
-
-  function animateQuad(to, ms) {
-    return new Promise(function (res) {
-      if (!S.quad) { res(); return; }
-      if (reduced || !ms) { S.quad = to.map(function (p) { return { x: p.x, y: p.y }; }); draw(); res(); return; }
-      var from = S.quad.map(function (p) { return { x: p.x, y: p.y }; }), t0 = performance.now(), id = ++animId;
-      (function step(now) {
-        if (id !== animId) { res(); return; }
-        var k = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - k, 3);
-        S.quad = from.map(function (p, i) { return { x: p.x + (to[i].x - p.x) * e, y: p.y + (to[i].y - p.y) * e }; });
-        draw();
-        if (k < 1) requestAnimationFrame(step); else res();
-      })(t0);
-    });
-  }
-
   async function onPhoto(file) {
-    var tok = ++S.tok;
-    show('crop'); S.src = null; S.quad = null; els.cv.width = els.cv.height = 1; setBusy(t('detecting'));
+    show('crop'); setBusy(t('detecting'));
     try {
-      var img = await readImage(file);
-      if (tok !== S.tok) return;
-      S.src = img; fit(); S.quad = defaultQuad(img.width, img.height); draw();
-      laser(!reduced);
-      var r = await Promise.all([detectQuad(img), sleep(reduced ? 0 : 1100)]);
-      if (tok !== S.tok) return;
-      laser(false); setBusy('');
-      await animateQuad(r[0], 650);
+      S.src = await readImage(file);
+      fit(); S.quad = defaultQuad(S.src.width, S.src.height); draw();
+      await frame();
+      S.quad = await detectQuad(S.src);
+      draw();
     } catch (e) {
-      if (tok !== S.tok) return;
-      laser(false); setBusy(''); alert(t('readErr')); S.src = null; show('src'); return;
+      alert(t('readErr')); S.src = null; show('src');
     }
-    if (tok === S.tok) { laser(false); setBusy(''); }
+    setBusy('');
   }
+  function setBusy(msg) { els.busy.textContent = msg || ''; els.busy.classList.toggle('on', !!msg); }
 
   /* ---- crop canvas ---- */
+  var PAD = 20;
   function fit() {
     if (!S.src) return;
     var st = els.stage, aw = Math.max(80, st.clientWidth - 16 - PAD * 2), ah = Math.max(80, st.clientHeight - 16 - PAD * 2);
@@ -728,25 +569,19 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
   function vpt(p) { return { x: PAD + p.x * geo.k, y: PAD + p.y * geo.k }; }
   function draw() {
     if (!S.src || !S.quad || !geo) return;
-    var ctx = els.cv.getContext('2d'), g = geo, i;
+    var ctx = els.cv.getContext('2d'), g = geo;
     ctx.setTransform(g.dpr, 0, 0, g.dpr, 0, 0); ctx.clearRect(0, 0, g.cw, g.ch);
-    ctx.save(); ctx.shadowColor = 'rgba(15,23,42,.18)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 4; ctx.fillStyle = '#fff'; ctx.fillRect(PAD, PAD, g.iw, g.ih); ctx.restore();
     ctx.imageSmoothingQuality = 'high'; ctx.drawImage(S.src, PAD, PAD, g.iw, g.ih);
     var v = S.quad.map(vpt);
-    function path() { ctx.beginPath(); ctx.moveTo(v[0].x, v[0].y); for (var j = 1; j < 4; j++) ctx.lineTo(v[j].x, v[j].y); ctx.closePath(); }
-    /* soft dim outside the document, blue tint inside */
     ctx.save(); ctx.beginPath(); ctx.rect(PAD, PAD, g.iw, g.ih);
-    ctx.moveTo(v[0].x, v[0].y); for (i = 1; i < 4; i++) ctx.lineTo(v[i].x, v[i].y); ctx.closePath();
-    ctx.fillStyle = 'rgba(241,245,249,.55)'; ctx.fill('evenodd'); ctx.restore();
-    path(); ctx.fillStyle = 'rgba(37,99,235,.12)'; ctx.fill();
-    path(); ctx.lineWidth = 3; ctx.strokeStyle = '#2563eb'; ctx.lineJoin = 'round'; ctx.stroke();
-    path(); ctx.lineWidth = 1; ctx.strokeStyle = '#6366f1'; ctx.setLineDash([6, 6]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.moveTo(v[0].x, v[0].y); for (var i = 1; i < 4; i++) ctx.lineTo(v[i].x, v[i].y); ctx.closePath();
+    ctx.fillStyle = 'rgba(10,12,22,.52)'; ctx.fill('evenodd'); ctx.restore();
+    ctx.beginPath(); ctx.moveTo(v[0].x, v[0].y); for (i = 1; i < 4; i++) ctx.lineTo(v[i].x, v[i].y); ctx.closePath();
+    ctx.lineWidth = 3; ctx.strokeStyle = '#8b5cf6'; ctx.lineJoin = 'round'; ctx.stroke();
     for (i = 0; i < 4; i++) {
-      var r = drag === i ? 16 : 13;
-      ctx.save(); ctx.shadowColor = 'rgba(37,99,235,.4)'; ctx.shadowBlur = drag === i ? 14 : 8; ctx.shadowOffsetY = 2;
-      ctx.beginPath(); ctx.arc(v[i].x, v[i].y, r, 0, 6.2832); ctx.fillStyle = '#fff'; ctx.fill(); ctx.restore();
-      ctx.beginPath(); ctx.arc(v[i].x, v[i].y, r, 0, 6.2832); ctx.lineWidth = 3.5; ctx.strokeStyle = '#2563eb'; ctx.stroke();
-      if (drag === i) { ctx.beginPath(); ctx.arc(v[i].x, v[i].y, 5, 0, 6.2832); ctx.fillStyle = '#2563eb'; ctx.fill(); }
+      ctx.beginPath(); ctx.arc(v[i].x, v[i].y, 13, 0, 6.2832);
+      ctx.fillStyle = drag === i ? 'rgba(139,92,246,.95)' : 'rgba(76,46,170,.55)'; ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
     }
   }
   function pointer(e) { var r = els.cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
@@ -764,17 +599,16 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
     var q = S.quad[drag], v = vpt(q), lp = els.lp, sr = els.stage.getBoundingClientRect(), cr = els.cv.getBoundingClientRect();
     var x = cr.left - sr.left + v.x, y = cr.top - sr.top + v.y, top = y - 150; if (top < 4) top = y + 56;
     lp.style.left = Math.max(4, Math.min(sr.width - 108, x - 52)) + 'px'; lp.style.top = top + 'px'; lp.style.display = 'block';
-    var c = els.lpc, ctx = c.getContext('2d'), side = 104 / (geo.k * 2.6);
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 208, 208);
+    var c = els.lpc, ctx = c.getContext('2d'), side = 104 / (geo.k * 2.6) * 1;
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 208, 208);
     ctx.drawImage(S.src, q.x - side / 2, q.y - side / 2, side, side, 0, 0, 208, 208);
-    ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(104, 104, 14, 0, 6.2832); ctx.moveTo(104, 84); ctx.lineTo(104, 124); ctx.moveTo(84, 104); ctx.lineTo(124, 104); ctx.stroke();
+    ctx.strokeStyle = '#8b5cf6'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(104, 104, 14, 0, 6.2832); ctx.moveTo(104, 84); ctx.lineTo(104, 124); ctx.moveTo(84, 104); ctx.lineTo(124, 104); ctx.stroke();
   }
   function bindCanvas() {
     var cv = els.cv;
     cv.addEventListener('pointerdown', function (e) {
-      if (!S.quad || !S.src) return;
+      if (!S.quad) return;
       var p = pointer(e), i = nearest(p); if (i < 0) return;
-      animId++; S.tok++; laser(false); setBusy('');          // a touch cancels the auto-detect animation
       drag = i; var v = vpt(S.quad[i]); dragOff = { x: v.x - p.x, y: v.y - p.y };
       try { cv.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
       moveCorner(e); e.preventDefault();
@@ -786,10 +620,10 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
     cv.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
   }
 
-  /* ---- crop -> perspective warp (raw, unfiltered; filters are applied on the confirmation step) ---- */
+  /* ---- crop -> warp -> enhance ---- */
   async function doCrop() {
-    if (!S.src || !S.quad || S.busy) return;
-    S.busy = true; S.tok++; animId++; laser(false); setBusy(t('processing')); await frame();
+    if (!S.src || !S.quad) return;
+    setBusy(t('processing')); await frame();
     try {
       var q = S.quad, W = Math.round(Math.max(dist(q[0], q[1]), dist(q[3], q[2]))), H = Math.round(Math.max(dist(q[0], q[3]), dist(q[1], q[2])));
       if (W < 20 || H < 20) throw new Error('small');
@@ -797,85 +631,44 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
       var out = warp(S.src, q, W, H);
       var idMode = S.layout === 'id' || (S.layout === 'auto' && isIdLike(out));
       if (idMode && out.height > out.width) out = rotateCW(out);
-      S.raw[S.side] = out; S.cache = {}; S.src = null;
-      S.busy = false; setBusy('');
-      show('ok'); renderOk();
-    } catch (e) { S.busy = false; setBusy(''); alert(t('readErr')); }
+      out = idMode ? enhanceId(out) : enhanceDoc(out);
+      S.sides[S.side] = out; S.src = null;
+      showOk();
+    } catch (e) { alert(t('readErr')); }
+    setBusy('');
   }
 
-  /* ---- confirmation (Step 4) ---- */
-  function thumb(c, max) { var k = Math.min(1, (max || 900) / Math.max(c.width, c.height)), s = newCanvas(Math.round(c.width * k), Math.round(c.height * k)); s.getContext('2d').drawImage(c, 0, 0, s.width, s.height); return s.toDataURL('image/jpeg', 0.88); }
-  function sideImg(side) {
-    var key = side + ':' + S.filter;
-    if (!S.cache[key]) S.cache[key] = makeFiltered(S.raw[side], S.filter);
-    return S.cache[key];
-  }
-  function rotateSide(side) {
-    if (!S.raw[side] || S.busy) return;
-    S.raw[side] = rotateCW(S.raw[side]); delete S.cache[side + ':orig']; delete S.cache[side + ':clean']; delete S.cache[side + ':bw'];
-    renderOk();
-  }
-  async function renderOk() {
-    var f = S.raw.front, b = S.raw.back; if (!f) return;
-    var tok = ++S.rtok;
-    S.busy = true; setBusy(t('applying'), els.busy2);
-    [].forEach.call(root.querySelectorAll('[data-f]'), function (p) { var on = p.dataset.f === S.filter; p.classList.toggle('on', on); p.setAttribute('aria-checked', on); });
+  /* ---- confirmation ---- */
+  function thumb(c) { var k = Math.min(1, 900 / Math.max(c.width, c.height)), s = newCanvas(Math.round(c.width * k), Math.round(c.height * k)); s.getContext('2d').drawImage(c, 0, 0, s.width, s.height); return s.toDataURL('image/jpeg', 0.85); }
+  function showOk() { show('ok'); renderOk(); }
+  function renderOk() {
+    var f = S.sides.front, b = S.sides.back;
+    if (!f) return;
     els.okt.textContent = b ? t('ok.both') : (S.side === 'back' ? t('ok.back') : t('ok.front'));
+    els.pv.className = 'sw-pv' + (b ? ' two' : '');
+    els.pv.innerHTML = '';
+    [[f, 'side_front'], [b, 'side_back']].forEach(function (p) {
+      if (!p[0]) return;
+      var fig = document.createElement('figure'), im = document.createElement('img'), cap = document.createElement('figcaption');
+      im.alt = ''; im.src = thumb(p[0]); cap.textContent = t(p[1]); fig.appendChild(im); if (b) fig.appendChild(cap); els.pv.appendChild(fig);
+    });
     els.rots.innerHTML = '';
     function rb(a, label) { var x = document.createElement('button'); x.type = 'button'; x.className = 'sw-btn'; x.dataset.a = a; x.textContent = label; els.rots.appendChild(x); }
     if (b) { rb('rotF', t('rotF')); rb('rotB', t('rotB')); } else rb('rotF', t('rotate'));
-    els.addback.style.display = (b || S.layout === 'cert') ? 'none' : '';
-    await frame();
-    if (tok !== S.rtok) return;
-    try {
-      var figs = [[sideImg('front'), 'side_front'], b ? [sideImg('back'), 'side_back'] : null];
-      els.pv.className = 'sw-pv' + (b ? ' two' : ''); els.pv.innerHTML = '';
-      figs.forEach(function (p) {
-        if (!p) return;
-        var fig = document.createElement('figure'), im = document.createElement('img'), cap = document.createElement('figcaption');
-        im.alt = ''; im.src = thumb(p[0]); cap.textContent = t(p[1]); fig.appendChild(im); if (b) fig.appendChild(cap); els.pv.appendChild(fig);
-      });
-    } catch (e) { /* keep previous preview */ }
-    if (tok === S.rtok) { S.busy = false; setBusy('', els.busy2); }
+    els.addback.style.display = b ? 'none' : '';
   }
 
-  /* ---- Step 5: A4 composition (300 DPI) ---- */
-  function resolveLayout() {
-    var l = S.layout;
-    return l === 'auto' ? (isIdLike(S.raw.front) ? 'id' : 'cert') : l;
-  }
-  async function toA4() {
-    if (!S.raw.front || S.busy) return;
-    S.busy = true; setBusy(t('building'), els.busy2); await frame();
-    try {
-      var layout = resolveLayout();
-      S.pages = compose(layout, sideImg('front'), S.raw.back ? sideImg('back') : null);
-      S.finalLayout = layout;
-      S.busy = false; setBusy('', els.busy2);
-      show('a4'); renderA4();
-    } catch (e) { S.busy = false; setBusy('', els.busy2); alert(t('readErr')); }
-  }
-  function renderA4() {
-    if (!S.pages) return;
-    els.a4pv.innerHTML = '';
-    S.pages.forEach(function (p, i) {
-      var fig = document.createElement('figure'), im = document.createElement('img'), cap = document.createElement('figcaption');
-      im.alt = 'A4 ' + (i + 1); im.src = thumb(p, 900); im.style.boxShadow = '0 6px 18px rgba(15,23,42,.14),0 0 0 1px #e2e8f0';
-      fig.appendChild(im);
-      if (S.pages.length > 1) { cap.textContent = t('page') + ' ' + (i + 1); fig.appendChild(cap); }
-      els.a4pv.appendChild(fig);
-    });
-    els.a4info.textContent = t('a4.info') + ' · ' + t(S.finalLayout === 'id' ? 'lblid' : S.finalLayout === 'admit' ? 'lbladmit' : 'lblcert') + (S.pages.length > 1 ? ' · ' + S.pages.length + ' ' + t('pages') : '');
-  }
-
-  /* ---- finish: hand the A4 pages to the print flow ---- */
+  /* ---- finish: compose A4 and hand over ---- */
   function finish() {
-    if (!S.pages) return;
-    var layout = S.finalLayout, label = t(layout === 'id' ? 'lblid' : layout === 'admit' ? 'lbladmit' : 'lblcert');
-    var res = { pages: S.pages, layout: layout, label: label, hasBack: !!S.raw.back };
+    var f = S.sides.front, b = S.sides.back; if (!f) return;
+    var layout = S.layout;
+    if (layout === 'auto') layout = isIdLike(f) ? 'id' : 'cert';
+    var pages = compose(layout, f, b);
+    var label = t(layout === 'id' ? 'lblid' : layout === 'admit' ? 'lbladmit' : 'lblcert');
+    var res = { pages: pages, layout: layout, label: label, hasBack: !!b };
     close(); reset();
     if (typeof SmartScan.onDone === 'function') SmartScan.onDone(res);
   }
 
-  var SmartScan = window.SmartScan = { open: open, close: close, onDone: null, _t: { solveH: solveH, applyH: applyH, orderQuad: orderQuad, edgeQuad: edgeQuad, warp: warp, enhanceDoc: enhanceDoc, enhanceId: enhanceId, bwFilter: bwFilter, compose: compose } };
+  var SmartScan = window.SmartScan = { open: open, close: close, onDone: null, _t: { solveH: solveH, applyH: applyH, orderQuad: orderQuad, edgeQuad: edgeQuad, warp: warp, enhanceDoc: enhanceDoc, enhanceId: enhanceId, compose: compose } };
 })();

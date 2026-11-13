@@ -525,6 +525,88 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
  <a href="/pdf-tools.html"><svg><use href="#i-pdf"/></svg>PDF tools</a>
 </div></nav>
 <div class="wrap">
+  <!-- ===== SEND VIA WHATSAPP: print bot card (pay by UPI QR or cash, then collect) ===== -->
+  <style>
+  .wa-card{--sp:cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden;margin:0 0 16px;padding:18px 20px;border-radius:24px;color:#fff;background:linear-gradient(135deg,#0b6b5f 0%,#128c7e 38%,#25d366 100%);box-shadow:0 22px 40px -20px rgba(18,140,126,.9);animation:waIn .7s var(--sp) both}
+  .wa-card[hidden]{display:none}
+  .wa-card:before{content:"";position:absolute;inset:-40% -10% auto auto;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
+  @keyframes waIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
+  .wa-top{position:relative;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .wa-ic{position:relative;width:56px;height:56px;border-radius:18px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:30px}
+  .wa-ic:after{content:"";position:absolute;inset:-2px;border-radius:20px;border:2px solid rgba(255,255,255,.7);animation:waPulse 2s var(--sp) infinite}
+  @keyframes waPulse{0%{transform:scale(1);opacity:.9}100%{transform:scale(1.5);opacity:0}}
+  .wa-tx{flex:1;min-width:220px}
+  .wa-live{display:inline-flex;align-items:center;gap:7px;background:rgba(0,0,0,.24);padding:4px 11px;border-radius:999px;font-size:11.5px;font-weight:800;letter-spacing:.4px;margin-bottom:6px}
+  .wa-live i{width:8px;height:8px;border-radius:50%;background:#7CFF9E;animation:waDot 1.6s infinite}
+  @keyframes waDot{0%{box-shadow:0 0 0 0 rgba(124,255,158,.9)}70%{box-shadow:0 0 0 8px rgba(124,255,158,0)}100%{box-shadow:0 0 0 0 rgba(124,255,158,0)}}
+  .wa-tx b{display:block;font-size:17px;line-height:1.35;font-weight:800}
+  .wa-tx span{display:block;font-size:13px;opacity:.95;margin-top:3px;font-weight:600}
+  .wa-acts{display:flex;gap:8px;flex-wrap:wrap}
+  .wa-acts a,.wa-acts button{font:inherit;font-weight:800;font-size:14px;padding:12px 17px;border-radius:14px;border:0;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:transform .45s var(--sp),box-shadow .45s var(--sp)}
+  .wa-acts a:hover,.wa-acts button:hover{transform:translateY(-3px) scale(1.04)}
+  .wa-acts a:active,.wa-acts button:active{transform:scale(.96)}
+  .wa-go{background:#fff;color:#0b6b5f;box-shadow:0 12px 22px -12px rgba(0,0,0,.5)}.wa-qr{background:rgba(0,0,0,.24);color:#fff}
+  .wa-steps{position:relative;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:14px}
+  .wa-step{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);backdrop-filter:blur(6px);padding:8px 14px;border-radius:999px;font-size:13px;font-weight:800;animation:waIn .6s var(--sp) both;transition:transform .45s var(--sp),background .3s}
+  .wa-step:nth-child(3){animation-delay:.1s}.wa-step:nth-child(5){animation-delay:.2s}
+  .wa-step:hover{transform:translateY(-3px);background:rgba(255,255,255,.3)}
+  .wa-step em{font-style:normal;width:22px;height:22px;border-radius:50%;background:#fff;color:#0b6b5f;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+  .wa-arrow{opacity:.8;font-weight:900}
+  .wa-note{position:relative;margin-top:10px;font-size:12.5px;font-weight:600;opacity:.95}
+  .wa-mod{position:fixed;inset:0;z-index:9990;background:rgba(15,23,42,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px}
+  .wa-mod[hidden]{display:none}
+  .wa-box{background:#fff;color:#0f172a;border-radius:26px;padding:26px;width:min(100%,380px);text-align:center;animation:waIn .5s cubic-bezier(.16,1,.3,1) both}
+  .wa-box h3{margin:0 0 4px;font-size:19px}.wa-box p{margin:0 0 14px;font-size:13.5px;color:#5a6778}
+  #waQrBox{position:relative;display:inline-block;padding:14px;border:3px solid #25d366;border-radius:20px;background:#fff;overflow:hidden}
+  #waQrBox:after{content:"";position:absolute;left:0;right:0;height:40px;top:-40px;background:linear-gradient(180deg,transparent,rgba(37,211,102,.45),transparent);animation:waScan 2.4s linear infinite}
+  @keyframes waScan{to{top:100%}}
+  .wa-num{margin-top:12px;font-weight:800;font-size:15px;color:#0b6b5f}
+  .wa-box .wa-open{display:inline-block;margin-top:12px;padding:12px 22px;border-radius:14px;background:linear-gradient(135deg,#128c7e,#25d366);color:#fff;font-weight:800;text-decoration:none}
+  .wa-box button{margin-top:12px;font:inherit;font-weight:700;padding:10px 22px;border:0;border-radius:12px;background:#eef2f7;cursor:pointer;display:block;margin-left:auto;margin-right:auto}
+  @media(max-width:520px){.wa-arrow{display:none}.wa-step{flex:1 1 100%}}
+  @media(prefers-reduced-motion:reduce){.wa-card *,.wa-card,.wa-box{animation:none!important}}
+  </style>
+  <section class="wa-card" id="waCard" hidden aria-label="Print on WhatsApp">
+    <div class="wa-top">
+      <div class="wa-ic" aria-hidden="true">💬</div>
+      <div class="wa-tx"><div class="wa-live"><i></i> LIVE · WhatsApp Print Bot</div>
+        <b>💬 WhatsApp-এ ফাইল পাঠান, প্রিন্ট নিন (Print via WhatsApp)</b>
+        <span>PDF বা ছবি পাঠান → QR/UPI অথবা ক্যাশে পেমেন্ট → প্রিন্ট রেডি। · Send your PDF / photo, pay and collect.</span></div>
+      <div class="wa-acts"><a class="wa-go" id="waLink" href="#" target="_blank" rel="noopener">📤 WhatsApp খুলুন / Open</a><button class="wa-qr" id="waQrBtn" type="button">📷 QR স্ক্যান / Scan QR</button></div>
+    </div>
+    <div class="wa-steps" aria-label="How it works">
+      <span class="wa-step"><em>1</em>Send File on WhatsApp</span><span class="wa-arrow">→</span>
+      <span class="wa-step"><em>2</em>Pay via QR or Cash</span><span class="wa-arrow">→</span>
+      <span class="wa-step"><em>3</em>Collect Print</span>
+    </div>
+    <div class="wa-note">⚡ UPI পেমেন্ট হলেই অটো প্রিন্ট · 💵 ক্যাশে দিলে কাউন্টারে টোকেন বলুন। · Pay by UPI = instant print; Cash = tell the token at the counter.</div>
+  </section>
+  <div class="wa-mod" id="waMod" hidden role="dialog" aria-modal="true"><div class="wa-box">
+    <h3>📷 WhatsApp QR স্ক্যান করুন</h3><p>ফোনের ক্যামেরা দিয়ে স্ক্যান করুন, তারপর আপনার ফাইল পাঠান।<br>Scan with your phone camera, then attach your PDF / photo.</p>
+    <div id="waQrBox"></div><div class="wa-num" id="waNum"></div>
+    <a class="wa-open" id="waLink2" href="#" target="_blank" rel="noopener">📤 WhatsApp-এ খুলুন / Open WhatsApp</a>
+    <button id="waModX" type="button">✕ বন্ধ / Close</button></div></div>
+  <script>
+  (function () {
+    var PLACEHOLDER = '91XXXXXXXXXX';            // <- or set WA_NUMBER in Cloudflare (digits with country code); the site reads it from /api/config
+    var card = document.getElementById('waCard'), drawn = false;
+    function close() { document.getElementById('waMod').hidden = true; }
+    function setup(num) {
+      if (!num || num === PLACEHOLDER) return;   // not configured yet: keep the card hidden instead of showing a dead link
+      var link = 'https://wa.me/' + num + '?text=PRINT';
+      document.getElementById('waLink').href = link; document.getElementById('waLink2').href = link;
+      document.getElementById('waNum').textContent = '+' + num.replace(/^(\d{2})(\d{5})(\d+)$/, '$1 $2 $3'); card.hidden = false;
+      document.getElementById('waQrBtn').onclick = function () {
+        document.getElementById('waMod').hidden = false;
+        if (!drawn && window.QRCode) { drawn = true; new QRCode(document.getElementById('waQrBox'), { text: link, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M }); }
+      };
+      document.getElementById('waModX').onclick = close;
+      document.getElementById('waMod').onclick = function (e) { if (e.target.id === 'waMod') close(); };
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    }
+    fetch('/api/config').then(function (r) { return r.json(); }).then(function (c) { setup(c.waNumber || PLACEHOLDER); }).catch(function () { setup(PLACEHOLDER); });
+  })();
+  </script>
 <div id="pdfPasswordOverlay" class="password-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pdfPasswordTitle">
     <form id="pdfPasswordForm" class="password-card">
       <h2 id="pdfPasswordTitle">Protected PDF</h2>
@@ -1849,40 +1931,6 @@ if (window.Wiz) {
   Wiz.mirror('ppErr', 'ppErr3');
   new MutationObserver(() => { $('ppBadge').textContent = $('ppAmt').textContent; }).observe($('ppAmt'), { childList: true, characterData: true, subtree: true });
 }
-
-/* =====================================================
-   PDF TOOLS -> "Send to Counter" hand-off receiver
-   pdf-tools.html stores the finished PDF in IndexedDB (db "therajesh_handoff", key "pending_print_file")
-   and opens /index.html?source=pdf-tools&autoOpenWizard=1. We feed that file through the normal
-   #pick handler so page counting, thumbnails, price and the Print wizard behave exactly like an upload.
-   ===================================================== */
-(async () => {
-  const q = new URLSearchParams(location.search);
-  if (q.get('source') !== 'pdf-tools') return;
-  const clean = () => { try { history.replaceState(null, '', location.pathname + location.hash); } catch {} };
-  try {
-    const db = await new Promise((res, rej) => {
-      const r = indexedDB.open('therajesh_handoff', 1);
-      r.onupgradeneeded = () => r.result.createObjectStore('files');
-      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
-    });
-    const rec = await new Promise((res, rej) => {
-      const tx = db.transaction('files', 'readwrite'), st = tx.objectStore('files'), g = st.get('pending_print_file');
-      g.onsuccess = () => { st.delete('pending_print_file'); };              // one-shot: the file is removed as soon as it is read
-      tx.oncomplete = () => res(g.result); tx.onerror = tx.onabort = () => rej(tx.error);
-    });
-    db.close();
-    if (!rec || !rec.buf || Date.now() - (rec.ts || 0) > 60 * 60 * 1000) { clean(); return; }
-    const file = new File([rec.buf], rec.name || 'document.pdf', { type: rec.type || 'application/pdf' });
-    const dt = new DataTransfer(); dt.items.add(file);
-    $('pick').files = dt.files;
-    $('pick').dispatchEvent(new Event('change'));                           // -> existing handler adds it to the order and opens the wizard
-    if (q.get('autoOpenWizard') === '1' && window.Wiz) Wiz.open('doc', 1);
-  } catch (e) {
-    $('err').textContent = 'Could not load your file from PDF tools. Please upload it again.';
-  }
-  clean();
-})();
 </script>
 </body>
 </html>

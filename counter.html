@@ -339,6 +339,61 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 .vtbl td{padding:7px 10px;border-top:1px solid #eef0f7;white-space:nowrap}.vtbl td.ip{font-family:ui-monospace,Menlo,Consolas,monospace}
 @media(max-width:760px){.vtiles{grid-template-columns:repeat(2,1fr)}.vcols{grid-template-columns:1fr}}
 </style>
+<style id="v4">
+/* ===== v4: glass SaaS dashboard, spring motion, payment-gated states ===== */
+:root{--spring:cubic-bezier(.16,1,.3,1);--amber:#f59e0b}
+body{background:radial-gradient(900px 480px at 8% -10%,#c7d2fe99,transparent 70%),radial-gradient(800px 420px at 100% -6%,#fbcfe899,transparent 70%),radial-gradient(900px 480px at 50% 115%,#a7f3d099,transparent 70%),#f1f5f9!important;background-attachment:fixed}
+.topbar{background:linear-gradient(120deg,rgba(3,33,31,.94),rgba(6,78,59,.92) 55%,rgba(10,122,92,.9))!important;backdrop-filter:blur(14px);color:#fff}
+.topbar .logo-domain,.topbar .brand-logo{color:#fff}.topbar .logo-sub{color:#a7f3d0}
+.topbar .logo-domain span{-webkit-text-fill-color:#7ee2c4;background:none}
+.ctl,.stat-card,.card,.rev{background:rgba(255,255,255,.72)!important;backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);border:1px solid rgba(255,255,255,.8)!important}
+.card{transition:transform .5s var(--spring),box-shadow .5s var(--spring)!important}
+button{transition:transform .4s var(--spring),box-shadow .4s var(--spring),background .2s,color .2s,filter .2s!important}
+.mu-btn{background:linear-gradient(135deg,#7c3aed,#db2777)!important;color:#fff!important;font-size:12.5px;padding:8px 14px;box-shadow:0 10px 20px -10px #db2777}
+#sndBtn{background:rgba(255,255,255,.18)!important;color:#fff!important;font-size:15px;padding:6px 11px}
+/* revenue strip */
+.rev-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:0 0 16px}
+@media(max-width:820px){.rev-grid{grid-template-columns:repeat(2,1fr)}}
+.rev{border-radius:20px;padding:16px 18px;position:relative;overflow:hidden;box-shadow:0 18px 36px -22px rgba(30,41,59,.55);animation:revIn .7s var(--spring) both}
+.rev:nth-child(2){animation-delay:.07s}.rev:nth-child(3){animation-delay:.14s}.rev:nth-child(4){animation-delay:.21s}
+@keyframes revIn{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:none}}
+.rev small{display:block;font-size:11.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--mute)}
+.rev b{display:block;font-size:30px;margin-top:3px;font-variant-numeric:tabular-nums}
+.rev i{position:absolute;right:14px;top:10px;font-size:28px;font-style:normal}
+.rev .sub{font-size:12px;color:var(--mute);font-weight:600}
+.rev.upi b{background:linear-gradient(90deg,#2563eb,#7c3aed);-webkit-background-clip:text;background-clip:text;color:transparent}
+.rev.cash b{color:#059669}.rev.pend{border-color:rgba(245,158,11,.6)!important}.rev.pend b{color:#d97706}
+.rev.pend.hot{animation:ringA 1.8s infinite}
+@keyframes ringA{0%{box-shadow:0 0 0 0 rgba(245,158,11,.55)}70%{box-shadow:0 0 0 14px rgba(245,158,11,0)}100%{box-shadow:0 0 0 0 rgba(245,158,11,0)}}
+@keyframes ringB{0%{box-shadow:0 0 0 0 rgba(37,99,235,.55)}70%{box-shadow:0 0 0 12px rgba(37,99,235,0)}100%{box-shadow:0 0 0 0 rgba(37,99,235,0)}}
+@keyframes ringG{0%{box-shadow:0 0 0 0 rgba(22,163,74,.5)}70%{box-shadow:0 0 0 12px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+/* animated status pills */
+.tag{position:relative}
+.t-cash_wait{background:#fef3c7;color:#b45309;animation:ringA 1.8s infinite}
+.t-pay_wait,.t-pay_choose{background:#e0e7ff;color:#3730a3}.t-pay_wait{animation:ringB 2s infinite}
+.t-approved,.t-printing{animation:ringB 1.6s infinite}
+.pay{padding:4px 12px;border-radius:999px;font-size:11.5px;font-weight:800;white-space:nowrap}
+.pay-ok{background:#dcfce7;color:#166534}.pay-un{background:#f1f5f9;color:#64748b}.pay-info{background:#dbeafe;color:#1d4ed8}
+.pay-cash{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;animation:ringA 1.6s infinite}
+/* cash-pending cards stand out at the top */
+.card.cashcard{border:2px solid var(--amber)!important;border-top:4px solid var(--amber)!important;background:linear-gradient(135deg,rgba(254,243,199,.9),rgba(255,255,255,.85))!important}
+.act button.cashbtn{flex:1 1 100%!important;font-size:17px;padding:15px 18px;background:linear-gradient(135deg,#16a34a,#22c55e)!important;box-shadow:0 14px 28px -12px #16a34a;animation:ringG 2s infinite}
+.act button.cashbtn:hover{transform:translateY(-3px) scale(1.02)}
+.toast.cash{background:linear-gradient(135deg,#d97706,#f59e0b)}
+/* manual upload modal */
+.mu-box{width:min(100%,640px)!important}
+.mu-h{display:flex;justify-content:space-between;align-items:center}
+.mu-drop{display:flex;align-items:center;justify-content:center;text-align:center;min-height:92px;border:2px dashed #94a3b8;border-radius:18px;background:#f8fafc;font-weight:800;color:#475569;cursor:pointer;transition:all .4s var(--spring);padding:10px}
+.mu-drop:hover,.mu-drop.over{border-color:#7c3aed;background:#f5f3ff;transform:scale(1.015)}
+.mu-file{display:flex;align-items:center;gap:10px;background:#f1f5f9;border-radius:12px;padding:8px 12px;font-size:13.5px;font-weight:700;animation:revIn .4s var(--spring) both}
+.mu-file span.n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mu-file span.p{color:#64748b;font-weight:600}
+.mu-file button{background:#fee2e2;color:#b91c1c;padding:4px 9px;font-size:12px}
+.mu-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:560px){.mu-grid{grid-template-columns:1fr}}
+.mu-grid label,.mu-box label.l{display:block;font-size:12.5px;font-weight:800;color:#475569;margin-bottom:4px}
+.mu-grid input,.mu-grid select{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;font:inherit;background:#fff}
+.mu-hold{display:flex;gap:8px;align-items:center;font-weight:700;font-size:13.5px;justify-content:flex-start;text-align:left}.mu-hold input{width:auto!important;flex:none;margin:0}
+.mu-est{font-weight:800;font-size:15px;color:#0a5c4b}
+</style>
 </head>
 <style id="wa-css">
   .t-wa_wait{background:#fef9c3;color:#854d0e}
@@ -426,6 +481,8 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
       </a>
       <div class="top-actions">
         <span id="count" style="background:rgba(255,255,255,.16);padding:7px 14px;border-radius:999px;font-size:13px;font-weight:700"></span>
+        <button id="muBtn" class="mu-btn" type="button">➕ Manual Upload &amp; Print</button>
+        <button id="sndBtn" type="button" title="Sound alerts on / off">🔔</button>
         <button id="stBtn" style="background:#dcfce7;color:#166534;font-size:12.5px;padding:8px 14px">📒 Statement</button>
         <button id="priceBtn" style="background:#fef3c7;color:#92400e;font-size:12.5px;padding:8px 14px">💰 Prices</button>
         <button id="clr" style="background:#fee2e2;color:#b91c1c;font-size:12.5px;padding:8px 14px">🗑️ Remove All</button>
@@ -434,13 +491,19 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
     </div>
 
     <div class="ctl" id="ctl">
-      <div class="grp"><label class="sw"><input type="checkbox" id="swAuto"><i></i></label><div>⚡ Auto-Print <span id="autoLbl">…</span><small>ON: WhatsApp &amp; paid orders print by themselves · OFF: wait for “Print Now”</small></div></div>
+      <div class="grp"><label class="sw"><input type="checkbox" id="swAuto"><i></i></label><div>✅ Auto-Print Online Paid Orders (UPI/Razorpay) <span id="autoLbl">…</span><small>ON: prints the moment the payment succeeds · 💵 Cash orders NEVER auto-print — they wait for “Cash Received”</small></div></div>
       <div class="grp"><div>💬 WhatsApp bot<small>when a file arrives</small></div><div class="seg2" id="segBot"><button type="button" data-v="ask">Ask B&amp;W / Color</button><button type="button" data-v="instant">Instant B&amp;W</button></div></div>
       <div class="grp"><label class="sw"><input type="checkbox" id="swKeep"><i></i></label><div>🔄 Keep files 30 min<small>needed for “Reprint”</small></div></div>
       <div class="grp"><span class="wapill" id="waPill">WhatsApp: …</span></div>
       <div class="flt" id="flt"><button type="button" data-v="all" class="on">All</button><button type="button" data-v="web">🌐 Web</button><button type="button" data-v="whatsapp">💬 WhatsApp</button></div>
     </div>
     <div class="card hidden" id="waCard"><div id="waQr"></div><div style="flex:1;min-width:220px"><div style="font-size:19px;font-weight:800">📱 Link the shop's WhatsApp</div><p class="mute" style="font-size:14px;margin:6px 0 0">On the shop phone open <b>WhatsApp → Settings → Linked devices → Link a device</b> and scan this code. It disappears once connected. / শপের ফোনে WhatsApp → Linked devices → Link a device থেকে স্ক্যান করুন।</p></div></div>
+    <div class="rev-grid" id="rev">
+      <div class="rev upi"><i>📲</i><small>Today's UPI Collection</small><b id="rvUpi">₹0</b><div class="sub" id="rvUpiN">0 orders</div></div>
+      <div class="rev cash"><i>💵</i><small>Today's Cash Collection</small><b id="rvCash">₹0</b><div class="sub" id="rvCashN">0 orders</div></div>
+      <div class="rev"><i>📄</i><small>Total Pages Printed</small><b id="rvPages">0</b><div class="sub">today</div></div>
+      <div class="rev pend" id="rvPendBox"><i>⏳</i><small>Cash Waiting Approval</small><b id="rvPend">0</b><div class="sub" id="rvPendS">₹0 to collect</div></div>
+    </div>
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-label">Waiting Approval</div>
@@ -459,6 +522,7 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
         <div class="stat-val" id="stRev">₹0</div>
       </div>
     </div>
+    <div id="orders"></div>
     <div class="card vis" id="vis">
       <div class="vis-h"><div class="vis-t">👥 Visitors <span id="vLive" class="vlive"></span></div><button id="vRef" class="vbtn" type="button">Refresh</button></div>
       <div class="vtiles">
@@ -473,13 +537,31 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
     </div>
 
 
-    <div id="orders"></div>
+
   </div>
 </div>
 
 
 
 <!-- STATEMENT -->
+<div id="muModal" class="preview-overlay hidden" role="dialog" aria-modal="true"><div class="modal-box mu-box">
+  <div class="mu-h"><div style="font-size:20px;font-weight:800">➕ Manual Upload &amp; Direct Print</div><button id="muX" type="button" style="background:#e2e8f0;color:#0f172a;padding:8px 14px">✕</button></div>
+  <div class="mute" style="font-size:13.5px">Customer at the counter? Add their file and print at once — or tick “Hold” to preview / crop it first.</div>
+  <label class="mu-drop" id="muDrop"><input type="file" id="muFiles" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx" hidden><span>📂 Tap to choose files, or drop them here<br><small class="mute">PDF · photos · Word · Excel · PowerPoint (max 25 MB each)</small></span></label>
+  <div id="muList" style="display:flex;flex-direction:column;gap:6px"></div>
+  <div class="mu-grid">
+    <div><label>Customer name (optional)</label><input id="muName" maxlength="40" placeholder="Walk-in customer"></div>
+    <div><label>Copies</label><input id="muCopies" type="number" min="1" max="100" value="1"></div>
+    <div><label>Print type</label><div class="seg2" id="muColor"><button type="button" data-v="0" class="on">⚫ B&amp;W</button><button type="button" data-v="1">🌈 Color</button></div></div>
+    <div><label>Paper</label><select id="muPaper"><option value="A4">A4</option><option value="A3">A3</option><option value="4x6">4×6 Photo</option></select></div>
+    <div><label>Payment</label><div class="seg2" id="muPay"><button type="button" data-v="cash" class="on">💵 Cash</button><button type="button" data-v="upi">📲 UPI</button><button type="button" data-v="free">🎁 Free</button></div></div>
+    <div><label>Amount ₹ <span class="mute">(blank = automatic)</span></label><input id="muAmt" type="number" min="0" step="0.5" inputmode="decimal"></div>
+  </div>
+  <label class="mu-hold"><input type="checkbox" id="muHold"> ✏️ Hold — don't print yet (I want to preview / crop first)</label>
+  <div id="muEst" class="mu-est"></div><div id="muMsg" class="mute" style="font-weight:700"></div>
+  <div class="row"><button class="ok" id="muGo" type="button" style="flex:1;font-size:16px;padding:13px">🖨️ Print Now</button><button class="no" id="muCancel" type="button">Cancel</button></div>
+</div></div>
+
 <div id="replyModal" class="preview-overlay hidden" role="dialog" aria-modal="true"><div class="modal-box">
   <div style="font-size:20px;font-weight:800">💬 Reply on WhatsApp <span class="mute" id="replyTo"></span></div>
   <div class="row" id="replyQuick"></div>
@@ -694,7 +776,9 @@ async function load() {
   if (!$('previewModal').classList.contains('hidden')) return;
   try {
     const data = await (await api('orders')).json(); const orders = data.orders; applyFlags(data.flags, data.wa);
-    const pend = orders.filter((o) => ['pending', 'wa_wait'].includes(o.status)).length;
+    orders.sort((x, y) => (y.status === 'cash_wait') - (x.status === 'cash_wait'));
+    const cashO = orders.filter((o) => o.status === 'cash_wait'), cashAmt = cashO.reduce((t, o) => t + (Number(o.amount) || 0), 0);
+    const pend = orders.filter((o) => ['pending', 'wa_wait', 'cash_wait'].includes(o.status)).length;
     const work = orders.filter((o) => ['approved', 'printing'].includes(o.status)).length;
     const done = orders.filter((o) => o.status === 'printed').length;
     const rev = orders.filter((o) => o.status !== 'rejected').reduce((s, o) => s + (Number(o.amount) || 0), 0);
@@ -704,7 +788,9 @@ async function load() {
     $('stDone').textContent = done;
     $('stRev').textContent = '₹' + rev;
 
-    $('count').textContent = pend ? `🔔 ${pend} waiting` : '✓ Queue clear';
+    $('count').textContent = cashO.length ? `💵 ${cashO.length} cash pending · ${RS(cashAmt)}` : pend ? `🔔 ${pend} waiting` : '✓ Queue clear';
+    countTo($('rvPend'), cashO.length, (n) => Math.round(n)); $('rvPendS').textContent = RS(cashAmt) + ' to collect'; $('rvPendBox').classList.toggle('hot', cashO.length > 0);
+    loadStats();
     document.title = (pend ? `(${pend}) ` : '') + 'Admin Counter – therajesh.shop';
     announceNew(orders);
     lastPending = pend;
@@ -713,19 +799,23 @@ async function load() {
   } catch (e) { if (e.message === 'auth') { clearInterval(timer); location.reload(); } }
 }
 
+let drawSig = '';
 function draw(orders) {
-  const box = $('orders'); box.innerHTML = '';
+  const box = $('orders');
+  const sig = srcFilter + '|' + JSON.stringify(orders.map((o) => [o.id, o.status, o.pay_status, o.amount, o.color, o.copies, o.paper, o.note, (o.files || []).map((f) => f.id + f.pages).join()]));
+  if (sig === drawSig && box.children.length) return; drawSig = sig;
+  box.innerHTML = '';
   if (!orders.length) {
     box.innerHTML = '<div class="card mute" style="grid-column:1/-1;text-align:center;padding:40px">No print orders in the queue yet.</div>';
     return;
   }
   for (const o of orders) {
     try { o.opt = JSON.parse(o.opts || '{}'); } catch { o.opt = {}; }
-    const div = document.createElement('div'); div.className = 'card';
+    const div = document.createElement('div'); div.className = 'card' + (o.status === 'cash_wait' ? ' cashcard' : '');
     const pages = o.files.reduce((s, f) => s + f.pages, 0);
     div.innerHTML = `
       <div>
-        <div class="row">${o.source === 'whatsapp' ? '<span class="src src-wa">💬 WhatsApp</span>' : '<span class="src src-web">🌐 Web</span>'}<span class="id">${o.token ? '#' + esc(o.token) : o.id}</span><span class="tag t-${o.status}">${STATUS_LABEL[o.status] || o.status.toUpperCase()}</span>${o.pay_status === 'paid' ? '<span class="tag t-printed">💰 PAID ONLINE</span>' : ''}
+        <div class="row">${o.source === 'whatsapp' ? '<span class="src src-wa">💬 WhatsApp</span>' : o.source === 'counter' ? '<span class="src src-web" style="background:#ede9fe;color:#6d28d9">🖥 Counter</span>' : '<span class="src src-web">🌐 Web</span>'}<span class="id">${o.token ? '#' + esc(o.token) : o.id}</span><span class="tag t-${o.status}">${STATUS_LABEL[o.status] || o.status.toUpperCase()}</span>${payBadge(o)}
         <span class="amt">₹${o.amount}</span></div>
         <div class="mute" style="margin-top:4px">${esc(o.name || 'Walk-in Customer')} ${o.source === 'whatsapp' && o.wa_number ? '· <a href="https://wa.me/' + esc(o.wa_number) + '" target="_blank" rel="noopener" style="color:#166534;font-weight:800;text-decoration:none">💬 +' + esc(o.wa_number) + '</a>' : (o.phone ? '· 📞 ' + esc(o.phone) : '')} · 🕒 ${new Date(o.created_at).toLocaleTimeString()}</div>
         <div style="margin-top:10px;padding:8px 12px;background:#f8fafc;border-radius:10px;font-size:13.5px;font-weight:700">
@@ -767,7 +857,7 @@ function draw(orders) {
     });
     const act = div.querySelector('.act');
     if (BROWSER_MODE) {
-      if (['pending', 'approved', 'printing', 'error'].includes(o.status)) {
+      if (['pending', 'approved', 'printing', 'error', 'cash_wait'].includes(o.status)) {
         o.files.forEach((f) => {
           const b = document.createElement('button'); b.className = 'ok';
           b.textContent = '🖨️ Print: ' + f.name.slice(0, 22);
@@ -1011,7 +1101,7 @@ function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 
 
 /* ---------- WhatsApp / master controls (added) ---------- */
-const STATUS_LABEL = { wa_wait: 'AWAITING REPLY', pending: 'PENDING', approved: 'PRINTING', printing: 'PRINTING', printed: 'PRINTED', error: 'FAILED', rejected: 'DELETED', expired: 'EXPIRED' };
+const STATUS_LABEL = { pay_choose: 'CHOOSING PAYMENT', pay_wait: 'WAITING FOR UPI', cash_wait: '💵 WAITING CASH APPROVAL', wa_wait: 'AWAITING REPLY', pending: 'PENDING', approved: 'PRINTING', printing: 'PRINTING', printed: 'PRINTED', error: 'FAILED', rejected: 'DELETED', expired: 'EXPIRED' };
 let srcFilter = 'all', allOrders = [], seen = null, flagLock = 0, lastQr = '';
 const PIN_TXT = { 1: 'cleared' };
 
@@ -1054,36 +1144,80 @@ function applyFlags(f, wa, force) {
   if (!showQr) lastQr = '';
 }
 
-let actx;
-function beep() {
+let actx, soundOn = ls.get('snd') !== '0';
+function beep(kind) {
+  if (!soundOn) return;
   try {
     actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume();
-    [[880, 0], [1175, 0.22]].forEach(([fr, at]) => { const o = actx.createOscillator(), g = actx.createGain(); o.connect(g); g.connect(actx.destination); o.frequency.value = fr; g.gain.value = 0.25; o.start(actx.currentTime + at); o.stop(actx.currentTime + at + 0.18); });
+    const seq = kind === 'cash' ? [[660, 0], [880, 0.2], [1175, 0.4], [880, 0.62], [1175, 0.82]] : [[880, 0], [1175, 0.22]];
+    seq.forEach(([fr, at]) => { const o = actx.createOscillator(), g = actx.createGain(); o.connect(g); g.connect(actx.destination); o.type = 'sine'; o.frequency.value = fr; g.gain.setValueAtTime(0.0001, actx.currentTime + at); g.gain.exponentialRampToValueAtTime(0.28, actx.currentTime + at + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + at + 0.17); o.start(actx.currentTime + at); o.stop(actx.currentTime + at + 0.19); });
   } catch {}
 }
 document.addEventListener('click', () => { try { if (actx && actx.state === 'suspended') actx.resume(); } catch {} }, { once: true });
-function toast(t, sub) {
-  const d = document.createElement('div'); d.className = 'toast'; d.innerHTML = esc(t) + (sub ? '<small>' + esc(sub) + '</small>' : '');
-  document.body.appendChild(d); setTimeout(() => d.remove(), 6000);
+function paintSound() { $('sndBtn').textContent = soundOn ? '🔔' : '🔕'; }
+$('sndBtn').onclick = () => { soundOn = !soundOn; ls.set('snd', soundOn ? '1' : '0'); paintSound(); if (soundOn) beep(); };
+paintSound();
+function toast(t, sub, cls) {
+  const d = document.createElement('div'); d.className = 'toast' + (cls ? ' ' + cls : ''); d.innerHTML = esc(t) + (sub ? '<small>' + esc(sub) + '</small>' : '');
+  document.body.appendChild(d); setTimeout(() => d.remove(), 6500);
 }
-function announceNew(orders) {   // 🔔 sound + toast for every job that was not on the screen before
-  const ids = new Set(orders.map((o) => o.id));
+function announceNew(orders) {   // 🔔 sound + toast for new WhatsApp / web jobs and every new cash request
+  const cur = new Map(orders.map((o) => [o.id, o.status]));
   if (seen) {
-    const fresh = orders.filter((o) => !seen.has(o.id) && ['wa_wait', 'pending', 'approved'].includes(o.status));
-    if (fresh.length) { beep(); const o = fresh[0]; toast('🔔 New Print Job!', (o.source === 'whatsapp' ? '💬 WhatsApp' : '🌐 Web') + ' · ' + (o.name || 'Customer') + (fresh.length > 1 ? ' (+' + (fresh.length - 1) + ' more)' : '')); }
+    const cash = orders.filter((o) => o.status === 'cash_wait' && seen.get(o.id) !== 'cash_wait');
+    const fresh = orders.filter((o) => !seen.has(o.id) && ['wa_wait', 'pay_choose', 'pending', 'approved'].includes(o.status) && o.source !== 'counter');
+    if (cash.length) { beep('cash'); const o = cash[0]; toast('💵 Cash Pending: ₹' + o.amount, 'Token #' + (o.token || o.id) + ' is waiting at the counter' + (cash.length > 1 ? ' (+' + (cash.length - 1) + ' more)' : ''), 'cash'); }
+    else if (fresh.length) { beep(); const o = fresh[0]; toast('🔔 New Print Job!', (o.source === 'whatsapp' ? '💬 WhatsApp' : '🌐 Web') + ' · ' + (o.name || 'Customer') + (fresh.length > 1 ? ' (+' + (fresh.length - 1) + ' more)' : '')); }
   }
-  seen = ids;
+  seen = cur;
+}
+const RS = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
+function countTo(el, to, fmt) {
+  const from = el._v == null ? 0 : el._v; if (from === to) { el.textContent = fmt(to); return; } el._v = to;
+  const t0 = performance.now();
+  (function step(t) { const k = Math.min(1, (t - t0) / 800), e = 1 - Math.pow(1 - k, 3); el.textContent = fmt(from + (to - from) * e); if (k < 1) requestAnimationFrame(step); })(t0);
+}
+let statTs = 0;
+async function loadStats(force) {
+  if (!force && Date.now() - statTs < 7000) return; statTs = Date.now();
+  try {
+    const j = await (await api('stats')).json();
+    countTo($('rvUpi'), j.upi.amount, RS); countTo($('rvCash'), j.cash.amount, RS); countTo($('rvPages'), j.pages, (n) => Math.round(n).toLocaleString('en-IN'));
+    $('rvUpiN').textContent = j.upi.orders + ' order' + (j.upi.orders === 1 ? '' : 's'); $('rvCashN').textContent = j.cash.orders + ' order' + (j.cash.orders === 1 ? '' : 's');
+  } catch {}
+}
+function payBadge(o) {
+  if (o.pay_status === 'paid') return '<span class="pay pay-ok">✅ Paid via UPI</span>';
+  if (o.status === 'cash_wait') return '<span class="pay pay-cash">💵 Cash Pending: ₹' + o.amount + '</span>';
+  if (o.pay_status === 'cash_received') return '<span class="pay pay-ok">💵 Cash received</span>';
+  if (o.pay_status === 'free') return '<span class="pay pay-info">🎁 No charge</span>';
+  if (['wa_wait', 'pay_choose', 'pay_wait', 'pending'].includes(o.status)) return '<span class="pay pay-un">⏳ Unpaid</span>';
+  return '';
+}
+async function cashApprove(id) {
+  const r = await api('cash-approve/' + id, { method: 'POST' }); const j = await r.json().catch(() => ({}));
+  if (!r.ok) alert(j.error || 'Could not approve'); load(); loadStats(true); setTimeout(load, 1500); setTimeout(load, 3500);
 }
 
 function mkBtn(label, cls, fn, title) {
   const b = document.createElement('button'); b.type = 'button'; b.className = cls + ' sm2'; b.textContent = label; if (title) b.title = title; b.onclick = fn; return b;
 }
 function buildActions(act, o) {
-  const live = ['wa_wait', 'pending', 'approved', 'printing', 'error'].includes(o.status);
+  const live = ['wa_wait', 'pay_choose', 'pay_wait', 'cash_wait', 'pending', 'approved', 'printing', 'error'].includes(o.status);
   const files = o.files || [], img = files.find((f) => isImg(f.name));
-  if (o.status === 'wa_wait') { const w = document.createElement('div'); w.className = 'mute'; w.style.cssText = 'width:100%;font-weight:700'; w.textContent = '⏳ Customer has not chosen B&W / Color yet — you can print now as B&W.'; act.appendChild(w); }
-  if (['wa_wait', 'pending', 'error'].includes(o.status)) {
-    const ap = mkBtn(o.status === 'error' ? '🔁 Retry Print' : '🖨️ Print Now (1-Click)', 'ok', () => { ap.disabled = true; ap.textContent = '⏳ Sending to printer…'; decide('approve', o.id); });
+  const note = (t) => { const w = document.createElement('div'); w.className = 'mute'; w.style.cssText = 'width:100%;font-weight:700'; w.textContent = t; act.appendChild(w); };
+  if (o.status === 'cash_wait') {
+    note('💵 Customer chose CASH — token #' + (o.token || o.id) + '. Collect ₹' + o.amount + ', then press the green button.');
+    const b = mkBtn('✅ Cash Received & Print Now', 'ok cashbtn', () => { b.disabled = true; b.textContent = '⏳ Sending to printer…'; cashApprove(o.id); }); act.appendChild(b);
+  } else if (o.status === 'pay_wait') {
+    note('⏳ UPI link sent — it prints automatically when the payment arrives.');
+    act.appendChild(mkBtn('💵 Paid cash instead — Print Now', 'b-re', () => cashApprove(o.id)));
+  } else if (o.status === 'pay_choose') {
+    note('⏳ Customer is choosing Online UPI or Cash.');
+    act.appendChild(mkBtn('💵 Cash Received — Print Now', 'b-re', () => cashApprove(o.id)));
+  } else if (['wa_wait', 'pending', 'error'].includes(o.status)) {
+    if (o.status === 'wa_wait') note('⏳ Customer has not chosen B&W / Color yet — you can print now as B&W.');
+    const ap = mkBtn(o.status === 'error' ? '🔁 Retry Print' : '🖨️ Approve & Print', 'ok', () => { ap.disabled = true; ap.textContent = '⏳ Sending to printer…'; decide('approve', o.id); });
     ap.style.flex = '1'; act.appendChild(ap);
   } else if (o.status === 'approved' || o.status === 'printing') {
     const w = document.createElement('span'); w.className = 'mute'; w.style.flex = '1'; w.textContent = o.status === 'approved' ? '⏳ Sent to PC agent – starting…' : '🖨️ Printing on PC…'; act.appendChild(w);
@@ -1096,7 +1230,7 @@ function buildActions(act, o) {
   }, 'Prints the same job again (files must still be kept)'));
   if (o.source === 'whatsapp' && o.wa_number) act.appendChild(mkBtn('💬 Reply on WhatsApp', 'b-wa', () => openReply(o)));
   if (live && files.length) act.appendChild(mkBtn('🖨️ This PC', 'b-prev', () => printOrderManually(o, o.files, true), 'Print from this browser – the PC agent is not used'));
-  act.appendChild(mkBtn('🗑️ Delete', 'no', () => decide('reject', o.id)));
+  act.appendChild(mkBtn('🗑️ Cancel', 'no', () => decide('reject', o.id)));
 }
 
 /* reply on WhatsApp */
@@ -1180,6 +1314,62 @@ function drawCrop() {
   $s('stCsv').onclick=()=>{const q=(v)=>'"'+String(v).replace(/"/g,'""')+'"';const L=[['Date time','Order','Type','Paper','Colour','Pages','Copies','Amount'].join(',')].concat(rows.map(x=>[q(fmt(x.ts)),x.order_id,q(label[x.kind]||'Document'),x.paper,x.color?'Colour':'B&W',x.pages,x.copies,x.amount].join(',')));
     L.push(['','','','','','','Total',tot.amount||0].join(','));const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+L.join('\n')],{type:'text/csv'}));a.download='statement_'+$s('stFrom').value+'_to_'+$s('stTo').value+'.csv';document.body.append(a);a.click();a.remove()};
 })();
+
+/* ---------- Manual Admin Upload & Direct Print ---------- */
+let muFiles = [], muPrices = null;
+const muOpen = () => { $('muModal').classList.remove('hidden'); $('muMsg').textContent = ''; if (!muPrices) fetch('/api/config').then((r) => r.json()).then((c) => { muPrices = c; muEst(); }).catch(() => {}); };
+const muClose = () => { $('muModal').classList.add('hidden'); };
+async function muPages(f) {
+  if (ext(f.name) === 'pdf' && window.pdfjsLib) { try { const d = await pdfjsLib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise; return d.numPages; } catch {} }
+  return 1;
+}
+function muSeg(id) { return (document.querySelector('#' + id + ' button.on') || {}).dataset?.v; }
+function muEst() {
+  const pg = muFiles.reduce((t, x) => t + x.pages, 0), cp = Math.max(1, parseInt($('muCopies').value) || 1), paper = $('muPaper').value, color = muSeg('muColor') === '1';
+  const hasAmt = $('muAmt').value !== '', pay = muSeg('muPay');
+  if (!muFiles.length) { $('muEst').textContent = ''; return; }
+  let amt = 0;
+  if (muPrices && muPrices.rate) amt = paper === '4x6' ? pg * cp * (muPrices.photo4x6 || 0) : pg * cp * (color ? muPrices.rate.color : muPrices.rate.bw) * (paper === 'A3' ? (muPrices.a3 || 1) : 1);
+  if (pay === 'free') amt = 0; if (hasAmt) amt = Number($('muAmt').value) || 0;
+  $('muEst').textContent = pg + ' page(s) × ' + cp + ' = ' + RS(amt) + (hasAmt ? ' (your amount)' : muPrices ? ' (automatic)' : '');
+}
+function muPaint() {
+  $('muList').innerHTML = '';
+  muFiles.forEach((x, i) => { const d = document.createElement('div'); d.className = 'mu-file'; d.innerHTML = '<span>' + (isImg(x.f.name) ? '🖼️' : '📄') + '</span><span class="n">' + esc(x.f.name) + '</span><span class="p">' + x.pages + ' pg · ' + (x.f.size / 1048576).toFixed(1) + ' MB</span>'; const b = document.createElement('button'); b.type = 'button'; b.textContent = '✕'; b.onclick = () => { muFiles.splice(i, 1); muPaint(); }; d.appendChild(b); $('muList').appendChild(d); });
+  muEst();
+}
+async function muAdd(list) {
+  for (const f of Array.from(list)) {
+    if (muFiles.length >= 10) break;
+    if (f.size > 25 * 1048576) { $('muMsg').textContent = f.name + ' is over 25 MB.'; continue; }
+    muFiles.push({ f, pages: await muPages(f) });
+  }
+  muPaint();
+}
+$('muBtn').onclick = muOpen; $('muX').onclick = muClose; $('muCancel').onclick = muClose;
+$('muFiles').onchange = (e) => { muAdd(e.target.files); e.target.value = ''; };
+const mud = $('muDrop');
+['dragenter', 'dragover'].forEach((ev) => mud.addEventListener(ev, (e) => { e.preventDefault(); mud.classList.add('over'); }));
+['dragleave', 'drop'].forEach((ev) => mud.addEventListener(ev, (e) => { e.preventDefault(); mud.classList.remove('over'); }));
+mud.addEventListener('drop', (e) => muAdd(e.dataTransfer.files));
+['muColor', 'muPay'].forEach((id) => document.querySelectorAll('#' + id + ' button').forEach((b) => b.onclick = () => { document.querySelectorAll('#' + id + ' button').forEach((x) => x.classList.toggle('on', x === b)); muEst(); }));
+['muCopies', 'muPaper', 'muAmt'].forEach((id) => $(id).oninput = muEst);
+$('muHold').onchange = () => { $('muGo').textContent = $('muHold').checked ? '💾 Add & Hold for editing' : '🖨️ Print Now'; };
+$('muGo').onclick = async () => {
+  if (!muFiles.length) { $('muMsg').textContent = 'Choose at least one file first.'; return; }
+  const btn = $('muGo'); btn.disabled = true; const old = btn.textContent; btn.textContent = '⏳ Uploading…';
+  try {
+    const fd = new FormData();
+    fd.set('meta', JSON.stringify({ name: $('muName').value.trim(), copies: parseInt($('muCopies').value) || 1, color: muSeg('muColor') === '1', paper: $('muPaper').value, pay: muSeg('muPay'), amount: $('muAmt').value, hold: $('muHold').checked, pages: muFiles.map((x) => x.pages) }));
+    muFiles.forEach((x) => fd.append('files', x.f, x.f.name));
+    const r = await api('manual-upload', { method: 'POST', body: fd }); const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Upload failed');
+    muFiles = []; muPaint(); $('muName').value = ''; $('muAmt').value = ''; $('muCopies').value = 1; muClose();
+    toast($('muHold').checked ? '✅ Added — use Preview / Crop, then print' : '🖨️ Sent to the printer', RS(j.amount) + ' · ' + (j.status === 'approved' ? 'printing starts in a moment' : 'on hold'));
+    $('muHold').checked = false; $('muGo').textContent = '🖨️ Print Now'; load(); loadStats(true); setTimeout(load, 1500); setTimeout(load, 3500);
+  } catch (e) { $('muMsg').textContent = '⚠ ' + (e.message || 'Failed'); btn.textContent = old; }
+  btn.disabled = false;
+};
 </script>
 </body>
 </html>
