@@ -21,7 +21,7 @@
     margin:0;
     font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
     background:radial-gradient(circle at 85% 0%, #e6f7f0 0%, var(--bg) 50%);
-    background-attachment:fixed;
+    
     color:var(--ink);
     -webkit-font-smoothing:antialiased;
     min-height:100vh;
@@ -204,7 +204,7 @@
 :root{--bg:#f4f6fb;--ink:#0f1b2d;--mute:#5b6778;--line:#dde3ea;--brand:#0e7c66;--brand-dark:#0a5c4b;--brand2:#0891b2;--bad:#c62828;
  --rainbow:linear-gradient(90deg,var(--brand),#0891b2,#2563eb,#7c3aed,#db2777,#f59e0b);--grad:linear-gradient(135deg,var(--brand) 0%,#0891b2 55%,#2563eb 100%)}
 body{font-family:'Figtree','Noto Sans Bengali',system-ui,sans-serif;font-size:15px;
- background:radial-gradient(900px 460px at 0% -8%,#dbeafe99,transparent 70%),radial-gradient(800px 420px at 100% -4%,#fce7f399,transparent 70%),radial-gradient(800px 460px at 50% 112%,#d1fae599,transparent 70%),#f4f6fb;background-attachment:fixed}
+ background:radial-gradient(900px 460px at 0% -8%,#dbeafe99,transparent 70%),radial-gradient(800px 420px at 100% -4%,#fce7f399,transparent 70%),radial-gradient(800px 460px at 50% 112%,#d1fae599,transparent 70%),#f4f6fb}
 :focus-visible{outline:3px solid #2563eb55;outline-offset:2px}
 .wrap{padding-top:0}
 @media(min-width:960px){.wrap{padding-top:0}}
@@ -342,11 +342,9 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 <style id="v4">
 /* ===== v4: glass SaaS dashboard, spring motion, payment-gated states ===== */
 :root{--spring:cubic-bezier(.16,1,.3,1);--amber:#f59e0b}
-body{background:radial-gradient(900px 480px at 8% -10%,#c7d2fe99,transparent 70%),radial-gradient(800px 420px at 100% -6%,#fbcfe899,transparent 70%),radial-gradient(900px 480px at 50% 115%,#a7f3d099,transparent 70%),#f1f5f9!important;background-attachment:fixed}
-.topbar{background:linear-gradient(120deg,rgba(3,33,31,.94),rgba(6,78,59,.92) 55%,rgba(10,122,92,.9))!important;backdrop-filter:blur(14px);color:#fff}
-.topbar .logo-domain,.topbar .brand-logo{color:#fff}.topbar .logo-sub{color:#a7f3d0}
-.topbar .logo-domain span{-webkit-text-fill-color:#7ee2c4;background:none}
-.ctl,.stat-card,.card,.rev{background:rgba(255,255,255,.72)!important;backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);border:1px solid rgba(255,255,255,.8)!important}
+.topbar{color:#fff}
+
+.ctl,.stat-card,.card,.rev{background:#fff!important;border:1px solid #e3e7f5!important}
 .card{transition:transform .5s var(--spring),box-shadow .5s var(--spring)!important}
 button{transition:transform .4s var(--spring),box-shadow .4s var(--spring),background .2s,color .2s,filter .2s!important}
 .mu-btn{background:linear-gradient(135deg,#7c3aed,#db2777)!important;color:#fff!important;font-size:12.5px;padding:8px 14px;box-shadow:0 10px 20px -10px #db2777}
@@ -363,21 +361,17 @@ button{transition:transform .4s var(--spring),box-shadow .4s var(--spring),backg
 .rev .sub{font-size:12px;color:var(--mute);font-weight:600}
 .rev.upi b{background:linear-gradient(90deg,#2563eb,#7c3aed);-webkit-background-clip:text;background-clip:text;color:transparent}
 .rev.cash b{color:#059669}.rev.pend{border-color:rgba(245,158,11,.6)!important}.rev.pend b{color:#d97706}
-.rev.pend.hot{animation:ringA 1.8s infinite}
-@keyframes ringA{0%{box-shadow:0 0 0 0 rgba(245,158,11,.55)}70%{box-shadow:0 0 0 14px rgba(245,158,11,0)}100%{box-shadow:0 0 0 0 rgba(245,158,11,0)}}
-@keyframes ringB{0%{box-shadow:0 0 0 0 rgba(37,99,235,.55)}70%{box-shadow:0 0 0 12px rgba(37,99,235,0)}100%{box-shadow:0 0 0 0 rgba(37,99,235,0)}}
-@keyframes ringG{0%{box-shadow:0 0 0 0 rgba(22,163,74,.5)}70%{box-shadow:0 0 0 12px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+.rev.pend.hot{border-color:#f59e0b!important;box-shadow:0 0 0 2px rgba(245,158,11,.35)!important}
 /* animated status pills */
 .tag{position:relative}
-.t-cash_wait{background:#fef3c7;color:#b45309;animation:ringA 1.8s infinite}
-.t-pay_wait,.t-pay_choose{background:#e0e7ff;color:#3730a3}.t-pay_wait{animation:ringB 2s infinite}
-.t-approved,.t-printing{animation:ringB 1.6s infinite}
+.t-cash_wait{background:#fef3c7;color:#b45309}
+.t-pay_wait,.t-pay_choose{background:#e0e7ff;color:#3730a3}
 .pay{padding:4px 12px;border-radius:999px;font-size:11.5px;font-weight:800;white-space:nowrap}
 .pay-ok{background:#dcfce7;color:#166534}.pay-un{background:#f1f5f9;color:#64748b}.pay-info{background:#dbeafe;color:#1d4ed8}
-.pay-cash{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;animation:ringA 1.6s infinite}
+.pay-cash{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff}
 /* cash-pending cards stand out at the top */
 .card.cashcard{border:2px solid var(--amber)!important;border-top:4px solid var(--amber)!important;background:linear-gradient(135deg,rgba(254,243,199,.9),rgba(255,255,255,.85))!important}
-.act button.cashbtn{flex:1 1 100%!important;font-size:17px;padding:15px 18px;background:linear-gradient(135deg,#16a34a,#22c55e)!important;box-shadow:0 14px 28px -12px #16a34a;animation:ringG 2s infinite}
+.act button.cashbtn{flex:1 1 100%!important;font-size:17px;padding:15px 18px;background:linear-gradient(135deg,#16a34a,#22c55e)!important;box-shadow:0 8px 18px -10px #16a34a}
 .act button.cashbtn:hover{transform:translateY(-3px) scale(1.02)}
 .toast.cash{background:linear-gradient(135deg,#d97706,#f59e0b)}
 /* manual upload modal */
@@ -436,7 +430,7 @@ button{transition:transform .4s var(--spring),box-shadow .4s var(--spring),backg
           <path d="M6 9V2h12v7"/>
           <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
           <rect x="6" y="14" width="12" height="8" rx="1"/>
-          <circle cx="17" cy="11.5" r="1" fill="#6ee7b7" stroke="none"/>
+          <circle cx="17" cy="11.5" r="1" fill="#c4b5fd" stroke="none"/>
         </svg>
       </div>
       <div style="text-align:left">
@@ -471,7 +465,7 @@ button{transition:transform .4s var(--spring),box-shadow .4s var(--spring),backg
             <path d="M6 9V2h12v7"/>
             <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
             <rect x="6" y="14" width="12" height="8" rx="1"/>
-            <circle cx="17" cy="11.5" r="1" fill="#6ee7b7" stroke="none"/>
+            <circle cx="17" cy="11.5" r="1" fill="#c4b5fd" stroke="none"/>
           </svg>
         </div>
         <div>
@@ -533,7 +527,9 @@ button{transition:transform .4s var(--spring),box-shadow .4s var(--spring),backg
       </div>
       <div class="vbars" id="vBars" aria-label="Visits in the last 14 days"></div>
       <div class="vcols"><div><h4>Top locations · 30 days</h4><div id="vPlaces"></div></div><div><h4>Popular pages · 30 days</h4><div id="vPages"></div></div></div>
-      <details open><summary>Recent visitors (IP &amp; location)</summary><div class="vtbl"><table><thead><tr><th>Time (IST)</th><th>IP address</th><th>Location</th><th>Page</th></tr></thead><tbody id="vRows"></tbody></table></div></details>
+      <details open><summary>Recent visitors</summary>
+        <div class="vr-bar"><div class="vchips" id="vFlt"><button type="button" data-f="all" class="on">All</button><button type="button" data-f="today">Today only</button><button type="button" data-f="unique">Unique IPs</button></div><span class="mute" id="vCount"></span></div>
+        <div class="vlist" id="vRows"></div></details>
     </div>
 
 
@@ -627,6 +623,92 @@ button{transition:transform .4s var(--spring),box-shadow .4s var(--spring),backg
   </div>
 </div>
 
+<style id="v5">
+/* ===== v5: counter-only. Indigo / violet / aurora theme + lightweight rendering ===== */
+:root{--brand:#4f46e5;--brand-dark:#312e81;--brand2:#7c3aed;--brand-lt:#a5b4fc;--brand-lt2:#c7d2fe;--brand-pale:#e0e7ff;--brand-dk:#1e1b4b;
+ --grad:linear-gradient(135deg,#4f46e5 0%,#7c3aed 55%,#db2777 100%);--bg:#f6f7ff;--line:#e3e7f5}
+/* 1) language bar is hidden on this page only */
+.sui{display:none!important}
+.wrap,.wrap:first-child{padding-top:14px!important}
+/* 4) static, cheap page background (no fixed layers, nothing repaints on scroll) */
+html{scroll-behavior:auto}
+body{background:linear-gradient(180deg,#eceeff 0,#f6f7ff 380px,#f6f7ff 100%)!important;background-attachment:scroll!important}
+body:before{display:none!important}
+/* 2) topbar */
+.topbar{background:linear-gradient(135deg,#1e1b4b 0%,#312e81 45%,#4f46e5 80%,#7c3aed 100%)!important;color:#fff;border:0!important;border-radius:22px!important;box-shadow:0 16px 36px -12px rgba(79,70,229,.35)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.topbar:before,.topbar::before{background:var(--rgb)!important;height:4px!important}
+.topbar .brand-logo,.topbar .logo-domain{color:#fff!important}
+.topbar .logo-domain span{background:linear-gradient(90deg,#c4b5fd,#38bdf8)!important;-webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important;color:transparent!important}
+.topbar .logo-sub{color:#e0e7ff!important}
+.topbar .logo-mark{background:linear-gradient(135deg,#6366f1,#8b5cf6 60%,#ec4899)!important;border:1px solid rgba(255,255,255,.28)!important;box-shadow:0 6px 14px rgba(15,10,60,.35)!important;animation:none!important}
+.brand-mark{animation:none!important}
+#count{background:rgba(255,255,255,.14)!important;color:#fff!important;border:1px solid rgba(255,255,255,.28)!important}
+#out{background:rgba(255,255,255,.14)!important;color:#fff!important;border:1px solid rgba(255,255,255,.3)!important}
+#priceBtn{background:#fef3c7!important;color:#92400e!important}
+#sndBtn{background:rgba(255,255,255,.16)!important}
+/* leftover greens -> indigo family (status colours such as Paid / Printed / Cash received stay green on purpose) */
+.btn-prev{background:#eef2ff;color:#4338ca;border-color:#c7d2fe}.btn-prev:hover{background:#4f46e5!important;color:#fff!important}
+.file-card:hover{border-color:#a5b4fc}
+.preview-badge{color:#c7d2fe}
+.chipr button.on{background:#4f46e5!important}
+.stt div{background:#f3f4ff;border-color:#dfe3ff}.stt b{color:#312e81}
+.mu-est{color:#4338ca}
+.qpd .cap{fill:#c7d2fe}.qpd .ph{fill:#1e1b4b}
+#waCard{background:linear-gradient(135deg,#eef2ff,#fff)}
+.seg2 button.on{color:#4338ca}
+.flt button.on{background:#312e81}
+.sw input:checked+i{background:#7c3aed}
+.login-wrap .logo-mark{background:linear-gradient(135deg,#4f46e5,#8b5cf6 60%,#ec4899)!important}
+.toast{background:#312e81}.toast.cash{background:linear-gradient(135deg,#d97706,#f59e0b)}
+/* 4) lighter surfaces: solid backgrounds, small shadows, no blur (except modal overlays) */
+.ctl,.stat-card,.card,.rev,.vis,.tabs{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:0 1px 2px rgba(30,27,75,.06),0 8px 18px -12px rgba(30,27,75,.22)!important}
+.card.cashcard{background:linear-gradient(135deg,#fffbeb,#fff)!important}
+.preview-overlay{backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+.card:hover{transform:none!important}
+.card{transition:box-shadow .3s}
+.card.still,.card.still *{animation:none!important}
+#orders>.card{content-visibility:auto;contain-intrinsic-size:auto 380px}
+/* pulsing = cheap dots (opacity + transform only), never animated box-shadows */
+.t-cash_wait:before,.t-pay_wait:before,.t-approved:before,.t-printing:before,.pay-cash:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px;animation:dotP 1.4s ease-in-out infinite}
+@keyframes dotP{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.55);opacity:.3}}
+.rev.pend.hot i{animation:dotP 1.4s ease-in-out infinite}
+.t-pay_wait,.t-approved,.t-printing,.t-cash_wait,.pay-cash{animation:none!important}
+.rev{animation:none!important}
+/* 3) visitors */
+.vis{padding:18px}
+.vtiles{gap:10px}.vt{min-width:0}.vv{overflow:hidden;text-overflow:ellipsis}
+.vcols>div{min-width:0}.vrow{min-width:0}.vrow span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vr-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:6px 0 10px}
+.vchips{display:flex;gap:6px;flex-wrap:wrap}
+.vchips button{background:#eef2ff;color:#3730a3;padding:7px 13px;font-size:12.5px;font-weight:700;border-radius:999px}
+.vchips button.on{background:#4f46e5;color:#fff}
+.vlist{max-height:380px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;border:1px solid #e3e7f5;border-radius:14px;background:#fbfbff;-webkit-overflow-scrolling:touch}
+.vi{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:center;padding:10px 12px;border-top:1px solid #eef0fa}
+.vi:first-child{border-top:0}
+.vi1{display:flex;flex-direction:column;gap:5px;min-width:0;align-items:flex-start}
+.vloc{font-weight:700;font-size:13.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vpg{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#ede9fe;color:#5b21b6;padding:2px 9px;border-radius:999px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vi2{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:0}
+.vip{position:relative;display:inline-flex;align-items:center;gap:6px;background:#eef2ff;color:#312e81;border:1px solid #d6dbff;border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer;max-width:100%}
+.vip i{font-style:normal;font-size:10px;font-weight:800;background:#4f46e5;color:#fff;border-radius:6px;padding:1px 5px}.vip i.v4{background:#0ea5e9}
+.vip code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vip u{text-decoration:none;opacity:.55;font-size:12px}
+.vip.copied:after{content:"Copied!";position:absolute;right:0;top:-30px;background:#312e81;color:#fff;font-size:11.5px;font-weight:800;padding:4px 10px;border-radius:8px;white-space:nowrap;animation:none}
+.vn{font-size:11.5px;font-weight:800;background:#fce7f3;color:#be185d;border-radius:999px;padding:2px 8px}
+.vtm{font-size:12px;color:#64748b;white-space:nowrap}
+.vi2{flex-direction:row;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.vi2 .vtm{flex-basis:100%;text-align:right}
+@media(max-width:560px){.vi{grid-template-columns:1fr}.vi2{justify-content:flex-start}.vi2 .vtm{flex-basis:auto;text-align:left}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<script>
+/* counter only: drop the language bar that /site-ui.js injects, other pages keep it */
+(function () {
+  function kill() { var n = document.querySelectorAll('.sui'); for (var i = 0; i < n.length; i++) n[i].remove(); return n.length; }
+  kill();
+  try { var mo = new MutationObserver(function () { kill(); }); mo.observe(document.body || document.documentElement, { childList: true }); setTimeout(function () { mo.disconnect(); kill(); }, 4000); } catch (e) {}
+})();
+</script>
 <script>
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -704,7 +786,16 @@ async function getThumbUrl(f) {
   return null;
 }
 
-let gInit = false, vtimer;
+let gInit = false, vtimer, appLive = false;
+const BG_POLL_MS = 0;   // 0 = fully pause while the tab is hidden. Set e.g. 20000 to keep checking (and beeping) every 20 s in a background tab.
+let bgTimer;
+function startPolling() { stopPolling(); timer = setInterval(load, 4000); vtimer = setInterval(loadVisitors, 30000); }
+function stopPolling() { clearInterval(timer); clearInterval(vtimer); clearInterval(bgTimer); }
+document.addEventListener('visibilitychange', () => {
+  if (!appLive) return;
+  if (document.hidden) { stopPolling(); if (BG_POLL_MS > 0) bgTimer = setInterval(load, BG_POLL_MS); }
+  else { load(); loadVisitors(); startPolling(); }
+});
 async function initGoogle() {
   if (gInit) return; gInit = true;
   let cid = '', pin = false;
@@ -733,8 +824,7 @@ async function enter() {
     const r = await api('ping');
     if (!r.ok) throw new Error('auth');
     $('login').classList.add('hidden'); $('app').classList.remove('hidden');
-    load(); timer = setInterval(load, 4000);
-    loadVisitors(); vtimer = setInterval(loadVisitors, 30000);
+    appLive = true; load(); loadVisitors(); startPolling();
   } catch (e) {
     ls.del('gsess'); sess = '';
     $('login').classList.remove('hidden'); $('app').classList.add('hidden');
@@ -760,9 +850,44 @@ function renderVisitors(d) {
   $('vBars').innerHTML = days.map((k, i) => { const v = map[k] || 0; return '<div class="' + (v ? (i === 13 ? 't' : '') : 'z') + '" style="height:' + Math.max(4, Math.round(v / max * 100)) + '%" title="' + esc(k) + ': ' + v + ' visits"></div>'; }).join('');
   $('vPlaces').innerHTML = (d.places || []).map((p) => '<div class="vrow"><span>' + esc(place(p)) + '</span><b>' + n(p.v) + '</b></div>').join('') || '<div class="mute">No visits yet</div>';
   $('vPages').innerHTML = (d.pages || []).map((p) => '<div class="vrow"><span>' + esc(p.path) + '</span><b>' + n(p.v) + '</b></div>').join('') || '<div class="mute">No visits yet</div>';
-  $('vRows').innerHTML = (d.recent || []).map((r) => '<tr><td>' + esc(fmtT(r.ts)) + '</td><td class="ip">' + esc(r.ip) + '</td><td>' + esc(place(r)) + '</td><td>' + esc(r.path) + '</td></tr>').join('') || '<tr><td colspan="4" class="mute">No visits yet</td></tr>';
+  visRecent = d.recent || []; paintRecent();
 }
 $('vRef').onclick = loadVisitors;
+
+/* ---- Recent visitors: compact cards (no table, no horizontal scroll) ---- */
+let visRecent = [], visFilter = 'all';
+function ipInfo(raw) {
+  let ip = String(raw || '').trim(); const m4 = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i); if (m4) ip = m4[1];
+  if (ip.indexOf(':') < 0) return { full: ip, short: ip, v6: false };
+  const seg = ip.split(':').filter(Boolean);
+  return { full: ip, short: seg.length > 3 ? seg.slice(0, 2).join(':') + '…:' + seg[seg.length - 1] : ip, v6: true };
+}
+const istDay = (ts) => new Date(ts + 19800000).toISOString().slice(0, 10);
+function paintRecent() {
+  let rows = visRecent;
+  if (visFilter === 'today') { const t = istDay(Date.now()); rows = rows.filter((r) => istDay(r.ts) === t); }
+  if (visFilter === 'unique') {
+    const g = new Map();
+    rows.forEach((r) => { const k = r.ip; const e = g.get(k); if (!e) g.set(k, { r, n: 1 }); else { e.n++; if (r.ts > e.r.ts) e.r = r; } });
+    rows = Array.from(g.values()).map((e) => Object.assign({}, e.r, { n: e.n })).sort((a, b) => b.ts - a.ts);
+  }
+  $('vCount').textContent = rows.length + (visFilter === 'unique' ? ' unique IP' : ' visit') + (rows.length === 1 ? '' : 's');
+  $('vRows').innerHTML = rows.map((r, i) => {
+    const ip = ipInfo(r.ip);
+    return '<div class="vi"><div class="vi1"><span class="vloc">📍 ' + esc(place(r)) + '</span><span class="vpg">' + esc(r.path || '/') + '</span></div>' +
+      '<div class="vi2"><button type="button" class="vip" data-ip="' + esc(ip.full) + '" title="Tap to copy the full IP: ' + esc(ip.full) + '">' + (ip.v6 ? '<i>IPv6</i>' : '<i class="v4">IPv4</i>') + '<code>' + esc(ip.short) + '</code><u>⧉</u></button>' +
+      (r.n > 1 ? '<span class="vn">×' + r.n + '</span>' : '') + '<span class="vtm">' + esc(fmtT(r.ts)) + '</span></div></div>';
+  }).join('') || '<div class="mute" style="padding:18px;text-align:center">No visits to show</div>';
+}
+function copyText(t) {
+  try { if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(t); } catch {}
+  return new Promise((res) => { const a = document.createElement('textarea'); a.value = t; a.style.cssText = 'position:fixed;opacity:0;left:-999px'; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); } catch {} a.remove(); res(); });
+}
+$('vRows').addEventListener('click', async (e) => {
+  const b = e.target.closest('.vip'); if (!b) return;
+  await copyText(b.dataset.ip); b.classList.add('copied'); clearTimeout(b._t); b._t = setTimeout(() => b.classList.remove('copied'), 1300);
+});
+$('vFlt').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; visFilter = b.dataset.f; document.querySelectorAll('#vFlt button').forEach((x) => x.classList.toggle('on', x === b)); paintRecent(); });
 
 $('clr').onclick = async () => {
   if (!confirm('Remove ALL orders and delete all uploaded files?\n\nOrders waiting or printing right now will be lost.')) return;
@@ -799,7 +924,7 @@ async function load() {
   } catch (e) { if (e.message === 'auth') { clearInterval(timer); location.reload(); } }
 }
 
-let drawSig = '';
+let drawSig = '', cardSeen = new Set();
 function draw(orders) {
   const box = $('orders');
   const sig = srcFilter + '|' + JSON.stringify(orders.map((o) => [o.id, o.status, o.pay_status, o.amount, o.color, o.copies, o.paper, o.note, (o.files || []).map((f) => f.id + f.pages).join()]));
@@ -811,7 +936,7 @@ function draw(orders) {
   }
   for (const o of orders) {
     try { o.opt = JSON.parse(o.opts || '{}'); } catch { o.opt = {}; }
-    const div = document.createElement('div'); div.className = 'card' + (o.status === 'cash_wait' ? ' cashcard' : '');
+    const div = document.createElement('div'); div.className = 'card' + (o.status === 'cash_wait' ? ' cashcard' : '') + (cardSeen.has(o.id) ? ' still' : '');
     const pages = o.files.reduce((s, f) => s + f.pages, 0);
     div.innerHTML = `
       <div>
@@ -873,6 +998,7 @@ function draw(orders) {
     }
     box.appendChild(div);
   }
+  cardSeen = new Set(orders.map((o) => o.id));
 }
 
 async function decide(action, id) {
