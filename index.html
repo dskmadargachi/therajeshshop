@@ -525,51 +525,6 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
  <a href="/pdf-tools.html"><svg><use href="#i-pdf"/></svg>PDF tools</a>
 </div></nav>
 <div class="wrap">
-  <!-- ===== SEND VIA WHATSAPP quick action ===== -->
-  <style>
-  .wa-card{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 16px;padding:16px 18px;border-radius:20px;color:#fff;background:linear-gradient(135deg,#128c7e 0%,#25d366 70%,#7be495 100%);box-shadow:0 16px 30px -16px rgba(18,140,126,.85)}
-  .wa-card[hidden]{display:none}
-  .wa-ic{width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:28px}
-  .wa-tx{flex:1;min-width:210px}
-  .wa-tx b{display:block;font-size:16.5px;line-height:1.35;font-weight:800}
-  .wa-tx span{display:block;font-size:13px;opacity:.95;margin-top:3px;font-weight:600}
-  .wa-acts{display:flex;gap:8px;flex-wrap:wrap}
-  .wa-acts a,.wa-acts button{font:inherit;font-weight:800;font-size:14px;padding:11px 16px;border-radius:12px;border:0;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
-  .wa-go{background:#fff;color:#0b6b5f}.wa-qr{background:rgba(0,0,0,.22);color:#fff}
-  .wa-mod{position:fixed;inset:0;z-index:9990;background:rgba(15,23,42,.7);display:flex;align-items:center;justify-content:center;padding:16px}
-  .wa-mod[hidden]{display:none}
-  .wa-box{background:#fff;color:#0f172a;border-radius:24px;padding:24px;width:min(100%,360px);text-align:center}
-  .wa-box h3{margin:0 0 4px;font-size:18px}.wa-box p{margin:0 0 14px;font-size:13.5px;color:#5a6778}
-  #waQrBox{display:inline-block;padding:12px;border:3px solid #25d366;border-radius:18px;background:#fff}
-  .wa-box button{margin-top:14px;font:inherit;font-weight:700;padding:10px 22px;border:0;border-radius:12px;background:#eef2f7;cursor:pointer}
-  </style>
-  <section class="wa-card" id="waCard" hidden aria-label="Send file on WhatsApp">
-    <div class="wa-ic" aria-hidden="true">💬</div>
-    <div class="wa-tx"><b>💬 ওয়েবসাইটে ঝামেলা মনে হচ্ছে? সরাসরি WhatsApp-এ ফাইল পাঠান (Send File on WhatsApp)</b>
-      <span>PDF বা ছবি WhatsApp-এ পাঠান — প্রিন্ট নিজে থেকেই শুরু হবে। · Just send your PDF / photo on WhatsApp and it prints.</span></div>
-    <div class="wa-acts"><a class="wa-go" id="waLink" href="#" target="_blank" rel="noopener">📤 WhatsApp খুলুন / Open</a><button class="wa-qr" id="waQrBtn" type="button">📷 QR স্ক্যান / Scan QR</button></div>
-  </section>
-  <div class="wa-mod" id="waMod" hidden role="dialog" aria-modal="true"><div class="wa-box">
-    <h3>📷 WhatsApp QR স্ক্যান করুন</h3><p>ফোনের ক্যামেরা দিয়ে স্ক্যান করুন, তারপর আপনার ফাইল পাঠান।<br>Scan with your phone camera, then attach your PDF / photo.</p>
-    <div id="waQrBox"></div><div><button id="waModX" type="button">✕ বন্ধ / Close</button></div></div></div>
-  <script>
-  (function () {
-    var PLACEHOLDER = '91XXXXXXXXXX';            // <- or set WA_NUMBER in Cloudflare (digits with country code); the site reads it from /api/config
-    var card = document.getElementById('waCard'), drawn = false;
-    function setup(num) {
-      if (!num || num === PLACEHOLDER) return;   // not configured yet: keep the card hidden instead of showing a dead link
-      var link = 'https://wa.me/' + num + '?text=PRINT';
-      document.getElementById('waLink').href = link; card.hidden = false;
-      document.getElementById('waQrBtn').onclick = function () {
-        document.getElementById('waMod').hidden = false;
-        if (!drawn && window.QRCode) { drawn = true; new QRCode(document.getElementById('waQrBox'), { text: link, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M }); }
-      };
-      document.getElementById('waModX').onclick = function () { document.getElementById('waMod').hidden = true; };
-      document.getElementById('waMod').onclick = function (e) { if (e.target.id === 'waMod') e.currentTarget.hidden = true; };
-    }
-    fetch('/api/config').then(function (r) { return r.json(); }).then(function (c) { setup(c.waNumber || PLACEHOLDER); }).catch(function () { setup(PLACEHOLDER); });
-  })();
-  </script>
 <div id="pdfPasswordOverlay" class="password-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pdfPasswordTitle">
     <form id="pdfPasswordForm" class="password-card">
       <h2 id="pdfPasswordTitle">Protected PDF</h2>
@@ -1894,6 +1849,40 @@ if (window.Wiz) {
   Wiz.mirror('ppErr', 'ppErr3');
   new MutationObserver(() => { $('ppBadge').textContent = $('ppAmt').textContent; }).observe($('ppAmt'), { childList: true, characterData: true, subtree: true });
 }
+
+/* =====================================================
+   PDF TOOLS -> "Send to Counter" hand-off receiver
+   pdf-tools.html stores the finished PDF in IndexedDB (db "therajesh_handoff", key "pending_print_file")
+   and opens /index.html?source=pdf-tools&autoOpenWizard=1. We feed that file through the normal
+   #pick handler so page counting, thumbnails, price and the Print wizard behave exactly like an upload.
+   ===================================================== */
+(async () => {
+  const q = new URLSearchParams(location.search);
+  if (q.get('source') !== 'pdf-tools') return;
+  const clean = () => { try { history.replaceState(null, '', location.pathname + location.hash); } catch {} };
+  try {
+    const db = await new Promise((res, rej) => {
+      const r = indexedDB.open('therajesh_handoff', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('files');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+    const rec = await new Promise((res, rej) => {
+      const tx = db.transaction('files', 'readwrite'), st = tx.objectStore('files'), g = st.get('pending_print_file');
+      g.onsuccess = () => { st.delete('pending_print_file'); };              // one-shot: the file is removed as soon as it is read
+      tx.oncomplete = () => res(g.result); tx.onerror = tx.onabort = () => rej(tx.error);
+    });
+    db.close();
+    if (!rec || !rec.buf || Date.now() - (rec.ts || 0) > 60 * 60 * 1000) { clean(); return; }
+    const file = new File([rec.buf], rec.name || 'document.pdf', { type: rec.type || 'application/pdf' });
+    const dt = new DataTransfer(); dt.items.add(file);
+    $('pick').files = dt.files;
+    $('pick').dispatchEvent(new Event('change'));                           // -> existing handler adds it to the order and opens the wizard
+    if (q.get('autoOpenWizard') === '1' && window.Wiz) Wiz.open('doc', 1);
+  } catch (e) {
+    $('err').textContent = 'Could not load your file from PDF tools. Please upload it again.';
+  }
+  clean();
+})();
 </script>
 </body>
 </html>
