@@ -8,6 +8,7 @@ const A3_MULTIPLIER = 2;                    // A3 page = A4 price x 2
 const PHOTO_4X6 = 20;                       // one 4x6 photo print
 const PASSPORT_SHEET = { '4x6': 30, A4: 50 }; // one sheet of passport photos
 const PAPERS = ['A4', 'A3', '4x6'];
+const PASSPORT_PER_SHEET = 8, PASSPORT_DEFAULT = 6, PASSPORT_MAX = 48;   // WhatsApp option 3: photos on one 4x6 sheet (35x45 mm each) / default count / max per order
 const MAX_FILES = 10;
 const MAX_FILE_BYTES = 25 * 1024 * 1024; // KV value limit is 25 MB
 const ALLOWED = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
@@ -722,10 +723,12 @@ function parsePrintCaption(text) {
 }
 // customer's reply to the menu:  1 | 2 | 3 | "1 x3" | "2 3" | "bw" | "color" | 0 / cancel
 function parseChoice(text) {
-  const t = String(text || '').trim().toLowerCase();
+  let t = String(text || '').normalize('NFKC').trim().toLowerCase()                       // full-width / compat forms -> plain ASCII
+    .replace(/[\u09E6-\u09EF]/g, (d) => String(d.charCodeAt(0) - 0x09E6));                // Bengali digits ০-৯ -> 0-9
   if (/^(0|cancel|stop|বাতিল)$/.test(t)) return { cancel: true };
-  const m = /^([1-3])(?:\s*(?:x|×|\*|-)?\s*(\d{1,3}))?$/.exec(t);
-  if (m) return { opt: Number(m[1]), copies: m[2] ? Math.min(Math.max(parseInt(m[2]), 1), 100) : null };
+  t = t.replace(/[\u2715\u2716\u00d7\u2a2f]/g, 'x').replace(/\s+/g, ' ');               // ✕ ✖ × -> x
+  const m = /^([1-3])(?:\s*(?:x|\*|-|:)?\s*(\d{1,3})(?:\s*(?:copies|copy|কপি|pcs|photos?))?)?$/.exec(t);   // "2x5" "2 x 5" "2*5" "2 5" "3x8"
+  if (m) return { opt: Number(m[1]), copies: m[2] ? Math.min(Math.max(parseInt(m[2], 10), 1), 100) : null };
   const c = parsePrintCaption(t);
   if (c.mode) return { opt: c.mode === 'color' ? 2 : 1, copies: c.copies };
   return {};
@@ -1014,13 +1017,17 @@ function waStep1Text(files, pages, P, env) {
     `📄 *ফাইল পাওয়া গেছে:* \`${label}\` (${pages} Pages)\n\n` +
     `প্রিন্ট করার জন্য নিচের যেকোনো একটি নম্বর লিখে রিপ্লাই দিন:\n` +
     `*1️⃣ সাদাকালো প্রিন্ট (B&W)* — ${rupee(pages * P.bw)}\n` +
-    `*2️⃣ রঙিন প্রিন্ট (Color)* — ${rupee(pages * P.color)}\n\n` +
-    `💡 *টিপস: একাধিক কপি চাইলে লিখুন \`1x3\` (৩ কপি সাদাকালো) বা \`2x2\` (২ কপি কালার)*\n` +
-    `_English: reply 1 for B&W or 2 for Color. Example "1x3" = 3 copies B&W. Send 0 to cancel._`;
+    `*2️⃣ রঙিন প্রিন্ট (Color)* — ${rupee(pages * P.color)}\n` +
+    `*3️⃣ পাসপোর্ট সাইজ ফটো প্রিন্ট (Passport Photo)* — ${rupee(P.passport4x6)} / ৪×৬ শিট (${PASSPORT_DEFAULT}টি ছবি; ব্যাকগ্রাউন্ড অটো সাদা)\n\n` +
+    `💡 *টিপস: একাধিক কপি চাইলে লিখুন \`1x3\` (৩ কপি সাদাকালো), \`2x5\` (৫ কপি কালার) বা \`3x8\` (৮টি পাসপোর্ট ছবি)*\n` +
+    `_English: reply 1 for B&W, 2 for Color or 3 for Passport photos (send a clear JPG/PNG photo). Example "2x5" = 5 color copies. Send 0 to cancel._`;
 }
-function waStep2Text(token, color, pages, copies, total) {
+function waStep2Text(token, color, pages, copies, total, kind) {
+  const what = kind === 'passport'
+    ? `পাসপোর্ট সাইজ ফটো (${copies}টি ছবি, ${Math.ceil(copies / PASSPORT_PER_SHEET)} শিট ৪×৬)`
+    : `${color ? 'রঙিন (Color)' : 'সাদাকালো (B&W)'} (${pages} পৃষ্ঠা × ${copies} কপি)`;
   return `🧾 *অর্ডার সামারি (Token: #${token})*\n` +
-    `• প্রিন্ট: ${color ? 'রঙিন (Color)' : 'সাদাকালো (B&W)'} (${pages} পৃষ্ঠা × ${copies} কপি)\n` +
+    `• প্রিন্ট: ${what}\n` +
     `• মোট বিল: *${rupee(total)}*\n\n` +
     `পেমেন্ট কীভাবে করতে চান? নিচের নম্বর রিপ্লাই দিন:\n` +
     `*1️⃣ Online UPI / QR Code* *(পেমেন্ট করলেই অটোমেটিক প্রিন্ট বের হবে ⚡)*\n` +
@@ -1154,13 +1161,18 @@ async function pollPayments(env) {
 }
 
 // ---------- the conversation ----------
-async function waAfterMode(env, o, color, copies, flags) {   // mode chosen -> price -> ask UPI or cash
+async function waAfterMode(env, o, color, copies, flags, kind = 'doc') {   // mode chosen -> price -> ask UPI or cash
   const P = await getPrices(env), { pages } = await orderTotals(env, o.id);
-  const total = Math.round(pages * copies * (color ? P.color : P.bw) * 100) / 100;
+  const passport = kind === 'passport';
+  copies = Math.min(Math.max(parseInt(copies) || 1, 1), passport ? PASSPORT_MAX : 100);
+  // passport: priced per 4x6 sheet (8 photos fit one sheet); documents: pages x copies x rate
+  const total = passport ? Math.round(Math.ceil(copies / PASSPORT_PER_SHEET) * P.passport4x6 * 100) / 100
+    : Math.round(pages * copies * (color ? P.color : P.bw) * 100) / 100;
   const token = o.token || await nextWaToken(env);
-  await env.DB.prepare("UPDATE orders SET color=?, copies=?, amount=?, token=?, paper='A4', status='pay_choose', opts=? WHERE id=? AND status IN ('wa_wait','pay_choose')")
-    .bind(color ? 1 : 0, copies, total, token, JSON.stringify({ kind: 'doc', source: 'whatsapp' }), o.id).run();
-  return waStep2Text(token, color, pages, copies, total);
+  // copies + color + paper + kind are all stored on the order; /api/agent/jobs returns the whole row (copies, color, paper, opts.kind)
+  await env.DB.prepare("UPDATE orders SET color=?, copies=?, amount=?, token=?, paper=?, status='pay_choose', opts=? WHERE id=? AND status IN ('wa_wait','pay_choose')")
+    .bind(passport ? 1 : (color ? 1 : 0), copies, total, token, passport ? '4x6' : 'A4', JSON.stringify({ kind: passport ? 'passport' : 'doc', source: 'whatsapp' }), o.id).run();
+  return waStep2Text(token, passport ? 1 : color, passport ? 1 : pages, copies, total, passport ? 'passport' : 'doc');
 }
 async function waCash(env, o) {
   await env.DB.prepare("UPDATE orders SET status='cash_wait', pay_method='cash' WHERE id=? AND status IN ('pay_choose','pay_wait')").bind(o.id).run();
@@ -1188,7 +1200,12 @@ async function waHandleReply(env, o, text, flags) {
   if (o.status === 'wa_wait') {
     const ch = parseChoice(text);
     if (ch.opt === 1 || ch.opt === 2) return [await waAfterMode(env, o, ch.opt === 2, ch.copies || o.copies || 1, flags)];
-    return ['🙏 অনুগ্রহ করে *1* (সাদাকালো) বা *2* (রঙিন) লিখে রিপ্লাই দিন। উদাহরণ: `1x3`\n_Please reply 1 for B&W or 2 for Color (0 to cancel)._'];
+    if (ch.opt === 3) {      // passport photos: needs an image; the PC agent removes the background and lays out the 4x6 sheet(s)
+      const f = await env.DB.prepare('SELECT name FROM files WHERE order_id=? ORDER BY id LIMIT 1').bind(o.id).first();
+      if (!f || !['jpg', 'jpeg', 'png', 'webp'].includes(ext(f.name || ''))) return ['📷 পাসপোর্ট ফটোর জন্য একটি পরিষ্কার *ছবি (JPG/PNG)* পাঠান, তারপর আবার *3* লিখুন।\n_Passport photos need a clear JPG/PNG photo — send it, then reply 3 again._'];
+      return [await waAfterMode(env, o, true, ch.copies || (o.copies > 1 ? o.copies : PASSPORT_DEFAULT), flags, 'passport')];
+    }
+    return ['🙏 অনুগ্রহ করে *1* (সাদাকালো), *2* (রঙিন) বা *3* (পাসপোর্ট ফটো) লিখে রিপ্লাই দিন। উদাহরণ: `2x5`\n_Please reply 1 for B&W, 2 for Color or 3 for Passport photos (0 to cancel)._'];
   }
   if (o.status === 'pay_choose') {
     const upi = /^(1|upi|online|qr)$/.test(t), cash = /^(2|cash|counter|নগদ|ক্যাশ)$/.test(t);
@@ -1255,14 +1272,14 @@ async function waIncoming2(env, m) {
   const rows = (await env.DB.prepare('SELECT name, pages FROM files WHERE order_id=? ORDER BY id').bind(id).all()).results;
   const pages = rows.reduce((s, r) => s + Number(r.pages || 0), 0) || 1;
   const pc = parsePrintCaption(text);
-  const cap = /^\s*([12])\s*(?:x|×|\*)\s*(\d{1,3})\s*$/i.exec(text);               // caption "2x3" style
+  const cap = /^\s*([12])\s*(?:x|×|\*)\s*(\d{1,3})\s*$/i.exec(String(text).normalize('NFKC'));               // caption "2x3" style
   const mode = cap ? (cap[1] === '2' ? 'color' : 'bw') : (pc.mode || (flags.wabot === 'instant' ? 'bw' : null));
   const copies = cap ? Math.min(Math.max(parseInt(cap[2]), 1), 100) : pc.copies;
   const fresh = await env.DB.prepare('SELECT * FROM orders WHERE id=?').bind(id).first();
   if (mode) replies.push(await waAfterMode(env, fresh, mode === 'color', copies, flags));
   else {
     if (pc.onlyNumber && pc.copies > 1) await env.DB.prepare('UPDATE orders SET copies=? WHERE id=?').bind(pc.copies, id).run();
-    replies.push(open ? `➕ ফাইল যোগ হয়েছে (মোট ${pages} Pages)। এবার *1* (সাদাকালো) বা *2* (রঙিন) লিখুন।\n_File added (total ${pages} pages). Reply 1 for B&W or 2 for Color._` : waStep1Text(rows, pages, P, env));
+    replies.push(open ? `➕ ফাইল যোগ হয়েছে (মোট ${pages} Pages)। এবার *1* (সাদাকালো), *2* (রঙিন) বা *3* (পাসপোর্ট ফটো) লিখুন।\n_File added (total ${pages} pages). Reply 1 for B&W, 2 for Color or 3 for Passport._` : waStep1Text(rows, pages, P, env));
   }
   return replies;
 }
