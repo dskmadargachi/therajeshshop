@@ -885,8 +885,9 @@ async function agentWaIncoming(request, env) {
       files.push({ name: String(mf.name || fl[i].name || 'file'), mime: String(mf.mime || fl[i].type || ''), pages: mf.pages, bytes: await fl[i].arrayBuffer() });
     }
   }
+  BOT_LOG = [];
   const replies = await waIncoming2(env, { from: meta.from, chat: meta.chat, name: meta.name, text: meta.text, files });
-  return json({ replies });
+  return json({ replies, logs: BOT_LOG.splice(0) });
 }
 async function agentWaOutbox(env) {
   await ensureSchema(env);
@@ -1042,18 +1043,49 @@ const orderTotals = async (env, id) => {
 };
 
 // ---------- Razorpay: payment link (default) or UPI QR code for ONE order ----------
+// Bot Log lines produced while handling the current WhatsApp message; returned to the PC bridge (`logs`) and printed in the Agent's Bot Log.
+let BOT_LOG = [];
+const botLog = (m) => { try { console.log(m); BOT_LOG.push(String(m).slice(0, 300)); } catch {} };
+
+// Razorpay accepts customer.contact only when it is 8-14 characters long. WhatsApp may hand us "9198...:12@s.whatsapp.net",
+// "1234567890123456@lid" (a Local Identifier, NOT a phone number) or a bare number. Returns a valid contact string, or null (-> the key is NOT sent at all).
+function rzpContact(raw, chat) {
+  const s0 = String(raw == null ? '' : raw).trim();
+  if (!s0 || /@lid\b/i.test(s0)) return null;                // @lid = privacy id, never a dialable number
+  const digits = s0.split('@')[0].split(':')[0].replace(/\D/g, '');          // strip "@..." and ":device", keep digits only
+  if (/@lid$/i.test(String(chat || '')) && digits === String(chat).split('@')[0].replace(/\D/g, '')) return null;   // number column holds the lid digits
+  if (digits.length === 10) return '+91' + digits;           // Indian mobile -> +91XXXXXXXXXX (13 chars)
+  if (digits.length === 12 && digits.startsWith('91')) return '+' + digits;
+  if (digits.length >= 8 && digits.length <= 14) return digits;
+  return null;                                               // empty, < 8 or > 14 digits (e.g. a 15+ digit id)
+}
 async function razorpayCreate(env, o) {
   const { id: keyId, secret } = rzpKeys(env);
-  if (!keyId || !secret) return null;
+  if (!keyId || !secret) { botLog('⚠️ Razorpay is not configured (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET missing)'); return null; }
   const auth = 'Basic ' + btoa(keyId + ':' + secret), paise = Math.round(Number(o.amount) * 100);
-  const notes = { shop_order: o.id, token: o.token || '', phone: o.wa_number || '' };
+  const notes = { shop_order: o.id, token: o.token || '', phone: String(o.wa_number || '').slice(0, 20) };
   const desc = `Print ${o.token ? '#' + o.token : o.id} – therajesh.shop`;
-  const post = async (url, body) => { const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', authorization: auth }, body: JSON.stringify(body) }); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error((j.error && j.error.description) || 'Razorpay error ' + r.status); return j; };
+  const post = async (url, body) => {
+    const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', authorization: auth }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const e = j.error || {};
+      botLog(`❌ Razorpay API error ${r.status} on ${url.split('/v1/')[1]} (order ${o.id}): ${e.description || 'no description'}${e.field ? ' [field: ' + e.field + ']' : ''}${e.code ? ' [' + e.code + ']' : ''}`);
+      throw new Error(e.description || 'Razorpay error ' + r.status);
+    }
+    return j;
+  };
   if (clean(env.RAZORPAY_MODE).toLowerCase() === 'qr') {
     const j = await post('https://api.razorpay.com/v1/payments/qr_codes', { type: 'upi_qr', name: 'therajesh.shop', usage: 'single_use', fixed_amount: true, payment_amount: paise, description: desc, close_by: Math.floor(Date.now() / 1000) + 55 * 60, notes });
     return { kind: 'qr', ref: j.id, url: j.image_url, qrImage: j.image_url };
   }
-  const j = await post('https://api.razorpay.com/v1/payment_links', { amount: paise, currency: 'INR', accept_partial: false, reference_id: o.id, description: desc, customer: { contact: '+' + o.wa_number }, notify: { sms: false, email: false }, reminder_enable: false, expire_by: Math.floor(Date.now() / 1000) + 55 * 60, notes });
+  const validContact = rzpContact(o.wa_number, o.wa_chat) || rzpContact(o.wa_chat, o.wa_chat);
+  const customer = { name: String(o.wa_name || '').trim().slice(0, 50) || 'Customer' };
+  if (validContact) customer.contact = validContact;           // NEVER send contact:"" / null - Razorpay still length-checks it (8-14)
+  else botLog(`ℹ️ No dialable phone for order ${o.id} (${String(o.wa_number || '').replace(/\D/g, '').length} digits) – UPI link created without customer.contact`);
+  const body = { amount: paise, currency: 'INR', accept_partial: false, reference_id: o.id, description: desc, customer, notify: { sms: Boolean(validContact), email: false }, reminder_enable: false, expire_by: Math.floor(Date.now() / 1000) + 55 * 60, notes };
+  const j = await post('https://api.razorpay.com/v1/payment_links', body);
+  botLog(`✅ UPI payment link created for order ${o.id} (₹${o.amount})`);
   return { kind: 'link', ref: j.id, url: j.short_url };
 }
 async function razorpayCancel(env, o) {
