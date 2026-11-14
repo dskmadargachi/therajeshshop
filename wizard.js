@@ -3,7 +3,8 @@
    copies steppers and body scroll-lock. No dependencies. Page scripts register their flows:
      Wiz.register('doc', {steps:3, titles:[...], guard:(from,to)=>true})
    Optional flow settings: home (step a flow opens on, default 1; steps below it are optional
-   "side" views that get a back button returning home) and hideSteps (hide the "Step n of N" label + progress bar).
+   "side" views that get a back button returning home) and hideSteps (hide the "Step n of N" label + progress bar;
+   either true/false or a function(step) so e.g. only the final Order & payment step shows "Step 3 of 3").
      Wiz.open('doc') / Wiz.go(2) / Wiz.close() / Wiz.sync('doc', count) / Wiz.showDone('doc')
    Every existing element id stays untouched: the wizard only decides which pane is visible. */
 (function () {
@@ -40,7 +41,7 @@
     var r = root(), f = cfg[st.flow]; if (!r || !f) return;
     st.step = step;
     var home = f.home || 1;
-    r.classList.toggle('wz-nosteps', !!f.hideSteps);
+    r.classList.toggle('wz-nosteps', typeof f.hideSteps === 'function' ? !!f.hideSteps(step) : !!f.hideSteps);
     [].forEach.call(r.querySelectorAll('.wz-pane'), function (p) {
       var on = p.dataset.flow === st.flow && +p.dataset.step === step;
       p.classList.toggle('rev', dir < 0);
@@ -118,6 +119,14 @@
     updateResume();
   }
 
+  /* a finished order must not leak into the next one: forget the done state and hide the old token */
+  function resetDone(flow) {
+    st.done[flow] = false;
+    var d = $('done'), r = root();
+    if (d) d.classList.add('hidden');
+    if (r) r.classList.remove('is-done');
+  }
+
   /* copy an element's text into another (so one #err can be shown in two steps) */
   function mirror(srcId, dstId) {
     var s = $(srcId), d = $(dstId); if (!s || !d) return;
@@ -175,7 +184,7 @@
   window.Wiz = {
     register: function (flow, c) { cfg[flow] = c; },
     open: open, close: close, go: go, next: function () { go(st.step + 1, 1); }, prev: function () { go(st.step - 1, -1); },
-    sync: sync, showDone: showDone, mirror: mirror, modal: modal,
+    sync: sync, showDone: showDone, resetDone: resetDone, mirror: mirror, modal: modal,
     isOpen: function () { return st.open; }, step: function () { return st.step; }, flow: function () { return st.flow; }
   };
 

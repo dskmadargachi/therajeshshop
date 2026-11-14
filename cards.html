@@ -600,6 +600,23 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
 .sc-prev img{flex:none;height:min(52vh,420px);width:auto;max-width:100%;background:#fff;border-radius:6px;box-shadow:0 8px 22px -10px rgba(30,41,90,.5)}
 
 </style>
+<style id="deck-css">
+#deckOut .dk{margin:0 0 12px}
+#deckOut .dk.multi{padding:10px;border:1px solid #d6dbff;border-radius:18px;background:#fff;box-shadow:0 10px 22px -18px rgba(60,70,200,.55)}
+#deckOut .dk-h{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:30px;margin:0 0 8px}
+#deckOut .dk:not(.multi) .dk-h{justify-content:flex-end;margin:-2px 0 8px}
+#deckOut .dk-w{min-width:0}
+#deckOut .dk-t{display:block;font-size:14px;font-weight:800;color:#2c2a8f;line-height:1.2}
+#deckOut .dk-n{display:block;max-width:52vw;font-size:11px;font-weight:600;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adjwho{display:flex;align-items:baseline;gap:8px;margin:0 0 8px;padding:8px 12px;border-radius:12px;background:#f0f2ff;border:1px solid #d6dbff;font-size:13px}
+.adjwho[hidden]{display:none}
+.adjwho b{color:#2c2a8f;font-weight:800;flex:none}
+.adjwho span{min-width:0;color:#64748b;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#printBox .pb-row.pb-send{grid-template-columns:1fr}
+#printBox .pb-row.pb-send .b{min-height:58px;font-size:16px!important}
+.wz-pane .s3set{margin-top:12px}
+.wz-done-slot .donebox{border:0!important;box-shadow:none!important;background:none!important;padding:0!important;margin:0}
+</style>
 <link rel="stylesheet" href="/wizard.css">
 <script src="/wizard.js"></script>
 </head><body>
@@ -720,7 +737,8 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
   <div class="wz-b" id="wzBody">
    <div id="work" class="hidden">
     <section class="wz-pane" data-flow="card" data-step="1">
-     <p class="note" style="margin:0 0 6px">Drag a yellow box to move it. Drag its round handle to resize (card ratio stays locked). Use the arrows to nudge.</p>
+     <div class="adjwho" id="adjWho" hidden><b id="adjWhoT"></b><span id="adjWhoN"></span></div>
+      <p class="note" style="margin:0 0 6px">Drag a yellow box to move it. Drag its round handle to resize (card ratio stays locked). Use the arrows to nudge.</p>
      <div class="note" id="st2" aria-live="polite"></div>
      <div class="stage" id="stage"></div>
      <div class="ctl">
@@ -737,21 +755,37 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
     </section>
      <section class="wz-pane" data-flow="card" data-step="2">
       <h3 style="margin:0 0 8px;font-size:16px">Cropped card preview</h3>
-      <div class="pv-bar"><button class="adj-chip" id="adjBtn" type="button" data-wz="go:1" aria-label="Adjust crop"><span aria-hidden="true">✂️</span>Adjust crop</button></div>
-      <div class="pv-warn" id="pvWarn" role="status" hidden><span id="pvWarnT"></span><button type="button" data-wz="go:1">Adjust crop</button></div>
      <div class="row hidden" id="ccRow"><span class="lab">Output</span><span class="seg" style="display:inline-flex;width:auto"><button data-cc="0" class="on" type="button">Normal Aadhaar</button><button data-cc="1" type="button">Tricolour Aadhaar</button></span></div>
    <div class="row hidden" id="fxRow">
     <label class="sl">Brightness <input type="range" id="fb" min="70" max="140" value="100"></label>
     <label class="sl">Contrast <input type="range" id="fc" min="70" max="150" value="100"></label>
     <label class="sl">Saturation <input type="range" id="fs" min="0" max="200" value="100"></label></div>
-      <div class="out">
-    <div class="oc"><b id="fl">Front</b><canvas id="oF"></canvas><button class="b g sm" id="dF" type="button"><svg><use href="#i-down"/></svg>Front JPG</button></div>
-    <div class="oc" id="bWrap"><b>Back</b><canvas id="oB"></canvas><button class="b g sm" id="dB" type="button"><svg><use href="#i-down"/></svg>Back JPG</button></div>
-   </div>
+      <div id="deckOut"></div>
+     </section>
+     <section class="wz-pane" data-flow="card" data-step="3">
+      <div class="pre-done">
+       <h3>Order token &amp; payment</h3><p class="sub">Check the summary below, then tap Send. Secure payment opens next.</p>
+       <ul class="recap" id="rcCard"></ul>
+       <div class="s3set">
+        <label class="l">Print mode</label>
+        <div class="seg"><button id="sBw" class="on" type="button">B&amp;W</button><button id="sCol" type="button">Color</button></div>
+        <label class="l" for="sCopies">Copies</label>
+        <div class="stepper"><button type="button" data-step="-1" aria-label="Fewer copies">−</button><input type="number" id="sCopies" min="1" max="100" value="1" inputmode="numeric"><button type="button" data-step="1" aria-label="More copies">+</button></div>
+        <label class="l" for="sName">Your name</label>
+        <input type="text" id="sName" placeholder="Enter your name" maxlength="60" autocomplete="name">
+        <label class="l" for="sPhone">Mobile number (optional)</label>
+        <input type="tel" id="sPhone" placeholder="10-digit mobile" maxlength="10" inputmode="numeric" autocomplete="tel">
+       </div>
+       <div class="err" id="err3c"></div>
+      </div>
+      <div class="wz-done-slot"></div>
      </section>
     <div class="popbody" id="printBox"><div class="pop-h"><b>Print, save or download</b><button class="pop-x" type="button" aria-label="Close">✕</button></div>
     <div class="pb">
      <div class="pb-seg seg" id="paperSeg" role="group" aria-label="Sheet size"><button data-v="A4" class="on" type="button" aria-pressed="true">A4 (up to 5 pairs)</button><button data-v="4x6" type="button" aria-pressed="false">4×6 photo</button></div>
+     <div class="pb-row pb-send">
+      <button class="b hero" id="sendCounter" type="button"><svg><use href="#i-send"/></svg>Send to counter</button>
+     </div>
      <div class="pb-row">
       <button class="b hero" id="addOrder" type="button"><svg><use href="#i-plus"/></svg>Add to print order</button>
       <button class="b g hero" id="savePdf" type="button"><svg><use href="#i-pdf"/></svg>Save as PDF</button>
@@ -779,9 +813,11 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
    </section>
   </div>
   <footer class="wz-f">
+   <div class="wz-sum" data-flow="card" data-from="3"><span><span id="wzPg">0</span> pages × <span id="wzCp">1</span> copy</span><b id="wzAmt">₹0</b></div>
    <div class="wz-act" data-flow="card" data-step="1"><button class="wz-btn pri" type="button" data-wz="go:2">Apply &amp; return to preview</button></div>
    <div class="wz-act" data-flow="card" data-step="2"><button class="b hero" id="printBtn" type="button">Print · Save · Download</button></div>
-   <div class="wz-act" data-flow="scan" data-step="1"><button class="b hero" id="scGo" type="button" style="width:100%">✅ All Good — Continue</button></div>
+   <div class="wz-act" data-flow="card" data-step="3"><button class="wz-btn" type="button" data-wz="prev" style="flex:none" aria-label="Back">←</button><button class="btn" id="wzSend" type="button">Send to counter</button></div>
+    <div class="wz-act" data-flow="scan" data-step="1"><button class="b hero" id="scGo" type="button" style="width:100%">✅ All Good — Continue</button></div>
   </footer>
  </div>
 </div>
@@ -815,7 +851,7 @@ voter:{n:'Voter Card',bn:'ভোটার কার্ড',d:'e-EPIC PDF · fron
 abc:{minW:.4,maxW:1,n:'ABC / APAAR ID',bn:'অ্যাপার',d:'PDF, JPG or PNG · front only',img:1,pdf:1,one:1,fx:1,F:[.04,.03,.92,.4],det:'ink',inset:.002},
 abha:{n:'ABHA Card',bn:'আভা কার্ড',d:'PDF · front and back',pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'cards',inset:.004},
 eshram:{minW:.3,maxW:1,n:'e-Shram Card',bn:'ই-শ্রম কার্ড',d:'PDF, JPG or PNG · front and back',img:1,pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'cards',inset:.004}};
-let fitMode=(()=>{try{return localStorage.getItem('cardFit')==='keep'?'keep':'fill'}catch(e){return 'fill'}})(),K,Tp,pp=[],pages=[],bx={},dpi=300,cc=0,batch=[],pdfBuf=null,srcFile=null,selS='F',sheetPaper='A4';
+let fitMode=(()=>{try{return localStorage.getItem('cardFit')==='keep'?'keep':'fill'}catch(e){return 'fill'}})(),K,Tp,pp=[],pages=[],bx={},dpi=300,cc=0,batch=[],pdfBuf=null,srcFile=null,selS='F',sheetPaper='A4',deck=[],ai=-1,autoBatch=false,deckAdded=false,srcImg=false,sendItems=[];
 
 const CA=(()=>{
 const ph=(x,y,w,h,c)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${c}"/><circle cx="${x+w/2}" cy="${y+h*.36}" r="${w*.2}" fill="#fff" opacity=".9"/><path d="M${x+w*.14} ${y+h}Q${x+w/2} ${y+h*.5} ${x+w*.86} ${y+h}Z" fill="#fff" opacity=".9"/>`;
@@ -845,11 +881,11 @@ popBack.onclick=closePop;document.addEventListener('keydown',e=>{if(e.key==='Esc
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('.pop-x,[data-popclose]'))closePop()});
 $('setBtn').onclick=()=>openPop('setBox');$('printBtn').onclick=()=>openPop('printBox');
 function st(m,e){$('st').textContent=m||'';$('st').className=e?'e':''}
-function pick(k){K=k;Tp=T[k];$('tool').classList.remove('hidden');pages.forEach(freeCanvas);pages=[];bx={};pdfBuf=null;$('file').value='';
+function pick(k){K=k;Tp=T[k];$('tool').classList.remove('hidden');freeDeck();pages.forEach(freeCanvas);pages=[];pp=[];bx={};pdfBuf=null;$('file').value='';
  document.querySelectorAll('.tile').forEach(b=>b.classList.toggle('on',b.dataset.k==k));
  $('file').accept=Tp.img?'.pdf,.jpg,.jpeg,.png':'.pdf';$('file').multiple=true;Q=[];lastPw='';$('pickL').textContent='Select '+Tp.n+' (up to 5 files)';
  $('hint').textContent='Up to 5 files at once · 15 MB each · '+Tp.d;$('pwBtn').classList.add('hidden');$('pw').value='';$('ccRow').classList.toggle('hidden',!Tp.cc);
- $('fxRow').classList.toggle('hidden',!Tp.fx);$('bWrap').classList.toggle('hidden',!!Tp.one);$('dBothL').textContent=Tp.one?'Front only':'Front + Back';$('fl').textContent=Tp.one?Tp.n+' front':'Front';
+ $('fxRow').classList.toggle('hidden',!Tp.fx);$('dBothL').textContent=Tp.one?'Front only':'Front + Back';
  $('work').classList.add('hidden');if(window.Wiz)Wiz.sync('card',0);st('')}
 /* ---- multi-file: up to 5 files in one go. Each file is auto-cropped and added to the A4 batch (5 pairs per sheet) ---- */
 const MAXF=5;let Q=[],lastPw='',multiN=0,multiDone=0;
@@ -865,8 +901,8 @@ $('file').onchange=async e=>{let files=[...e.target.files];if(!files.length)retu
  e.target.value='';
  const ok=[];for(const f of files){const err=await checkFile(f);if(err){toast(f.name.slice(0,28)+': '+err);if(files.length==1)return st(err,1)}else ok.push(f)}
  if(!ok.length)return st('No usable file was selected.',1);
- batch=[];batchUI();multiN=ok.length>1?ok.length:0;multiDone=0;lastPw='';Q=ok.slice();nextFile()};
-async function nextFile(){const f=Q.shift();if(!f)return;srcFile=f;pdfBuf=f._pdf?await f.arrayBuffer():null;
+ freeDeck();pages=[];pp=[];bx={};batch=[];batchUI();multiN=ok.length>1?ok.length:0;multiDone=0;lastPw='';Q=ok.slice();nextFile()};
+async function nextFile(){const f=Q.shift();if(!f)return;srcFile=f;srcImg=!f._pdf;pdfBuf=f._pdf?await f.arrayBuffer():null;
  if(multiN)st('File '+(multiDone+1)+' of '+multiN+': '+f.name.slice(0,30)+'…');
  if(Tp.pw&&!lastPw)return showPw('');
  load(lastPw)}
@@ -880,18 +916,59 @@ $('pwF').onsubmit=e=>{e.preventDefault();const v=$('pw').value;if(!v){$('pwErr')
  $('pwM').classList.add('hidden');lastPw=v;load(v)};
 async function open_(pass){const vs=pass?[...new Set([pass,pass.trim(),pass.trim().toUpperCase(),pass.trim().toLowerCase()])]:[undefined];let last;
  for(const v of vs){try{await render(v);return}catch(e){last=e;if(!isPw(e))throw e}}throw last}
-async function load(pass){st('Reading file…');pages=[];bx={};
- try{await open_(pass)}catch(err){
-  if(isPw(err)){lastPw='';return showPw(pass?'Wrong password. Check it and try again.':'')}
-  console.error(err);if(multiN&&Q.length){toast('Skipped '+srcFile.name.slice(0,24)+' (could not read)');return nextFile()}
-  return st('Could not read this file: '+(err&&err.message||err),1)}
- st('Finding the card edges…');await autoCrop();
- if(multiN){try{layoutBoxes();batch.push(await pair());multiDone++;batchUI()}catch(e){console.error(e)}
-  if(Q.length){st('File '+multiDone+' of '+multiN+' added to the A4 batch…');return nextFile()}
-  toast(multiDone+' of '+multiN+' files added to the A4 batch')}
- $('work').classList.remove('hidden');if(window.Wiz){Wiz.sync('card',1);Wiz.open('card')}
- st(rMsg()||(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(isFree()?(redFull?'No red border found, so the whole page is used as the card. Drag the yellow boxes if you need less.':(Tp.det=='red'?'Red border found on both pages. Cropped exactly inside it.':'Front and back card edges found. Cropped exactly to each card.')):'Cards found and cropped. Adjust the boxes if needed.')),rMsg()?!greenOK:miss);layoutBoxes();update();
-  if(window.pvWarn)pvWarn(!Tp.one&&bx.B&&bx.B===bx.F?'Back uses the same area as Front for a single photo. Tap Adjust crop to place the Back box.':'')}
+async function load(pass){st('Reading file…');pages=[];pp=[];bx={};
+  try{await open_(pass)}catch(err){
+   if(isPw(err)){lastPw='';return showPw(pass?'Wrong password. Check it and try again.':'')}
+   console.error(err);
+   if(multiN){toast('Skipped '+srcFile.name.slice(0,24)+' (could not read)');pages=[];pp=[];bx={};if(Q.length)return nextFile();return finishDeck()}
+   return st('Could not read this file: '+(err&&err.message||err),1)}
+  st('Finding the card edges…');await autoCrop();
+  /* every file keeps its own pages + crop boxes, so ALL selected cards reach the preview and the A4 batch */
+  deck.push({name:srcFile.name,pages,pp,bx,img:srcImg});multiDone++;
+  pages=[];pp=[];bx={};ai=-1;
+  if(Q.length){st('File '+multiDone+' of '+multiN+' ready…');return nextFile()}
+  return finishDeck()}
+function freeDeck(){deck.forEach(E=>(E.pages||[]).forEach(freeCanvas));deck=[];ai=-1;autoBatch=false;deckAdded=false;const o=$('deckOut');if(o)o.innerHTML=''}
+function commit(){const E=deck[ai];if(E){E.pages=pages;E.pp=pp;E.bx=bx}}
+function useCard(i){const E=deck[i];if(!E)return;if(ai>=0&&ai!==i)commit();ai=i;pages=E.pages;pp=E.pp;bx=E.bx;srcImg=E.img}
+async function finishDeck(){
+  if(!deck.length)return st('Could not read any of the selected files.',1);
+  useCard(0);const many=deck.length>1;
+  st(many?deck.length+' cards are ready in the preview and the A4 batch.':(rMsg()||(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(redFull?'':(isFree()?(Tp.det=='red'?'Red border found on both pages. Cropped exactly inside it.':'Front and back card edges found. Cropped exactly to each card.'):'Cards found and cropped. Adjust the boxes if needed.')))),many?0:(rMsg()?!greenOK:miss));
+  $('work').classList.remove('hidden');
+  autoBatch=many;batch=[];
+  const t1=$('dBoth').querySelector('.t1');if(t1)t1.textContent=many?'All JPGs':'Both JPGs';
+  $('dBothL').textContent=many?'All cards':(Tp.one?'Front only':'Front + Back');
+  buildDeckUI();
+  if(many){st('Adding all cards to the A4 batch…');try{await rebuildBatch()}catch(e){console.error(e)}st(deck.length+' cards are ready in the preview and the A4 batch.');toast(deck.length+' cards added to the A4 batch')}
+  if(window.Wiz){Wiz.resetDone('card');Wiz.open('card',2);Wiz.sync('card',1)}
+  deck.forEach((_,i)=>drawCard(i));batchUI()}
+/* ---- preview of every selected card ---- */
+function buildDeckUI(){const box=$('deckOut');box.innerHTML='';const many=deck.length>1;
+  deck.forEach((E,i)=>{const sec=document.createElement('section');sec.className='dk'+(many?' multi':'');sec.dataset.i=i;
+   sec.innerHTML='<div class="dk-h">'+(many?'<div class="dk-w"><b class="dk-t"></b><span class="dk-n"></span></div>':'')+'<button class="adj-chip" type="button" data-adj="'+i+'" aria-label="Adjust crop"><span aria-hidden="true">✂️</span>Adjust crop</button></div>'
+    +'<div class="out"><div class="oc"><b class="dk-fl"></b><canvas id="cF'+i+'"></canvas><button class="b g sm" type="button" data-dl="F" data-i="'+i+'"><svg><use href="#i-down"/></svg>Front JPG</button></div>'
+    +(Tp.one?'':'<div class="oc"><b>Back</b><canvas id="cB'+i+'"></canvas><button class="b g sm" type="button" data-dl="B" data-i="'+i+'"><svg><use href="#i-down"/></svg>Back JPG</button></div>')+'</div>';
+   sec.querySelector('.dk-fl').textContent=Tp.one?Tp.n+' front':'Front';
+   if(many){sec.querySelector('.dk-t').textContent='Card '+(i+1);sec.querySelector('.dk-n').textContent=E.name}
+   box.append(sec)})}
+function drawCard(i){const E=deck[i];if(!E||!E.bx||!E.bx.F)return;
+  const put=(id,sd)=>{const o=$(id);if(!o)return;const c=crop(sd,200,E);o.width=c.width;o.height=c.height;o.getContext('2d').drawImage(c,0,0);freeCanvas(c)};
+  put('cF'+i,'F');if(!Tp.one&&E.bx.B)put('cB'+i,'B')}
+function adjustCard(i){useCard(i);mount();selS='F';layoutBoxes();update();
+  const many=deck.length>1,w=$('adjWho');w.hidden=!many;if(many){$('adjWhoT').textContent='Card '+(i+1);$('adjWhoN').textContent=deck[i].name}
+  if(window.Wiz)Wiz.go(1)}
+function deckBack(){commit();deck.forEach((_,i)=>drawCard(i));if(autoBatch)queueRB();batchUI()}
+$('deckOut').addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-adj],[data-dl]');if(!t)return;
+  if(t.dataset.adj!=null)return adjustCard(+t.dataset.adj);
+  const i=+t.dataset.i,sd=t.dataset.dl,E=deck[i];if(!E)return;
+  busy(async()=>save(await cropHQ(sd,dpi,E),nm(i)+(sd==='F'?'_front.jpg':'_back.jpg')))});
+/* the A4 batch mirrors the deck: one pair per selected card (queued so quick changes never overlap) */
+async function rebuildBatch(){commit();const out=[];for(const E of deck.slice(0,5))out.push(await pair(E));batch=out;batchUI()}
+let rbQ=Promise.resolve(),rbT=0;
+const queueRB=()=>{rbQ=rbQ.then(()=>autoBatch?rebuildBatch():0).catch(e=>console.error(e));return rbQ};
+const dRB=()=>{clearTimeout(rbT);rbT=setTimeout(queueRB,450)};
+const curItems=async()=>{await rbQ;return batch.length?batch:[await pair()]};
 async function render(pass){pages.forEach(freeCanvas);pages=[];pp=[];
  if(!pdfBuf){const im=await new Promise((ok,no)=>{const i=new Image;i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(srcFile)});
   const k=Math.min(1,4096/Math.max(im.naturalWidth,im.naturalHeight)),c=mk(Math.round(im.naturalWidth*k),Math.round(im.naturalHeight*k));
@@ -1103,13 +1180,13 @@ async function autoCrop(){miss=0;redFull=0;greenOK=0;const last=Math.min(1,pages
   if(Math.abs(wa-wb)/Math.max(wa,wb)<.12){const m=(wa+wb)/2;['F','B'].forEach(s=>{const b=bx[s],c=pages[b.p],h=m/R,cx=b.x*c.width+b.w*c.width/2,cy=b.y*c.height+(b.w*c.width/R)/2;
     b.w=m/c.width;b.x=Math.max(0,Math.min(1-b.w,(cx-m/2)/c.width));b.y=Math.max(0,Math.min(1-hOf(b),(cy-h/2)/c.height))})}}
  else if(found.F&&!found.B&&!Tp.one&&!isFree()&&bx.F&&bx.B&&bx.B.p==bx.F.p){bx.B=fit(bx.B.p,[bx.B.x,bx.B.y,bx.B.w,hOf(bx.B)],bx.F.w)}
- if(pages.length==1&&!pdfBuf&&!Tp.one)bx.B=bx.F}
-$('auto').onclick=async()=>{st('Finding the card edges…');await autoCrop();layoutBoxes();update();st(rMsg()||(miss?'Card edge not found, so a default position is used.':'Auto crop done.'),rMsg()?!greenOK:miss)};
-$('reset').onclick=async()=>{bx={};st('Finding the card edges…');await autoCrop();layoutBoxes();update();st(rMsg()||(miss?'Card edge not found, so a default position is used.':'Boxes reset.'),rMsg()?!greenOK:miss)};
+ if(pages.length==1&&srcImg&&!Tp.one)bx.B=bx.F}
+$('auto').onclick=async()=>{st('Finding the card edges…');await autoCrop();commit();layoutBoxes();update();st(rMsg()||(miss?'Card edge not found, so a default position is used.':'Auto crop done.'),rMsg()?!greenOK:miss)};
+$('reset').onclick=async()=>{bx={};st('Finding the card edges…');await autoCrop();commit();layoutBoxes();update();st(rMsg()||(miss?'Card edge not found, so a default position is used.':'Boxes reset.'),rMsg()?!greenOK:miss)};
 
 /* ---- boxes UI ---- */
 const arOf=b=>b.ar||R;
-function hOf(b){const c=pages[b.p];return b.w*c.width/arOf(b)/c.height}
+function hOf(b,pg){const c=(pg||pages)[b.p];return b.w*c.width/arOf(b)/c.height}
 function layoutBoxes(){document.querySelectorAll('.bx').forEach(e=>e.remove());
  (Tp.one?['F']:['F','B']).forEach(s=>{const b=bx[s];if(!b)return;const host=$('stage').children[b.p],e=document.createElement('div');e.className='bx'+(s==selS?' sel':'');e.dataset.s=s;
   e.innerHTML='<span>'+(s=='F'?'Front':'Back')+'</span><i></i>';host.append(e);pos(e,b);drag(e,s,host)})}
@@ -1139,19 +1216,19 @@ function style(o){const x=o.getContext('2d');
  if(Tp.cc&&cc){x.globalCompositeOperation='multiply';[['#ffd9a8',0],['#ffffff',1/3],['#c9f0d0',2/3]].forEach(([col,p])=>{x.fillStyle=col;x.fillRect(0,p*o.height,o.width,o.height/3+1)});x.globalCompositeOperation='source-over'}
  return o}
 /* EVERY card is delivered at exactly 85.60 x 53.98 mm. Fill = card art stretched to that size, Keep = shape kept with white bars. */
-function crop(s,d){const b=bx[s],c=pages[b.p],W=Math.round(CW/MM*d),H=Math.round(CH/MM*d),o=mk(W,H),x=o.getContext('2d');x.imageSmoothingQuality='high';
- const sx=b.x*c.width,sy=b.y*c.height,sw=b.w*c.width,sh=hOf(b)*c.height;
+function crop(s,d,E){E=E||{bx,pages};const b=E.bx[s],c=E.pages[b.p],W=Math.round(CW/MM*d),H=Math.round(CH/MM*d),o=mk(W,H),x=o.getContext('2d');x.imageSmoothingQuality='high';
+ const sx=b.x*c.width,sy=b.y*c.height,sw=b.w*c.width,sh=hOf(b,E.pages)*c.height;
  if(fitMode=='keep'){x.fillStyle='#fff';x.fillRect(0,0,W,H);const k=Math.min(W/sw,H/sh),w=sw*k,h=sh*k;x.drawImage(c,sx,sy,sw,sh,(W-w)/2,(H-h)/2,w,h)}
  else x.drawImage(c,sx,sy,sw,sh,0,0,W,H);
  return style(o)}
-async function cropHQ(s,d){const b=bx[s],p=pp[b.p];if(!p)return crop(s,d);
- const W=Math.round(CW/MM*d),H=Math.round(CH/MM*d),v1=p.getViewport({scale:1}),bw=b.w*v1.width,bh=hOf(b)*v1.height,keep=fitMode=='keep',
+async function cropHQ(s,d,E){E=E||{bx,pages,pp};const b=E.bx[s],p=E.pp[b.p];if(!p)return crop(s,d,E);
+ const W=Math.round(CW/MM*d),H=Math.round(CH/MM*d),v1=p.getViewport({scale:1}),bw=b.w*v1.width,bh=hOf(b,E.pages)*v1.height,keep=fitMode=='keep',
   sX=keep?Math.min(W/bw,H/bh):W/bw,sY=keep?sX:H/bh,v=p.getViewport({scale:sX}),k=sY/sX,rw=bw*sX,rh=bh*sY,ox=(W-rw)/2,oy=(H-rh)/2,o=mk(W,H),x=o.getContext('2d');
  x.fillStyle='#fff';x.fillRect(0,0,W,H);x.save();x.beginPath();x.rect(ox,oy,rw,rh);x.clip();
  await p.render({canvasContext:x,viewport:v,transform:[1,0,0,k,-b.x*v.width+ox,-b.y*v.height*k+oy]}).promise;x.restore();return style(o)}
-function update(){if(!bx.F||!pages.length)return;const f=crop('F',200),g=$('oF');g.width=f.width;g.height=f.height;g.getContext('2d').drawImage(f,0,0);
- if(!Tp.one&&bx.B){const b=crop('B',200),h=$('oB');h.width=b.width;h.height=b.height;h.getContext('2d').drawImage(b,0,0)}
- batchUI()}
+function update(){if(!deck.length)return;
+  if(window.Wiz&&Wiz.isOpen()&&Wiz.step()===1&&ai>=0)drawCard(ai);else deck.forEach((_,i)=>drawCard(i));
+  batchUI()}
 /* A4 batch card: live count, progress dots, caption, Clear enabled only when there is something to clear */
 function batchUI(){const n=batch.length;$('bBadge').textContent=n+'/5';$('batchBox').classList.toggle('has',n>0);
  [...$('bDots').children].forEach((d,i)=>d.classList.toggle('on',i<n));$('clr').disabled=!n;
@@ -1160,28 +1237,26 @@ function blob(c,d){return new Promise(r=>c.toBlob(async b=>{if(!b)return r(null)
  if(u[2]==0xFF&&u[3]==0xE0&&u[6]==0x4A){u[13]=1;u[14]=u[16]=(d>>8);u[15]=u[17]=d&255}r(new Blob([u],{type:'image/jpeg'}))},'image/jpeg',.95))}
 function dl(b,name){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),8000)}
 async function save(c,name,d){const b=await blob(c,d||dpi);if(!b)return st('Image is too large for this device. Choose 300 DPI.',1);dl(b,name)}
-const nm=()=>K+'_'+dpi+'dpi';
+const nm=i=>K+'_'+dpi+'dpi'+(deck.length>1&&i!=null?'_card'+(i+1):'');
 async function busy(fn,msg){st(msg||'Preparing '+dpi+' DPI…');try{await fn();st('Done.')}catch(e){console.error(e);st('Failed: '+(e&&e.message||e)+'. Try 300 DPI.',1)}}
-async function pair(){const f=await cropHQ('F',dpi);return{f,b:Tp.one?null:await cropHQ('B',dpi)}}
-$('dF').onclick=()=>busy(async()=>save(await cropHQ('F',dpi),nm()+'_front.jpg'));
-$('dB').onclick=()=>bx.B&&busy(async()=>save(await cropHQ('B',dpi),nm()+'_back.jpg'));
-$('dBoth').onclick=()=>busy(async()=>{await save(await cropHQ('F',dpi),nm()+'_front.jpg');if(!Tp.one){await wait(500);await save(await cropHQ('B',dpi),nm()+'_back.jpg')}});
+async function pair(E){const f=await cropHQ('F',dpi,E);return{f,b:Tp.one?null:await cropHQ('B',dpi,E)}}
+$('dBoth').onclick=()=>busy(async()=>{for(let i=0;i<deck.length;i++){const E=deck[i];await save(await cropHQ('F',dpi,E),nm(i)+'_front.jpg');if(!Tp.one&&E.bx.B){await wait(500);await save(await cropHQ('B',dpi,E),nm(i)+'_back.jpg')}if(i<deck.length-1)await wait(500)}});
 const LIM=(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||navigator.maxTouchPoints>1)?15e6:6e7;
 function sheet(wIn,hIn,place){let d=dpi;if(wIn*hIn*d*d>LIM)d=Math.floor(Math.sqrt(LIM/(wIn*hIn)));const c=mk(Math.round(wIn*d),Math.round(hIn*d)),x=c.getContext('2d');
  x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.imageSmoothingQuality='high';place(x,d,v=>v/MM*d,CW/MM*d,CH/MM*d);c.eff=d;return c}
 const makeA4=items=>sheet(8.27,11.69,(x,d,mm,cw,ch)=>{let y=mm(8);items.forEach(p=>{const hf=cw*p.f.height/p.f.width,hb=p.b?cw*p.b.height/p.b.width:0;x.drawImage(p.f,mm(10),y,cw,hf);if(p.b)x.drawImage(p.b,mm(10)+cw+mm(4),y,cw,hb);y+=Math.max(hf,hb)+mm(3.5)})});
 const make46=p=>sheet(4,6,(x,d,mm,cw,ch)=>{const X=(4*d-cw)/2,gap=mm(8),hf=cw*p.f.height/p.f.width,hb=p.b?cw*p.b.height/p.b.width:0;
  if(p.b){const y=(6*d-hf-hb-gap)/2;x.drawImage(p.f,X,y,cw,hf);x.drawImage(p.b,X,y+hf+gap,cw,hb)}else x.drawImage(p.f,X,(6*d-hf)/2,cw,hf)});
-const jpgA4=()=>busy(async()=>{const items=batch.length?batch:[await pair()],c=makeA4(items);if(c.eff<dpi)st('Phone memory limit: A4 saved at '+c.eff+' DPI.');await save(c,'A4_'+nm()+'.jpg',c.eff)});
-const jpg46=()=>busy(async()=>{const c=make46(await pair());await save(c,'4x6_'+nm()+'.jpg',c.eff)});
+const jpgA4=()=>busy(async()=>{const items=await curItems(),c=makeA4(items);if(c.eff<dpi)st('Phone memory limit: A4 saved at '+c.eff+' DPI.');await save(c,'A4_'+nm()+'.jpg',c.eff)});
+const jpg46=()=>busy(async()=>{const its=await curItems();for(let i=0;i<its.length;i++){const c=make46(its[i]);await save(c,'4x6_'+nm(its.length>1?i:null)+'.jpg',c.eff);if(i<its.length-1)await wait(500)}});
 /* one "Sheet JPG" button: downloads whichever sheet is selected in the A4 / 4x6 toggle */
 $('dSheet').onclick=()=>sheetPaper==='A4'?jpgA4():jpg46();
-$('add').onclick=()=>busy(async()=>{if(batch.length>=5)return st('Maximum 5 ID pairs per A4.',1);batch.push(await pair());update()});
-$('clr').onclick=()=>{batch=[];update();batchUI()};
-document.querySelectorAll('[data-dpi]').forEach(b=>b.onclick=()=>{dpi=+b.dataset.dpi;mark();batch=[];update()});
-document.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{cc=+b.dataset.cc;document.querySelectorAll('[data-cc]').forEach(x=>x.classList.toggle('on',x==b));update()});
-['fb','fc','fs'].forEach(i=>$(i).oninput=qUp);
-document.querySelectorAll('[data-fit]').forEach(b=>b.onclick=()=>{fitMode=b.dataset.fit;try{localStorage.setItem('cardFit',fitMode)}catch(e){}mark();batch=[];update()});
+$('add').onclick=()=>busy(async()=>{if(batch.length>=5)return st('Maximum 5 ID pairs per A4.',1);autoBatch=false;batch.push(await pair());update()});
+$('clr').onclick=()=>{batch=[];autoBatch=false;update();batchUI()};
+document.querySelectorAll('[data-dpi]').forEach(b=>b.onclick=()=>{dpi=+b.dataset.dpi;mark();batch=[];update();if(autoBatch)queueRB()});
+document.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{cc=+b.dataset.cc;document.querySelectorAll('[data-cc]').forEach(x=>x.classList.toggle('on',x==b));update();if(autoBatch)dRB()});
+['fb','fc','fs'].forEach(i=>$(i).oninput=()=>{qUp();if(autoBatch)dRB()});
+document.querySelectorAll('[data-fit]').forEach(b=>b.onclick=()=>{fitMode=b.dataset.fit;try{localStorage.setItem('cardFit',fitMode)}catch(e){}mark();batch=[];update();if(autoBatch)queueRB()});
 function mark(){document.querySelectorAll('[data-fit]').forEach(b=>b.classList.toggle('on',b.dataset.fit==fitMode));document.querySelectorAll('[data-dpi]').forEach(b=>b.classList.toggle('on',+b.dataset.dpi==dpi))}mark();
 const paperUI=()=>{$('dSheetL').textContent=sheetPaper==='A4'?'A4':'4×6';document.querySelectorAll('#paperSeg button').forEach(x=>{const on=x.dataset.v===sheetPaper;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on)})};
 document.querySelectorAll('#paperSeg button').forEach(b=>b.onclick=()=>{sheetPaper=b.dataset.v;paperUI()});paperUI();
@@ -1196,9 +1271,9 @@ async function pdfFrom(list){const pdf=await PDFLib.PDFDocument.create();
  for(const it of list){const img=await pdf.embedJpg(await it.blob.arrayBuffer()),[w,h]=PAGE_PT[it.paper],p=pdf.addPage([w,h]);p.drawImage(img,{x:0,y:0,width:w,height:h})}
  return pdf.save()}
 function thumbOf(c){const s=mk(120,Math.round(120*c.height/c.width));s.getContext('2d').drawImage(c,0,0,s.width,s.height);return s.toDataURL('image/jpeg',.7)}
-async function pushCart(canvases,paper,label){
+async function pushCart(canvases,paper,label,counts){pushCart.last=[];
  if(cart.length&&cart[0].paper!==paper){toast('Your order already has '+cart[0].paper+' pages. Send it first or clear it to add '+paper+'.');return false}
- for(const c of canvases){const b=await blob(c,c.eff||200);if(!b)throw new Error('Could not prepare the page. Try 300 DPI.');cart.push({paper,blob:b,thumb:thumbOf(c),label})}
+ for(const [k,c] of canvases.entries()){const b=await blob(c,c.eff||200);if(!b)throw new Error('Could not prepare the page. Try 300 DPI.');const it={paper,blob:b,thumb:thumbOf(c),label,cards:(counts&&counts[k])||1};cart.push(it);pushCart.last.push(it)}
  drawCart();return true}
 function drawCart(){const el=$('cart');el.innerHTML='';
  cart.forEach((it,i)=>{const d=document.createElement('div');d.className='ci';
@@ -1211,37 +1286,65 @@ function drawCart(){const el=$('cart');el.innerHTML='';
  $('dock').classList.toggle('show',n>0);$('dockBtn').textContent='View print order · '+n+(n==1?' page':' pages');
  const is46=n&&cart[0].paper==='4x6';if(is46)oColor=true;
  $('oBw').disabled=is46;$('oBw').classList.toggle('on',!oColor);$('oCol').classList.toggle('on',oColor);ordRecalc()}
+const oCp=()=>Math.min(Math.max(parseInt($('oCopies').value)||1,1),100);
 function ordAmount(){const n=cart.length,cp=Math.min(Math.max(parseInt($('oCopies').value)||1,1),100);
  return n&&cart[0].paper==='4x6'?n*cp*cfg.photo4x6:n*cp*(oColor?cfg.rate.color:cfg.rate.bw)}
 function ordRecalc(){const n=cart.length,cp=Math.min(Math.max(parseInt($('oCopies').value)||1,1),100);
- $('osum').textContent=n+(n==1?' page':' pages')+' × '+cp+(cp==1?' copy':' copies');$('oamt').textContent='₹'+ordAmount()}
+ $('osum').textContent=n+(n==1?' page':' pages')+' × '+cp+(cp==1?' copy':' copies');$('oamt').textContent='₹'+ordAmount();sumLive()}
 $('oBw').onclick=()=>{if($('oBw').disabled)return;oColor=false;drawCart()};$('oCol').onclick=()=>{oColor=true;drawCart()};
 $('oCopies').oninput=ordRecalc;$('oClear').onclick=()=>{cart=[];drawCart()};
 $('dockBtn').onclick=()=>openPop('orderPanel');
 $('oPdf').onclick=async()=>{if(!cart.length)return;try{dl(new Blob([await pdfFrom(cart)],{type:'application/pdf'}),'print-order.pdf');toast('PDF saved')}catch(e){$('oerr').textContent='Could not create the PDF: '+(e.message||e)}};
 
-/* Add to print order (card crop) */
+/* Add to print order / Send to counter (card crop): put the current cards into the order, then open the final Order & payment step */
+const dropSend=()=>{if(sendItems.length){cart=cart.filter(x=>!sendItems.includes(x));sendItems=[];drawCart()}};
+const lblFor=(items,paper)=>Tp.n+(paper==='A4'?(items.length>1?' · '+items.length+' pairs':(Tp.one?'':' · front and back')):(Tp.one?'':' · front and back'));
+async function toOrder(keep){
+  dropSend();
+  if(!keep&&deckAdded&&cart.length)return true;                       /* these cards are already in the order */
+  const items=await curItems(),paper=sheetPaper,cvs=paper==='A4'?[makeA4(items)]:items.map(make46);
+  if(!(await pushCart(cvs,paper,lblFor(items,paper),paper==='A4'?[items.length]:items.map(()=>1))))return false;
+  if(keep){batch=[];autoBatch=false;sendItems=[];deckAdded=true;update()}else sendItems=pushCart.last.slice();
+  return true}
+async function toSummary(keep){if(!(await toOrder(keep)))return false;closePop();if(window.Wiz)Wiz.go(3);return true}
 $('addOrder').addEventListener('click',()=>setTimeout(closePop,60));
-$('addOrder').onclick=()=>busy(async()=>{
- const items=batch.length?batch:[await pair()],paper=sheetPaper;
- const cvs=paper==='A4'?[makeA4(items)]:items.map(make46),lbl=Tp.n+(paper==='A4'?(items.length>1?' · '+items.length+' pairs':(Tp.one?'':' · front and back')):(Tp.one?'':' · front and back'));
- if(await pushCart(cvs,paper,lbl)){batch=[];update();toast('Added to your print order')}},'Adding to print order…');
+$('addOrder').onclick=()=>busy(async()=>{if(await toSummary(true))toast('Added to your print order')},'Adding to print order…');
+$('sendCounter').onclick=()=>busy(()=>toSummary(false),'Preparing your order…');
 /* Save as PDF (card crop) */
 $('savePdf').onclick=()=>busy(async()=>{
- const items=batch.length?batch:[await pair()],paper=sheetPaper,cvs=paper==='A4'?[makeA4(items)]:items.map(make46),list=[];
+ const items=await curItems(),paper=sheetPaper,cvs=paper==='A4'?[makeA4(items)]:items.map(make46),list=[];
  for(const c of cvs){const b=await blob(c,c.eff||200);if(!b)throw new Error('Image too large');list.push({blob:b,paper})}
  dl(new Blob([await pdfFrom(list)],{type:'application/pdf'}),nm()+'_'+paper.replace('x','x')+'.pdf')},'Creating PDF…');
 
-/* Send to counter */
-$('oSend').onclick=async()=>{$('oerr').textContent='';if(!cart.length)return;const btn=$('oSend');btn.disabled=true;
- try{const paper=cart[0].paper,color=paper==='4x6'?true:oColor,copies=Math.min(Math.max(parseInt($('oCopies').value)||1,1),100);
-  const file=new File([await pdfFrom(cart)],'id-print-order.pdf',{type:'application/pdf'});
-  if(file.size>25*1048576)throw new Error('The order is larger than 25 MB. Remove a page or lower the resolution.');
-  const labels=[...new Set(cart.map(c=>c.label))].slice(0,3).join(', ');
-  const fd=new FormData();fd.append('meta',JSON.stringify({kind:'doc',paper,name:$('oName').value.trim(),phone:$('oPhone').value.trim(),color,copies,pages:[cart.length],orient:['portrait'],info:`${labels} · ${paper} · ${color?'Color':'B&W'}`}));
-  fd.append('files',file,file.name);
-  const r=await fetch('/api/orders',{method:'POST',body:fd}),d=await r.json();if(!r.ok)throw new Error(d.error||'Upload failed');showDone(d)}
- catch(e){$('oerr').textContent=e.message||'Something went wrong';btn.disabled=false}};
+/* Send to counter (order panel button AND the final summary button) */
+async function sendOrder(){$('oerr').textContent='';if(!cart.length){$('oerr').textContent='Your order is empty. Add a card first.';return}
+  const btns=[$('oSend'),$('wzSend')];btns.forEach(b=>b.disabled=true);
+  try{const paper=cart[0].paper,color=paper==='4x6'?true:oColor,copies=oCp();
+   const file=new File([await pdfFrom(cart)],'id-print-order.pdf',{type:'application/pdf'});
+   if(file.size>25*1048576)throw new Error('The order is larger than 25 MB. Remove a page or lower the resolution.');
+   const labels=[...new Set(cart.map(c=>c.label))].slice(0,3).join(', ');
+   const fd=new FormData();fd.append('meta',JSON.stringify({kind:'doc',paper,name:$('oName').value.trim(),phone:$('oPhone').value.trim(),color,copies,pages:[cart.length],orient:['portrait'],info:`${labels} · ${paper} · ${color?'Color':'B&W'}`}));
+   fd.append('files',file,file.name);
+   const r=await fetch('/api/orders',{method:'POST',body:fd}),d=await r.json();if(!r.ok)throw new Error(d.error||'Upload failed');
+   cart=[];sendItems=[];drawCart();btns.forEach(b=>b.disabled=false);showDone(d)}
+  catch(e){$('oerr').textContent=e.message||'Something went wrong';btns.forEach(b=>b.disabled=false)}}
+$('oSend').onclick=sendOrder;$('wzSend').onclick=sendOrder;
+
+/* Final step 3: Order & payment summary (Files / Paper / Mode / Copies) + live price bar */
+const sumLive=()=>{if(window.Wiz&&Wiz.isOpen()&&Wiz.flow()==='card'&&Wiz.step()===3)fillSummary()};
+function fillSummary(){const ul=$('rcCard');if(!ul)return;ul.textContent='';
+  const n=cart.length,cp=oCp(),paper=n?cart[0].paper:sheetPaper,color=paper==='4x6'?true:oColor,files=cart.reduce((t,x)=>t+(x.cards||1),0),nm_=$('oName').value.trim();
+  const li=(k,v)=>{const e=document.createElement('li'),a=document.createElement('span'),b=document.createElement('b');a.textContent=k;b.textContent=v;e.append(a,b);ul.appendChild(e)};
+  li('Files',String(files));li('Paper',paper==='4x6'?'4×6':'A4');li('Mode',color?'Color':'B&W');li('Copies',String(cp));if(nm_)li('Name',nm_);
+  $('wzPg').textContent=n;$('wzCp').textContent=cp;$('wzAmt').textContent='₹'+ordAmount();
+  $('sBw').disabled=paper==='4x6';$('sBw').classList.toggle('on',!color);$('sCol').classList.toggle('on',color);
+  if(document.activeElement!==$('sCopies'))$('sCopies').value=cp;
+  if(document.activeElement!==$('sName'))$('sName').value=$('oName').value;
+  if(document.activeElement!==$('sPhone'))$('sPhone').value=$('oPhone').value;
+  $('wzSend').disabled=!n}
+$('sBw').onclick=()=>{if($('sBw').disabled)return;oColor=false;drawCart()};$('sCol').onclick=()=>{oColor=true;drawCart()};
+$('sCopies').oninput=()=>{$('oCopies').value=$('sCopies').value;ordRecalc()};
+$('sName').oninput=()=>{$('oName').value=$('sName').value};$('sPhone').oninput=()=>{$('oPhone').value=$('sPhone').value};
 
 /* Done screen: token, UPI payment QR, live status */
 const LABEL={expired:'Not paid within 60 minutes, so the upload was deleted.',pending:'Waiting for counter approval…',approved:'Approved. Sending to printer…',printing:'Printing now',printed:'Printed. Please collect from the counter.',rejected:'Rejected by counter',error:'Printer problem. Please tell the counter.'};
@@ -1261,8 +1364,10 @@ function updateTracker(o) {
   if (note) note.textContent = st === 'expired' ? 'This upload was not paid within 60 minutes, so it was deleted.' : (st === 'rejected' ? 'Order cancelled. The file was deleted.' : (flags.srv ? 'Done. Your file is gone from the shop PC and from our server.' : ''));
 }
 
-function showDone(d){closePop();$('layout').classList.add('hidden');document.querySelector('.tabs').classList.add('hidden');$('dock').classList.remove('show');
- $('done').classList.remove('hidden');$('oid').textContent=d.id;window.scrollTo(0,0);
+function showDone(d){closePop();$('dock').classList.remove('show');
+  if(window.Wiz&&document.querySelector('.wz-pane[data-flow="card"][data-step="3"] .wz-done-slot'))Wiz.showDone('card');
+  else{$('layout').classList.add('hidden');document.querySelector('.tabs').classList.add('hidden');$('done').classList.remove('hidden')}
+  $('oid').textContent=d.id;window.scrollTo(0,0);
  const amount=Number(d.amount);$('odone').textContent='Exact amount to pay: ₹'+amount.toFixed(2);
  // Online payment: Razorpay Standard Checkout when configured, otherwise YOUPI PG (same as the main order page)
  const useRzp=!!(cfg.razorpay&&cfg.razorpay.keyId),useYoupi=!!(cfg.youpi&&cfg.youpi.key),usePay=useRzp||useYoupi;
@@ -1324,22 +1429,16 @@ setTimeout(()=>{cvReady().catch(()=>{})},1500);   /* warm up OpenCV quietly in t
 <script>
 (function(){
   if(window.Wiz){
-    /* Card flow opens straight on Preview (step 2). Step 1 is the optional "Adjust crop" drawer, reached from the corner chip. */
+    /* Card flow opens straight on Preview (step 2). Step 1 = optional "Adjust crop" drawer (per card). Step 3 = Order & payment summary. */
     var lastStep=0;
-    Wiz.register('card',{steps:2,home:2,hideSteps:true,titles:['Adjust crop','Preview & download'],
-      onStep:function(s){var w=document.getElementById('pvWarn');
-        if(s===2&&lastStep===1){if(w)w.hidden=true;try{update()}catch(e){}}   /* back from Adjust: refresh, and the warning has been dealt with */
+    Wiz.register('card',{steps:3,home:2,hideSteps:function(s){return s!==3},doneTitle:'Order placed',titles:['Adjust crop','Preview & download','Order & payment'],
+      onStep:function(s){
+        if(s===2&&lastStep===1){try{deckBack()}catch(e){}}      /* back from Adjust: redraw every card + refresh the A4 batch */
+        if(s===3){try{fillSummary()}catch(e){}}
         lastStep=s}});
     Wiz.register('scan',{steps:1,titles:['File Received']});
-    Wiz.mirror('st','st2');
+    Wiz.mirror('st','st2');Wiz.mirror('oerr','err3c');
   }
-  /* Auto-crop is no longer reviewed on its own screen, so any "not sure" message is surfaced on the preview */
-  (function(){var s=document.getElementById('st'),w=document.getElementById('pvWarn'),t=document.getElementById('pvWarnT');if(!s||!w||!t)return;
-    var RE=/Card edge not found|Exact ration edge|No red border|yellow boxes/i;
-    window.pvWarn=function(m){if(m){t.textContent=m;w.hidden=false}else w.hidden=true};
-    new MutationObserver(function(){var m=(s.textContent||'').trim();
-      if(RE.test(m)){t.textContent=m.replace(/\s*(Drag|Adjust) the yellow boxes[^.]*\./i,'')+' You can fine-tune it.';w.hidden=false}
-      else if(/^(Reading file|Finding the card edges)/i.test(m))w.hidden=true}).observe(s,{childList:true,characterData:true,subtree:true,attributes:true})})();
   var f=document.getElementById('sdF'),b=document.getElementById('sdB'),s1=document.getElementById('side1'),s2=document.getElementById('side2');
   function side(back){f.classList.toggle('on',!back);b.classList.toggle('on',back);f.setAttribute('aria-selected',!back);b.setAttribute('aria-selected',back);s1.classList.toggle('off',back);s2.classList.toggle('off',!back)}
   if(f&&b){f.onclick=function(){side(false)};b.onclick=function(){side(true)}}

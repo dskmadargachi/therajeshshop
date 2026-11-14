@@ -7,6 +7,8 @@ var LS = {get: function (k) { try { return localStorage.getItem(k); } catch (e) 
 
 /* ---------------- Bengali ---------------- */
 var BN = {
+'Card 1': 'কার্ড ১', 'Card 2': 'কার্ড ২', 'Card 3': 'কার্ড ৩', 'Card 4': 'কার্ড ৪', 'Card 5': 'কার্ড ৫',
+'All JPGs': 'সব JPG', 'All cards': 'সব কার্ড',
 'Card shape': 'কার্ডের আকার',
 'Fill 85.6×53.98 mm': 'ভরান ৮৫.৬×৫৩.৯৮ মিমি',
 'Keep shape': 'অনুপাত রাখুন',
