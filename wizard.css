@@ -317,3 +317,107 @@ html{scroll-padding-top:calc(var(--wz-bar) + 8px)}
  #printBox .pb{gap:10px}
 }
 @media(max-width:350px){#printBox .pb-seg button{font-size:12.5px;padding:10px 4px}#printBox .pb-row .b{font-size:13px!important}}
+
+/* =====================================================================================================
+   v13 · UNIFIED BUTTON SYSTEM  (loaded last, so it wins over the per-page rules)
+   primary  = gradient CTA          (.btn .go .pick .b .wz-btn.pri .pbtn.cam)
+   secondary= white outline button  (.b.g .wz-btn .prev-btn .pbtn .add-more)
+   pill     = option selectors      (.seg button, .seg2, .pb-seg, .sw)   · selected = solid blue, white text
+   All share: 46px height (38px small), 14px radius, 700 weight, press feedback, focus ring, no awkward wrapping.
+   ===================================================================================================== */
+:root{--bt-h:46px;--bt-h-sm:38px;--bt-r:14px;--bt-ink:#2d33c4;--bt-line:#ccd2ff;--bt-line-h:#98a3ff;--bt-soft:#f4f5ff;
+ --bt-grad:linear-gradient(135deg,#4f5bff 0%,#6d5cff 52%,#8f56f2 100%);--bt-sel:linear-gradient(135deg,#3346f0,#5b4bf5);
+ --bt-ring:0 0 0 3px rgba(79,91,255,.30);--bt-ease:cubic-bezier(.2,.7,.2,1)}
+
+/* ---- shared geometry + feedback ---- */
+body :is(.btn,.go,.b,.wz-btn,.pick,.pbtn,.prev-btn,.add-more){
+ box-sizing:border-box;min-height:var(--bt-h);padding:0 20px!important;border-radius:var(--bt-r)!important;
+ font-family:inherit;font-size:15px;font-weight:700;line-height:1.15;letter-spacing:.003em;text-align:center;text-wrap:balance;
+ gap:8px;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;cursor:pointer;
+ transition:transform .16s var(--bt-ease),box-shadow .22s var(--bt-ease),background-color .2s,border-color .2s,color .2s,filter .2s!important}
+body :is(.wz-btn,.pbtn,.pick,.prev-btn,.btn,.b){display:inline-flex;align-items:center;justify-content:center}
+body :is(.btn,.go,.b,.wz-btn,.pick,.pbtn,.prev-btn,.add-more) svg{width:17px;height:17px;flex:none}
+body :is(.btn,.go,.b,.wz-btn,.pick,.pbtn,.prev-btn,.add-more):focus-visible{outline:0!important;box-shadow:var(--bt-ring)!important}
+body :is(.btn,.go,.b,.wz-btn,.pick,.pbtn,.prev-btn,.add-more):disabled,
+body :is(.btn,.go,.b,.wz-btn,.pick,.pbtn,.prev-btn)[disabled]{opacity:.5;cursor:not-allowed;transform:none!important;filter:saturate(.55);pointer-events:none}
+
+/* small variant */
+body :is(.b.sm,.wz-btn.sm,.file .prev-btn,.prev-btn){min-height:var(--bt-h-sm);padding:0 14px!important;font-size:13.5px;border-radius:12px!important}
+
+/* ---- primary ---- */
+body :is(.btn,.go,.pick,.wz-btn.pri,.b:not(.g),.pbtn.cam){
+ color:#fff!important;-webkit-text-fill-color:#fff;background:var(--bt-grad)!important;border:0!important;
+ box-shadow:0 10px 22px -12px rgba(79,91,255,.9),inset 0 1px 0 rgba(255,255,255,.28)!important}
+body :is(.btn,.go,.pick,.wz-btn.pri,.b:not(.g),.pbtn.cam):hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.06);
+ box-shadow:0 14px 26px -12px rgba(79,91,255,.95),inset 0 1px 0 rgba(255,255,255,.32)!important}
+body :is(.btn,.go,.pick,.wz-btn.pri,.b:not(.g),.pbtn.cam):active:not(:disabled){transform:translateY(1px) scale(.985);filter:brightness(.97);
+ box-shadow:0 4px 10px -6px rgba(79,91,255,.8),inset 0 1px 2px rgba(0,0,0,.12)!important}
+body :is(.btn,.go,.pick,.wz-btn.pri,.b:not(.g),.pbtn.cam):focus-visible{box-shadow:var(--bt-ring),0 10px 22px -12px rgba(79,91,255,.9)!important}
+
+/* ---- secondary ---- */
+body :is(.b.g,.wz-btn:not(.pri),.prev-btn,.pbtn:not(.cam),.add-more){
+ color:var(--bt-ink)!important;-webkit-text-fill-color:var(--bt-ink);background:#fff!important;
+ border:1.5px solid var(--bt-line)!important;box-shadow:0 1px 2px rgba(15,23,42,.05)!important}
+body :is(.b.g,.wz-btn:not(.pri),.prev-btn,.pbtn:not(.cam),.add-more):hover:not(:disabled){
+ background:var(--bt-soft)!important;border-color:var(--bt-line-h)!important;transform:translateY(-1px);box-shadow:0 8px 16px -12px rgba(79,91,255,.7)!important}
+body :is(.b.g,.wz-btn:not(.pri),.prev-btn,.pbtn:not(.cam),.add-more):active:not(:disabled){background:#eceeff!important;transform:translateY(1px) scale(.985);box-shadow:none!important}
+body :is(.b.g,.wz-btn:not(.pri),.prev-btn,.pbtn:not(.cam),.add-more):focus-visible{box-shadow:var(--bt-ring)!important;border-color:var(--bt-line-h)!important}
+body .add-more{border-style:dashed!important;border-color:#a5b4ff!important}
+body .wz-f :is(.btn,.go,.wz-btn){min-height:50px;font-size:15.5px}
+body .wz-act{gap:10px}
+
+/* two-line download buttons (Both JPGs / Sheet JPG): keep both lines tidy */
+body .b.pb-dl{min-height:52px;padding:0 14px!important;gap:10px;text-align:left}
+body .b.pb-dl .t{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
+body .b.pb-dl .t1{font-size:14px;font-weight:800;line-height:1.1}
+body .b.pb-dl .t2{font-size:11.5px;font-weight:600;line-height:1.1;opacity:.75;white-space:nowrap}
+body .b.hero{min-height:50px;font-size:15.5px}
+
+/* dark "Rotate / Zoom" tools inside the file previewer */
+body .preview-tool-btn{min-height:var(--bt-h-sm);padding:0 14px;border-radius:12px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.09);color:#fff;
+ font:700 13.5px/1.1 inherit;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;cursor:pointer;
+ transition:transform .16s var(--bt-ease),background-color .2s,border-color .2s}
+body .preview-tool-btn:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.34)}
+body .preview-tool-btn:active{transform:scale(.96)}
+body .preview-tool-btn:focus-visible{outline:0;box-shadow:0 0 0 3px rgba(255,255,255,.35)}
+
+/* ---- option pills: Photo size / Print on / Print mode / Paper size / DPI / Fit ---- */
+body .seg,body .wz .seg{display:flex;flex-wrap:wrap;gap:8px;border:0!important;background:transparent!important;border-radius:0;overflow:visible}
+body .seg button,body .wz .seg button{
+ flex:1 1 auto;box-sizing:border-box;min-width:0;min-height:44px;padding:0 14px!important;margin:0;
+ border:1.5px solid var(--bt-line)!important;border-radius:12px!important;background:#fff;color:#2b3350;
+ font-family:inherit;font-size:14px;font-weight:700;line-height:1.15;white-space:nowrap;text-align:center;cursor:pointer;
+ display:inline-flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 1px 2px rgba(15,23,42,.04);
+ transition:transform .16s var(--bt-ease),box-shadow .2s,background-color .2s,border-color .2s,color .2s!important}
+body .seg button:hover:not(:disabled):not(.on){background:var(--bt-soft);border-color:var(--bt-line-h)!important;color:var(--bt-ink)}
+body .seg button:active:not(:disabled){transform:scale(.97)!important}
+body .seg button:focus-visible{outline:0;box-shadow:var(--bt-ring)}
+body .seg button:disabled{opacity:.45;cursor:not-allowed}
+body .seg button.on,body .seg button.on:hover,body .seg button[aria-pressed="true"],
+body .wz .seg button.on,body #sizeSeg button.on,body #sheetSeg button.on,body #paperSeg button.on{
+ background:var(--bt-sel)!important;color:#fff!important;-webkit-text-fill-color:#fff;border-color:transparent!important;font-weight:800;
+ box-shadow:0 8px 16px -10px rgba(51,70,240,.95),inset 0 1px 0 rgba(255,255,255,.22)!important}
+/* inline segmented groups that must not stretch (e.g. Normal / Tricolour Aadhaar) */
+body .seg[style*="inline-flex"]{flex-wrap:nowrap}
+
+/* segmented trays in the print panel + wizard toggle */
+body :is(.seg2,#printBox .pb-seg){gap:4px;padding:4px;border-radius:14px}
+body :is(.seg2 button,#printBox .pb-seg button){min-height:42px;border-radius:11px!important;font-size:14px;font-weight:700;white-space:nowrap;transition:background-color .2s,color .2s,transform .16s var(--bt-ease),box-shadow .2s}
+body :is(.seg2 button.on,#printBox .pb-seg button.on){background:var(--bt-sel)!important;color:#fff!important;-webkit-text-fill-color:#fff;font-weight:800;box-shadow:0 6px 12px -8px rgba(51,70,240,.9)!important}
+
+/* background colour swatches */
+body .wz .sw{gap:8px}
+body .wz .sw button{min-height:36px;padding:4px 13px 4px 6px!important;font-size:13px!important;font-weight:700!important;white-space:nowrap;border:1.5px solid var(--bt-line)!important;transition:transform .16s var(--bt-ease),border-color .2s,box-shadow .2s,background-color .2s}
+body .wz .sw button:hover:not(.on){border-color:var(--bt-line-h)!important;background:var(--bt-soft)}
+body .wz .sw button:active{transform:scale(.96)}
+body .wz .sw button.on,body .wz .sw button.orig.on{background:var(--bt-sel)!important;border-color:transparent!important;color:#fff!important;font-weight:800!important;box-shadow:0 6px 12px -8px rgba(51,70,240,.9)!important}
+body .wz .sw label.cust{min-height:36px;font-weight:700}
+
+/* ---- phones ---- */
+@media(max-width:420px){
+ body :is(.btn,.go,.b,.wz-btn,.pick,.pbtn,.prev-btn,.add-more){font-size:14.5px;padding:0 14px!important}
+ body .seg button,body .wz .seg button{font-size:13.5px;padding:0 10px!important}
+ body .seg,body .wz .seg{gap:6px}
+ body .b.pb-dl{padding:0 10px!important}
+}
+@media(prefers-reduced-motion:reduce){body :is(.btn,.go,.b,.wz-btn,.pick,.pbtn,.prev-btn,.add-more,.seg button){transition:none!important;transform:none!important}}

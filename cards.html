@@ -1,6 +1,12 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
-<meta name="description" content="Free ID card crop tools: Aadhaar, PAN, ration card and more on A4 or 4x6, plus smart scanner. Add to print order or save as PDF.">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="256x256" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+
+<meta name="description" content="Free ID card crop tools: Aadhaar, PAN, ration card, e-Shram and more on A4 or 4x6, plus smart scanner. Add to print order or save as PDF.">
 <meta name="theme-color" content="#3b6cff">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Card Crop & Smart Scanner – therajesh.shop</title>
@@ -630,12 +636,12 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
 
 <!-- ============ CARD CROP ============ -->
 <section id="cardsMode">
- <div class="page-head"><h1>Card crop</h1><span class="trust-pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.2 2 4.5 13.4h6.1L9.8 22l9.7-12.2h-6.2z"/></svg>Instant Auto-Crop · 100% on-device</span><p>Aadhaar, Ration, PAN, Ayushman, Voter, APAAR, ABHA. Crops to PVC size (85.60 × 53.98 mm). Files are processed in your browser and never uploaded until you send an order.</p></div>
+ <div class="page-head"><h1>Card crop</h1><span class="trust-pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.2 2 4.5 13.4h6.1L9.8 22l9.7-12.2h-6.2z"/></svg>Instant Auto-Crop · 100% on-device</span><p>Aadhaar, Ration, PAN, Ayushman, Voter, APAAR, ABHA, e-Shram. Select up to 5 files at once. Crops to PVC size (85.60 × 53.98 mm). Files are processed in your browser and never uploaded until you send an order.</p></div>
  <button type="button" class="scan-quick" id="scanQuick"><span class="sq-i">📸</span><span><b>Auto Crop Aadhaar PAN Voter</b><small>Take or choose a photo — the document is straightened and placed on A4</small></span></button>
  <div id="tilesBox"><div class="tiles" id="tiles"></div></div>
  <div class="panel hidden" id="tool">
   <label class="drop" for="file"><span class="ic"><svg><use href="#i-up"/></svg></span><span><strong id="pickL">Select file</strong><span id="hint"></span></span></label>
-  <input type="file" id="file">
+  <input type="file" id="file" multiple>
   <div class="row"><button class="b g sm hidden" id="pwBtn" type="button">Enter password</button></div>
   <div id="st" aria-live="polite"></div>
 
@@ -807,7 +813,8 @@ pan:{minW:.25,maxW:1,n:'PAN / Others',bn:'প্যান',d:'PDF, JPG or PNG',i
 ayushman:{minW:.3,maxW:1,n:'Ayushman Card',bn:'আয়ুষ্মান',d:'2-page PDF · page 1 front, page 2 back',pdf:1,pages:2,F:[0,0,1,1],B:[0,0,1,1],det:'red',inset:0},
 voter:{n:'Voter Card',bn:'ভোটার কার্ড',d:'e-EPIC PDF · front and back',pdf:1,F:[.03,.03,.47,.3],B:[.5,.03,.47,.3],det:'ink',inset:.004},
 abc:{minW:.4,maxW:1,n:'ABC / APAAR ID',bn:'অ্যাপার',d:'PDF, JPG or PNG · front only',img:1,pdf:1,one:1,fx:1,F:[.04,.03,.92,.4],det:'ink',inset:.002},
-abha:{n:'ABHA Card',bn:'আভা কার্ড',d:'PDF · front and back',pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'cards',inset:.004}};
+abha:{n:'ABHA Card',bn:'আভা কার্ড',d:'PDF · front and back',pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'cards',inset:.004},
+eshram:{minW:.3,maxW:1,n:'e-Shram Card',bn:'ই-শ্রম কার্ড',d:'PDF, JPG or PNG · front and back',img:1,pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'cards',inset:.004}};
 let fitMode=(()=>{try{return localStorage.getItem('cardFit')==='keep'?'keep':'fill'}catch(e){return 'fill'}})(),K,Tp,pp=[],pages=[],bx={},dpi=300,cc=0,batch=[],pdfBuf=null,srcFile=null,selS='F',sheetPaper='A4';
 
 const CA=(()=>{
@@ -823,7 +830,8 @@ ration:bg('#fff7ed')+'<rect width="120" height="15" fill="#ea580c"/>'+tx(8,10.5,
 voter:bg('#f5f3ff')+'<rect width="120" height="76" fill="url(#vg)"/><defs><linearGradient id="vg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ede9fe"/><stop offset="1" stop-color="#fce7f3"/></linearGradient></defs>'+'<rect width="120" height="14" fill="#7c3aed"/>'+tx(8,9.5,'ভোটার কার্ড · ELECTOR PHOTO ID',5.8,'#fff',800)+ph(9,20,26,30,'#8b5cf6')+ln(42,23,48,'#c4b5fd')+ln(42,30,38,'#c4b5fd')+ln(42,37,44,'#c4b5fd')+tx(42,48,'WB/01/001/123456',6,'#5b21b6',800)+'<g fill="#1f2937">'+Array.from({length:30},(_,i)=>`<rect x="${10+i*3.4}" y="58" width="${i%3?1.4:2.4}" height="12"/>`).join('')+'</g>',
 ayushman:bg('#fff')+'<rect width="120" height="5" fill="#ff9933"/><rect y="5" width="120" height="3" fill="#fff"/><rect y="8" width="120" height="3" fill="#138808"/><path d="M104 18c-3-4-9 0-5 5l5 5 5-5c4-5-2-9-5-5z" fill="#ef4444"/>'+tx(9,22,'AYUSHMAN BHARAT',7.5,'#0f766e',800)+tx(9,30,'আয়ুষ্মান কার্ড · PM-JAY',4.8,'#64748b',700)+ph(9,36,24,26,'#14b8a6')+ln(40,39,50,'#99f6e4')+ln(40,46,40,'#99f6e4')+ln(40,53,46,'#99f6e4')+tx(60,70.5,'12 3456 7890 1234',7,'#0f766e',800,'middle')+'<rect y="73" width="120" height="3" fill="#0f766e"/>',
 abc:bg('#eff6ff')+'<rect width="120" height="16" fill="#2563eb"/>'+tx(8,11,'APAAR ID · ABC',8,'#fff',800)+'<path d="M100 5l10 4-10 4-10-4z" fill="#fff"/><path d="M95 10v4c3 2 7 2 10 0v-4" fill="none" stroke="#fff" stroke-width="1.4"/>'+ph(9,22,24,28,'#3b82f6')+ln(40,25,56,'#93c5fd')+ln(40,32,44,'#93c5fd')+tx(40,46,'Academic Bank of Credits',4.8,'#1d4ed8',700)+tx(60,64,'1234-5678-9012',9,'#1e3a8a',900,'middle')+'<rect y="73" width="120" height="3" fill="#2563eb"/>',
-abha:bg('#ecfeff')+'<rect width="120" height="76" fill="url(#ag)"/><defs><linearGradient id="ag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ecfeff"/><stop offset="1" stop-color="#dbeafe"/></linearGradient></defs>'+'<rect width="120" height="15" fill="#0891b2"/>'+tx(8,10.5,'ABHA CARD · আভা',7.6,'#fff',800)+'<circle cx="107" cy="7.5" r="5.5" fill="#fff"/><path d="M107 4v7M103.500 7.500h7" stroke="#0891b2" stroke-width="2" stroke-linecap="round"/>'+ph(9,21,24,28,'#0ea5e9')+ln(40,24,50,'#a5f3fc')+ln(40,31,40,'#a5f3fc')+qr(94,34,20,'#0c4a6e')+tx(40,47,'ABDM · Health Account',4.4,'#0e7490',700)+tx(10,66,'12-3456-7890-1234',8,'#0c4a6e',900)+'<rect y="73" width="120" height="3" fill="#0891b2"/>'};
+abha:bg('#ecfeff')+'<rect width="120" height="76" fill="url(#ag)"/><defs><linearGradient id="ag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ecfeff"/><stop offset="1" stop-color="#dbeafe"/></linearGradient></defs>'+'<rect width="120" height="15" fill="#0891b2"/>'+tx(8,10.5,'ABHA CARD · আভা',7.6,'#fff',800)+'<circle cx="107" cy="7.5" r="5.5" fill="#fff"/><path d="M107 4v7M103.500 7.500h7" stroke="#0891b2" stroke-width="2" stroke-linecap="round"/>'+ph(9,21,24,28,'#0ea5e9')+ln(40,24,50,'#a5f3fc')+ln(40,31,40,'#a5f3fc')+qr(94,34,20,'#0c4a6e')+tx(40,47,'ABDM · Health Account',4.4,'#0e7490',700)+tx(10,66,'12-3456-7890-1234',8,'#0c4a6e',900)+'<rect y="73" width="120" height="3" fill="#0891b2"/>',
+eshram:bg('#fff7ed')+'<rect width="120" height="16" fill="#1d4ed8"/>'+tx(8,11,'e-SHRAM · ই-শ্রম',7.6,'#fff',800)+'<circle cx="107" cy="8" r="5.5" fill="#f97316"/><circle cx="107" cy="8" r="2.2" fill="#fff"/>'+tx(8,26,'Unorganised Worker ID · UAN',4.6,'#9a3412',700)+ph(9,31,24,28,'#f97316')+ln(40,34,54,'#fdba74')+ln(40,41,42,'#fdba74')+ln(40,48,48,'#fdba74')+tx(40,62,'1234 5678 9012',8,'#1e3a8a',900)+'<rect y="73" width="120" height="3" fill="#f97316"/>'};
 })();
 const cardSvg=k=>`<svg class="ca" viewBox="0 0 120 76" aria-hidden="true">${CA[k]||''}</svg>`;
 const tb=t=>'<span class="tbs"><i>'+(t.one?'Front':'Front & Back')+' · '+(t.img?'PDF/JPG':'PDF')+'</i></span>';
@@ -839,19 +847,29 @@ $('setBtn').onclick=()=>openPop('setBox');$('printBtn').onclick=()=>openPop('pri
 function st(m,e){$('st').textContent=m||'';$('st').className=e?'e':''}
 function pick(k){K=k;Tp=T[k];$('tool').classList.remove('hidden');pages.forEach(freeCanvas);pages=[];bx={};pdfBuf=null;$('file').value='';
  document.querySelectorAll('.tile').forEach(b=>b.classList.toggle('on',b.dataset.k==k));
- $('file').accept=Tp.img?'.pdf,.jpg,.jpeg,.png':'.pdf';$('pickL').textContent='Select '+Tp.n+(Tp.img?' (PDF or image)':' (PDF)');
- $('hint').textContent='Up to 15 MB · '+Tp.d;$('pwBtn').classList.add('hidden');$('pw').value='';$('ccRow').classList.toggle('hidden',!Tp.cc);
+ $('file').accept=Tp.img?'.pdf,.jpg,.jpeg,.png':'.pdf';$('file').multiple=true;Q=[];lastPw='';$('pickL').textContent='Select '+Tp.n+' (up to 5 files)';
+ $('hint').textContent='Up to 5 files at once · 15 MB each · '+Tp.d;$('pwBtn').classList.add('hidden');$('pw').value='';$('ccRow').classList.toggle('hidden',!Tp.cc);
  $('fxRow').classList.toggle('hidden',!Tp.fx);$('bWrap').classList.toggle('hidden',!!Tp.one);$('dBothL').textContent=Tp.one?'Front only':'Front + Back';$('fl').textContent=Tp.one?Tp.n+' front':'Front';
  $('work').classList.add('hidden');if(window.Wiz)Wiz.sync('card',0);st('')}
-$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;
- if(!Tp)return st('Tap a card type above first.',1);
- if(f.size>15*1048576)return st('File is too large. Maximum is 15 MB.',1);
+/* ---- multi-file: up to 5 files in one go. Each file is auto-cropped and added to the A4 batch (5 pairs per sheet) ---- */
+const MAXF=5;let Q=[],lastPw='',multiN=0,multiDone=0;
+async function checkFile(f){
+ if(f.size>15*1048576)return'File is too large. Maximum is 15 MB.';
  const h=new Uint8Array(await f.slice(0,8).arrayBuffer()),isPdf=String.fromCharCode(...h.slice(0,4))=='%PDF',
  isImg=(h[0]==0xFF&&h[1]==0xD8)||(h[0]==0x89&&h[1]==0x50);
- if(!(isPdf||(Tp.img&&isImg)))return st(Tp.img?'Only PDF, JPG or PNG files are allowed.':'Only a genuine PDF file is allowed.',1);
- srcFile=f;pdfBuf=isPdf?await f.arrayBuffer():null;
- if(Tp.pw)return showPw('');
- load('')};
+ if(!(isPdf||(Tp.img&&isImg)))return Tp.img?'Only PDF, JPG or PNG files are allowed.':'Only a genuine PDF file is allowed.';
+ f._pdf=isPdf;return''}
+$('file').onchange=async e=>{let files=[...e.target.files];if(!files.length)return;
+ if(!Tp){e.target.value='';return st('Tap a card type above first.',1)}
+ if(files.length>MAXF){files=files.slice(0,MAXF);const m='You can process up to '+MAXF+' files in one batch. Only the first '+MAXF+' were taken.';toast(m);try{alert(m)}catch(_){}}
+ e.target.value='';
+ const ok=[];for(const f of files){const err=await checkFile(f);if(err){toast(f.name.slice(0,28)+': '+err);if(files.length==1)return st(err,1)}else ok.push(f)}
+ if(!ok.length)return st('No usable file was selected.',1);
+ batch=[];batchUI();multiN=ok.length>1?ok.length:0;multiDone=0;lastPw='';Q=ok.slice();nextFile()};
+async function nextFile(){const f=Q.shift();if(!f)return;srcFile=f;pdfBuf=f._pdf?await f.arrayBuffer():null;
+ if(multiN)st('File '+(multiDone+1)+' of '+multiN+': '+f.name.slice(0,30)+'…');
+ if(Tp.pw&&!lastPw)return showPw('');
+ load(lastPw)}
 function showPw(err){$('pwErr').textContent=err||'';$('pwHint').textContent=Tp.pw?'Aadhaar PDF password is the first 4 letters of your name in CAPITALS followed by your birth year (for example RAJE1990).':'This PDF is protected. Type its password to continue.';
  $('pwBtn').classList.remove('hidden');$('pwM').classList.remove('hidden');st('Waiting for the password…');setTimeout(()=>{const i=$('pw');i.focus();i.select()},120)}
 const isPw=e=>!!e&&(e.name=='PasswordException'||/password/i.test((e.message||'')+' '+(e.name||'')));
@@ -859,14 +877,19 @@ $('pwBtn').onclick=()=>srcFile?showPw(''):st('Select the PDF first.',1);
 $('pwCancel').onclick=()=>{$('pwM').classList.add('hidden');st('Press Enter password to unlock the PDF.')};
 $('pwShowC').onchange=e=>{$('pw').style.webkitTextSecurity=$('pw').style.textSecurity=e.target.checked?'none':'disc'};
 $('pwF').onsubmit=e=>{e.preventDefault();const v=$('pw').value;if(!v){$('pwErr').textContent='Please type the password.';return $('pw').focus()}
- $('pwM').classList.add('hidden');load(v)};
+ $('pwM').classList.add('hidden');lastPw=v;load(v)};
 async function open_(pass){const vs=pass?[...new Set([pass,pass.trim(),pass.trim().toUpperCase(),pass.trim().toLowerCase()])]:[undefined];let last;
  for(const v of vs){try{await render(v);return}catch(e){last=e;if(!isPw(e))throw e}}throw last}
 async function load(pass){st('Reading file…');pages=[];bx={};
  try{await open_(pass)}catch(err){
-  if(isPw(err))return showPw(pass?'Wrong password. Check it and try again.':'');
-  console.error(err);return st('Could not read this file: '+(err&&err.message||err),1)}
- st('Finding the card edges…');await autoCrop();$('work').classList.remove('hidden');if(window.Wiz){Wiz.sync('card',1);Wiz.open('card')}
+  if(isPw(err)){lastPw='';return showPw(pass?'Wrong password. Check it and try again.':'')}
+  console.error(err);if(multiN&&Q.length){toast('Skipped '+srcFile.name.slice(0,24)+' (could not read)');return nextFile()}
+  return st('Could not read this file: '+(err&&err.message||err),1)}
+ st('Finding the card edges…');await autoCrop();
+ if(multiN){try{layoutBoxes();batch.push(await pair());multiDone++;batchUI()}catch(e){console.error(e)}
+  if(Q.length){st('File '+multiDone+' of '+multiN+' added to the A4 batch…');return nextFile()}
+  toast(multiDone+' of '+multiN+' files added to the A4 batch')}
+ $('work').classList.remove('hidden');if(window.Wiz){Wiz.sync('card',1);Wiz.open('card')}
  st(rMsg()||(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(isFree()?(redFull?'No red border found, so the whole page is used as the card. Drag the yellow boxes if you need less.':(Tp.det=='red'?'Red border found on both pages. Cropped exactly inside it.':'Front and back card edges found. Cropped exactly to each card.')):'Cards found and cropped. Adjust the boxes if needed.')),rMsg()?!greenOK:miss);layoutBoxes();update();
   if(window.pvWarn)pvWarn(!Tp.one&&bx.B&&bx.B===bx.F?'Back uses the same area as Front for a single photo. Tap Adjust crop to place the Back box.':'')}
 async function render(pass){pages.forEach(freeCanvas);pages=[];pp=[];

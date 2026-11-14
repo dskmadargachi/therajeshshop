@@ -2,6 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="256x256" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Digital Seva Kendra – print documents online, passport photos, Aadhaar, PAN and ration card ID sheets, scans and PDFs. Scan the QR, upload your file, pay by UPI and collect your print.">
 <meta name="keywords" content="print online, document printing, passport photo print, Aadhaar card print, PAN card print, ration card print, PDF tools, scan and print, Digital Seva Kendra, therajesh.shop">
@@ -180,8 +186,12 @@ input[type=range]{width:100%;accent-color:var(--brand)}
 .sw input[type=color]{width:38px;height:38px;border:0;padding:0;background:none;cursor:pointer}
 .cropbox{display:flex;justify-content:center;margin:12px 0}
 #crop{border-radius:6px;box-shadow:0 0 0 2px var(--brand);touch-action:none;background:#e2e8f0;cursor:grab}
+.pp-save{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 14px}.pp-save .err{grid-column:1/-1;margin:0}.pp-save .b{width:100%}
 .prog{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px}
 .prog i{display:block;height:100%;width:0;background:var(--brand);transition:width .2s}
+.prog.indet i{width:38%!important;transition:none;animation:progSlide 1.05s ease-in-out infinite}
+@keyframes progSlide{0%{margin-left:-38%}100%{margin-left:100%}}
+@media (prefers-reduced-motion:reduce){.prog.indet i{animation:none;width:100%!important}}
 .sheet{max-width:100%;border:1px solid var(--line);border-radius:var(--r-sm);margin-top:10px}
 .privacy{font-size:13px;color:var(--mute);text-align:center;margin-top:22px}
 .tools-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:24px}
@@ -985,7 +995,7 @@ body .tile:active{transform:scale(.97)!important}
       <button data-v="in" class="on" type="button">35×45 mm</button>
       <button data-v="us" type="button">2×2 inch</button>
       <button data-v="st" type="button">25×35 mm</button>
-      <button data-v="pass" type="button">Passport 3×3.5 cm</button>
+      <button data-v="pass" type="button">3×3.5 cm</button>
       <button data-v="custom" type="button">Custom</button>
      </div>
      <div id="customSize" class="csrow hidden">
@@ -1003,11 +1013,21 @@ body .tile:active{transform:scale(.97)!important}
      <label class="l" for="ppCount">How many photos?</label>
      <select id="ppCount"></select>
      <div class="hint" id="ppInfo"></div>
+     <div class="pp-save" role="group" aria-label="Save your photo sheet">
+      <button class="b g" type="button" data-ppsave="jpg"><svg><use href="#i-down"/></svg>Save as JPG</button>
+      <button class="b g" type="button" data-ppsave="pdf"><svg><use href="#i-pdf"/></svg>Save as PDF</button>
+      <div class="err pp-save-err" aria-live="polite"></div>
+     </div>
     </div>
    </section>
    <section class="wz-pane" data-flow="pp" data-step="3">
     <div class="pre-done">
      <h3>Details &amp; pay</h3><p class="sub">Your sheet price: <span class="price-badge" id="ppBadge">₹0</span></p>
+     <div class="pp-save" role="group" aria-label="Save your photo sheet">
+      <button class="b g" type="button" data-ppsave="jpg"><svg><use href="#i-down"/></svg>Save as JPG</button>
+      <button class="b g" type="button" data-ppsave="pdf"><svg><use href="#i-pdf"/></svg>Save as PDF</button>
+      <div class="err pp-save-err" aria-live="polite"></div>
+     </div>
      <label class="l" for="ppName">Your name</label>
      <input type="text" id="ppName" placeholder="Enter your name" maxlength="60" autocomplete="name">
      <label class="l" for="ppPhone">Mobile number (optional)</label>
@@ -1086,7 +1106,7 @@ function showTab(tab) {
   history.replaceState(null, '', tab === 'pp' ? '#pp' : location.pathname);
 }
 $('tabDoc').onclick = () => showTab('doc');
-$('tabPP').onclick = () => showTab('pp');
+$('tabPP').onclick = () => { showTab('pp'); setTimeout(() => { try { warmBg(); } catch {} }, 600); };
 if (location.hash === '#pp') showTab('pp');
 
 function seg(id, cb) {
@@ -1502,19 +1522,20 @@ async function post(fd) {
    PASSPORT PHOTO
    ===================================================== */
 const SIZES = { in: { w: 35, h: 45, label: '35×45 mm' }, us: { w: 50.8, h: 50.8, label: '2×2 inch' }, st: { w: 25, h: 35, label: '25×35 mm' },
-  pass: { w: 30, h: 35, label: 'Passport 3×3.5 cm' }, custom: { w: 35, h: 45, label: 'Custom 35×45 mm' } };
-const PASS_STD = { w: 30, h: 35, label: 'Passport 3×3.5 cm' };      // Passport button: always 3 x 3.5 cm
+  pass: { w: 30, h: 35, label: '3×3.5 cm' }, custom: { w: 35, h: 45, label: 'Custom 35×45 mm' } };
+const PASS_STD = { w: 30, h: 35, label: '3×3.5 cm' };      // 3×3.5 cm button: always 3 x 3.5 cm
 function syncPassSize() { if (pp.size === 'pass') SIZES.pass = PASS_STD; }
 const SHEETS = { '4x6': { w: 101.6, h: 152.4 }, A4: { w: 210, h: 297 } };
 const DPI = 300; const MARGIN = 3; const GAP = 2;
 const mm2px = (mm, dpi = DPI) => Math.round(mm / 25.4 * dpi);
 
-function layout(sheetKey, sizeKey) { return layoutP(sheetKey, SIZES[sizeKey]); }
-function layoutP(sheetKey, P) {
+function layout(sheetKey, sizeKey) { return layoutP(sheetKey, SIZES[sizeKey], sizeKey === 'pass' && sheetKey === 'A4'); }
+function layoutP(sheetKey, P, wideA4) {
   const S = SHEETS[sheetKey]; let best = null;
   // 4x6 paper always stays upright (portrait); if more photos fit with them turned sideways, they are rotated 90°.
-  const lands = sheetKey === '4x6' ? [false] : [false, true];
-  const rots = sheetKey === '4x6' ? [false, true] : [false];
+  // 3x3.5 cm on A4 is laid out on a landscape page, 9 photos per row x 5 rows = 45 photos.
+  const lands = wideA4 ? [true] : sheetKey === '4x6' ? [false] : [false, true];
+  const rots = wideA4 ? [false] : sheetKey === '4x6' ? [false, true] : [false];
   for (const land of lands) for (const rot of rots) {
     const W = land ? S.h : S.w, H = land ? S.w : S.h;
     const cw = rot ? P.h : P.w, ch = rot ? P.w : P.h;
@@ -1598,7 +1619,7 @@ $('ppCam').addEventListener('change', (e) => {
 $('ppPick').addEventListener('change', async (e) => {
   const f = e.target.files[0]; if (!f) return; $('ppErr').textContent = '';
   try {
-    pp.base = await loadBase(f); pp.cutout = null; pp.cutoutKind = ''; aiBase = null; aiPromise = null; setTimeout(startAI, 50); pp.bg = ''; pp.zoom = 1; pp.ox = 0; pp.oy = 0;
+    pp.base = await loadBase(f); pp.cutout = null; pp.cutoutKind = ''; aiBase = null; aiPromise = null; bgIdle(); setTimeout(startAI, 250); pp.bg = ''; pp.zoom = 1; pp.ox = 0; pp.oy = 0;
     $('zoom').value = 1;
     $('ppWork').classList.remove('hidden');
     $('ppOpts').classList.remove('hidden');
@@ -1663,28 +1684,95 @@ function fastCutout(base) {
   x.putImageData(im, 0, 0); return c;
 }
 
-/* AI background removal: small model + small input image + started the moment the photo is chosen */
+/* ---------------------------------------------------------------------------------------------
+   BACKGROUND REMOVAL (fast path)
+   1. The photo is shrunk to max 800 px for the model only (the model resizes to 1024 anyway).
+   2. Only the ALPHA MASK is kept. It is cached and stretched over the full-resolution photo, so print edges stay
+      crisp and colours come from the original pixels.
+   3. Changing colour / zoom / position never runs the model again, it only repaints from the cached cutout.
+   4. The model runs in a Web Worker (UI never freezes). If a browser cannot do that, it falls back to the main
+      thread after a short idle delay.
+   5. A quick flood-fill cutout (about 0.1 s) is shown immediately; the AI result replaces it when ready.
+   --------------------------------------------------------------------------------------------- */
+const BG_LIB = 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm';
+const BG_MAX = 800;
+let bgWorker = null, bgWorkerBad = false; const bgJobs = new Map();
+
+function getBgWorker() {
+  if (bgWorkerBad) return null; if (bgWorker) return bgWorker;
+  try {
+    const src = `import * as lib from '${BG_LIB}';
+      const rb = lib.removeBackground || lib.default;
+      self.onmessage = async (e) => {
+        const m = e.data;
+        try {
+          if (m.warm) { if (lib.preload) await lib.preload({ model: 'isnet_quint8', device: 'cpu' }); return; }
+          const run = (device) => rb(m.blob, { model: 'isnet_quint8', device, output: { format: 'image/png' },
+            progress: (k, cur, total) => self.postMessage({ id: m.id, p: total ? cur / total : 0 }) });
+          let out; try { out = await run(m.gpu ? 'gpu' : 'cpu'); } catch (err) { if (!m.gpu) throw err; out = await run('cpu'); }
+          self.postMessage({ id: m.id, out });
+        } catch (err) { self.postMessage({ id: m.id, err: String(err && err.message || err) }); }
+      };`;
+    bgWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })), { type: 'module' });
+    bgWorker.onmessage = (e) => { const m = e.data, j = bgJobs.get(m.id); if (!j) return; if (m.p != null) j.prog(m.p); else { bgJobs.delete(m.id); if (m.out) j.ok(m.out); else j.no(new Error(m.err || 'failed')); } };
+    bgWorker.onerror = () => { bgWorkerBad = true; try { bgWorker.terminate(); } catch {} bgWorker = null; bgJobs.forEach((j) => j.no(new Error('worker'))); bgJobs.clear(); };
+    return bgWorker;
+  } catch { bgWorkerBad = true; return null; }
+}
+function warmBg() { const w = getBgWorker(); if (w) try { w.postMessage({ warm: 1 }); } catch {} }    // downloads the model while the customer picks a photo
+
+function runBgModel(blob, onProg) {
+  const w = getBgWorker();
+  if (w) return new Promise((ok, no) => {
+    const id = Date.now() + Math.random(); const guard = setTimeout(() => { bgWorkerBad = true; no(new Error('worker timeout')); }, 45000);
+    bgJobs.set(id, { prog: onProg, ok: (o) => { clearTimeout(guard); ok(o); }, no: (e) => { clearTimeout(guard); no(e); } });
+    try { w.postMessage({ id, blob, gpu: !!navigator.gpu }); } catch (e) { clearTimeout(guard); bgJobs.delete(id); no(e); }
+  }).catch(() => runBgModelMain(blob, onProg));
+  return runBgModelMain(blob, onProg);
+}
+async function runBgModelMain(blob, onProg) {                       // fallback: same model on the main thread, started when the browser is idle
+  await new Promise((r) => (window.requestIdleCallback ? requestIdleCallback(r, { timeout: 1200 }) : setTimeout(r, 400)));
+  if (!bgLib) bgLib = await import(BG_LIB);
+  const rb = bgLib.removeBackground || bgLib.default;
+  const run = (device) => rb(blob, { model: 'isnet_quint8', device, output: { format: 'image/png' }, progress: (k, c, t) => t && onProg(c / t) });
+  try { return await run(navigator.gpu ? 'gpu' : 'cpu'); } catch (e) { if (!navigator.gpu) throw e; return run('cpu'); }
+}
+
+/* full-resolution photo x cached alpha mask -> cutout canvas (this is what gets cached in pp.cutout) */
+function buildCutout(base, alphaSrc) {
+  const c = document.createElement('canvas'); c.width = base.width; c.height = base.height;
+  const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
+  x.drawImage(base, 0, 0);
+  x.globalCompositeOperation = 'destination-in';
+  x.drawImage(alphaSrc, 0, 0, c.width, c.height);
+  return c;
+}
+function bgBusy(msg, pct) {                                      // immediate visual feedback: moving bar until real progress arrives
+  const pr = $('bgProg'); pr.classList.remove('hidden');
+  if (pct == null) pr.classList.add('indet'); else { pr.classList.remove('indet'); pr.firstElementChild.style.width = Math.round(pct * 100) + '%'; }
+  if (msg) $('bgMsg').textContent = msg;
+}
+function bgIdle() { const pr = $('bgProg'); pr.classList.add('hidden'); pr.classList.remove('indet'); }
+
 function startAI() {
   if (!pp.base) return null;
   if (aiBase === pp.base && aiPromise) return aiPromise;
   const base = pp.base; aiBase = base;
   aiPromise = (async () => {
     try {
-      if (!bgLib) bgLib = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm');
-      const rb = bgLib.removeBackground || bgLib.default;
-      const S = Math.min(1, 640 / Math.max(base.width, base.height)), sm = document.createElement('canvas');
+      const S = Math.min(1, BG_MAX / Math.max(base.width, base.height)), sm = document.createElement('canvas');
       sm.width = Math.max(1, Math.round(base.width * S)); sm.height = Math.max(1, Math.round(base.height * S));
       sm.getContext('2d').drawImage(base, 0, 0, sm.width, sm.height);
       const blob = await new Promise((res) => sm.toBlob(res, 'image/png'));
-      const run = (device) => rb(blob, { model: 'isnet_quint8', device, output: { format: 'image/png' },
-        progress: (k, cur, total) => { if (total && pp.base === base) $('bgProg').firstElementChild.style.width = Math.round(cur / total * 100) + '%'; } });
-      let out; try { out = await run(navigator.gpu ? 'gpu' : 'cpu'); } catch (e) { if (!navigator.gpu) throw e; out = await run('cpu'); }
+      if (pp.base === base && pp.bg) bgBusy(null, null);
+      const out = await runBgModel(blob, (f) => { if (pp.base === base && pp.bg) bgBusy(null, f > 0 && f < 1 ? f : null); });
       if (pp.base !== base) return;
-      pp.cutout = await createImageBitmap(out); pp.cutoutKind = 'ai';
-      $('bgProg').classList.add('hidden');
+      const mask = await createImageBitmap(out);
+      pp.cutout = buildCutout(base, mask); pp.cutoutKind = 'ai'; if (mask.close) mask.close();   // cached: colour / zoom changes reuse it
+      bgIdle();
       if (pp.bg) { $('bgMsg').textContent = 'Done. Edges refined.'; redraw(); }
     } catch (err) {
-      if (pp.base === base) { $('bgProg').classList.add('hidden'); if (pp.cutoutKind === 'fast') $('bgMsg').textContent = 'Quick background removal used.'; }
+      if (pp.base === base) { bgIdle(); if (pp.cutoutKind === 'fast') $('bgMsg').textContent = 'Quick background removal used.'; }
     }
   })();
   return aiPromise;
@@ -1694,12 +1782,13 @@ async function ensureCutout() {
   if (pp.cutout) return true;
   pp.cutoutBusy = true;
   try {
-    startAI(); $('bgProg').classList.remove('hidden'); $('bgMsg').textContent = 'Removing background…';
-    await Promise.race([aiPromise, sleep(3000)]);          // never wait more than 3 seconds for the AI
-    if (!pp.cutout) {
-      pp.cutout = fastCutout(pp.base); pp.cutoutKind = 'fast';
-      $('bgMsg').textContent = 'Quick result shown. Refining the edges in the background…';
-    } else $('bgMsg').textContent = 'Done. You can change the colour any time.';
+    bgBusy('Removing background…', null);
+    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));     // let the bar paint before the quick pass
+    if (!pp.cutout) {                                                            // the AI may have finished meanwhile
+      pp.cutout = buildCutout(pp.base, fastCutout(pp.base)); pp.cutoutKind = 'fast';
+      $('bgMsg').textContent = 'Quick result shown. Refining the edges…';
+      startAI();
+    }
     return true;
   } finally { pp.cutoutBusy = false; }
 }
@@ -1708,7 +1797,7 @@ async function setBg(c) {
   if (pp.cutoutBusy) return;
   pp.bg = c;
   if (c) { const ok = await ensureCutout(); if (!ok) { pp.bg = ''; } }
-  else $('bgMsg').textContent = 'Original background kept.';
+  else { $('bgMsg').textContent = 'Original background kept.'; if (pp.cutoutKind !== 'ai') bgIdle(); }
   redraw();
 }
 $('bgSw').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
@@ -1722,13 +1811,14 @@ $('bgCustom').addEventListener('input', (e) => {
 
 function fillCountOptions() {
   const sel = $('ppCount'); sel.innerHTML = '';
-  if (pp.size === 'pass') {                      // Passport button: only 3 / 6 / 9 / 12 copies
-    [3, 6, 9, 12].forEach((n) => {
+  if (pp.size === 'pass') {                      // 3×3.5 cm: 4×6 -> 3/6/9/12 copies; A4 -> 9/18/27/36/45 (9 per row, 1-5 rows)
+    const a4 = pp.sheet === 'A4', list = a4 ? [9, 18, 27, 36, 45] : [3, 6, 9, 12], top = list[list.length - 1];
+    list.forEach((n) => {
       const o = document.createElement('option'); o.value = n;
-      o.textContent = n + ' copies' + (n === 12 && pp.sheet === '4x6' ? ' (full 4×6 sheet)' : '');
+      o.textContent = n + ' copies' + (a4 ? ` (${n / 9} ${n / 9 === 1 ? 'row' : 'rows'}${n === top ? ', full A4 sheet' : ''})` : (n === top ? ' (full 4×6 sheet)' : ''));
       sel.appendChild(o);
     });
-    sel.value = 12; syncPassSize(); return;
+    sel.value = top; syncPassSize(); return;
   }
   const L = layout(pp.sheet, pp.size);
   const full = Math.max(1, L.n);
@@ -1791,11 +1881,44 @@ function ppRecalc() {
   const price = cfg.passport[pp.sheet] || 0;
   const tooBig = L.n < 1; $('ppSubmit').disabled = tooBig;
   $('ppInfo').textContent = tooBig ? `This size is too big for the ${pp.sheet === '4x6' ? '4×6' : 'A4'} sheet. Choose A4 or make it smaller.`
-    : (pp.size === 'pass' ? `Photo size: ${SIZES.pass.label.replace('Passport ', '')}. ` : '') + `${L.n} photo${L.n > 1 ? 's' : ''} fit${L.n > 1 ? '' : 's'} on one ${pp.sheet === '4x6' ? '4×6' : 'A4'} sheet.` + (L.rot ? ' Photos are placed sideways so the page stays upright.' : '') + (L.n === 1 && pp.sheet === '4x6' ? ' Choose A4 or a smaller size to fit more copies.' : '');
+    : (pp.size === 'pass' ? `Photo size: ${SIZES.pass.label}. ` : '') + `${L.n} photo${L.n > 1 ? 's' : ''} fit${L.n > 1 ? '' : 's'} on one ${pp.sheet === '4x6' ? '4×6' : 'A4'} sheet.` + (L.rot ? ' Photos are placed sideways so the page stays upright.' : '') + (L.n === 1 && pp.sheet === '4x6' ? ' Choose A4 or a smaller size to fit more copies.' : '');
   if (tooBig) { $('ppSum').textContent = 'Size does not fit'; $('ppAmt').textContent = '₹0'; return; }
   $('ppSum').textContent = `${sheets} sheet${sheets > 1 ? 's' : ''} · ${perSheet} photo${perSheet > 1 ? 's' : ''} each`;
   $('ppAmt').textContent = '₹' + sheets * price;
 }
+
+
+/* ---- Save as JPG / Save as PDF (300 DPI, the same sheet that is sent to the counter) ---- */
+function ppSaveErr(m) { document.querySelectorAll('.pp-save-err').forEach((e) => { e.textContent = m || ''; }); }
+function ppDownload(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 8000); }
+function ppJpeg(canvas, dpi) {              // JPEG with the real print density (300 DPI) written into the file header
+  return new Promise((res) => canvas.toBlob(async (b) => {
+    if (!b) return res(null); const u = new Uint8Array(await b.arrayBuffer());
+    if (u[2] === 0xFF && u[3] === 0xE0 && u[6] === 0x4A) { u[13] = 1; u[14] = u[16] = dpi >> 8; u[15] = u[17] = dpi & 255; }
+    res(new Blob([u], { type: 'image/jpeg' }));
+  }, 'image/jpeg', 0.95));
+}
+async function ppSaveSheet(kind, btn) {
+  ppSaveErr(''); if (!pp.base) return;
+  if (pp.cutoutBusy) return ppSaveErr('Please wait, background is still being processed.');
+  const { L, perSheet } = ppPlan(); if (L.n < 1) return ppSaveErr('This size is too big for the sheet. Choose A4 or a smaller size.');
+  const all = [...document.querySelectorAll('[data-ppsave]')], old = btn.innerHTML; all.forEach((b) => { b.disabled = true; }); btn.textContent = 'Preparing…';
+  try {
+    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+    const { canvas } = buildSheet(perSheet, DPI);
+    const jpg = await ppJpeg(canvas, DPI); if (!jpg) throw new Error('Image is too large for this device.');
+    const name = `photo-sheet-${SIZES[pp.size].label.replace('×', 'x').replace(/[^\w.]+/g, '').toLowerCase()}-${pp.sheet}-${perSheet}pcs`;
+    if (kind === 'jpg') ppDownload(jpg, name + '.jpg');
+    else {
+      if (!window.PDFLib) throw new Error('PDF tools are still loading. Try again in a moment.');
+      const pdf = await PDFLib.PDFDocument.create(), img = await pdf.embedJpg(await jpg.arrayBuffer());
+      const w = canvas.width / DPI * 72, h = canvas.height / DPI * 72, pg = pdf.addPage([w, h]); pg.drawImage(img, { x: 0, y: 0, width: w, height: h });
+      ppDownload(new Blob([await pdf.save()], { type: 'application/pdf' }), name + '.pdf');
+    }
+  } catch (e) { ppSaveErr(e.message || 'Could not save the file.'); }
+  finally { all.forEach((b) => { b.disabled = false; }); btn.innerHTML = old; }
+}
+document.querySelectorAll('[data-ppsave]').forEach((b) => b.addEventListener('click', () => ppSaveSheet(b.dataset.ppsave, b)));
 
 $('ppSubmit').onclick = async () => {
   $('ppErr').textContent = ''; if (!pp.base) return;
@@ -1808,7 +1931,7 @@ $('ppSubmit').onclick = async () => {
     fd.append('meta', JSON.stringify({
       kind: 'passport', paper: pp.sheet, name: $('ppName').value.trim(), phone: $('ppPhone').value.trim(),
       color: true, copies: sheets, pages: [1], orient: [land ? 'landscape' : 'portrait'],
-      info: `${/^Passport/.test(SIZES[pp.size].label) ? '' : 'Passport '}${SIZES[pp.size].label} · ${want} photos · bg ${pp.bg || 'original'}`,
+      info: `Passport ${SIZES[pp.size].label} · ${want} photos · bg ${pp.bg || 'original'}`,
     }));
     fd.append('files', blob, 'passport_sheet.jpg');
     btn.textContent = 'Uploading…';
