@@ -228,3 +228,39 @@ body .tile:active{transform:scale(.97)!important}
 @media(max-width:600px){body .page-head{margin-bottom:10px}body .page-head h1{font-size:22px}body .page-head p{font-size:12.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}body .scan-quick{margin-bottom:10px;padding:10px 14px}}
 .trust-m{margin:2px 0 0;padding:0}
 @media (prefers-reduced-motion:reduce){body div.flow:after,body div.flow b:after{animation:none!important}}
+
+/* ===== v11: premium ID-card grid (scoped to #tilesBox so other pages keep their own tiles) ===== */
+body .page-head .trust-pill{display:inline-flex;align-items:center;gap:6px;margin:8px 0 2px;padding:5px 12px 5px 9px;border-radius:999px;font-size:11.5px;font-weight:800;line-height:1.3;letter-spacing:.01em;color:#3338d6;background:linear-gradient(135deg,rgba(79,91,255,.10),rgba(155,92,255,.12));border:1px solid rgba(79,91,255,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.75),0 6px 14px -10px rgba(79,91,255,.7);-webkit-text-fill-color:currentColor}
+body .page-head .trust-pill svg{width:13px;height:13px;flex:none;fill:currentColor}
+body #tilesBox .tiles{grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:14px 12px;padding:2px 0 4px}
+body #tilesBox .tile{position:relative;display:flex!important;flex-direction:column;gap:10px;min-width:0;overflow:hidden;padding:10px 10px 12px!important;border-radius:22px!important;border:1px solid rgba(15,23,42,.07)!important;border-left-width:1px!important;background:linear-gradient(180deg,#fff,#f8f9ff)!important;
+ box-shadow:inset 0 1px 0 #fff,0 1px 1px rgba(15,23,42,.04),0 3px 6px -2px rgba(15,23,42,.06),0 14px 28px -14px color-mix(in srgb,var(--c) 38%,rgba(15,23,42,.5))!important;
+ -webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .24s cubic-bezier(.2,.8,.2,1),box-shadow .24s ease,border-color .2s ease,background .2s ease!important;animation:tileIn .5s cubic-bezier(.2,.8,.2,1) calc(var(--i,0)*45ms) backwards}
+body #tilesBox .tile:before{content:"";position:absolute;inset:0;height:auto;border-radius:inherit;background:radial-gradient(120% 62% at 50% 0%,color-mix(in srgb,var(--c) 15%,transparent),transparent 72%);pointer-events:none}
+body #tilesBox .tile:after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 2px var(--c);opacity:0;transition:opacity .18s ease;pointer-events:none}
+body #tilesBox .tile>*{position:relative}
+body #tilesBox .tile .cv{position:relative;display:block;flex:none;border-radius:13px;overflow:hidden;background:#fff;box-shadow:0 0 0 1px rgba(15,23,42,.09),0 2px 3px rgba(15,23,42,.10),0 12px 18px -10px color-mix(in srgb,var(--c) 60%,#0f172a)}
+body #tilesBox .tile .cv:after{content:"";position:absolute;inset:0;background:linear-gradient(112deg,rgba(255,255,255,.62) 0%,rgba(255,255,255,.14) 30%,rgba(255,255,255,0) 46%),linear-gradient(0deg,rgba(15,23,42,.07),rgba(15,23,42,0) 28%);pointer-events:none}
+body #tilesBox .tile .ca{display:block;width:100%;height:auto;aspect-ratio:120/76;margin:0;border:0;border-radius:0;box-shadow:none;filter:saturate(1.16) contrast(1.04);text-rendering:geometricPrecision;shape-rendering:geometricPrecision;transition:none!important}
+body #tilesBox .tile .tx{display:block;min-width:0;padding:0 2px}
+body #tilesBox .tile b{display:block;margin:0;font-size:14.5px;font-weight:800;line-height:1.25;letter-spacing:-.012em;color:#0f172a}
+body #tilesBox .tile small{display:block;margin-top:2px;font-size:11.5px;font-weight:600;line-height:1.3;color:#64748b}
+body #tilesBox .tile .tbs{display:flex;margin:auto 0 0;padding:0 2px}
+body #tilesBox .tile .tbs i{display:inline-flex;align-items:center;max-width:100%;padding:3px 9px;border-radius:999px;font-style:normal;font-size:10.5px;font-weight:700;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:color-mix(in srgb,var(--c) 72%,#0f172a);background:color-mix(in srgb,var(--c) 9%,#fff);border:1px solid color-mix(in srgb,var(--c) 20%,#fff)}
+body #tilesBox .tile.on{background:linear-gradient(180deg,color-mix(in srgb,var(--c) 10%,#fff),#fff)!important}
+body #tilesBox .tile.on:after{opacity:1}
+body #tilesBox .tile:focus-visible:after{opacity:1}
+body #tilesBox .tile:active{transform:scale(.98)!important;box-shadow:inset 0 1px 0 #fff,0 1px 1px rgba(15,23,42,.05),0 6px 12px -8px color-mix(in srgb,var(--c) 45%,rgba(15,23,42,.5))!important}
+@media(hover:hover){body #tilesBox .tile:hover{transform:translateY(-3px)!important;border-color:color-mix(in srgb,var(--c) 30%,rgba(15,23,42,.07))!important;box-shadow:inset 0 1px 0 #fff,0 2px 4px rgba(15,23,42,.05),0 8px 14px -6px rgba(15,23,42,.10),0 24px 38px -18px color-mix(in srgb,var(--c) 55%,rgba(15,23,42,.5))!important}body #tilesBox .tile:hover:after{opacity:.55}body #tilesBox .tile:active:hover{transform:scale(.98)!important}}
+@keyframes tileIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+/* phones: two columns; an odd last card spans the row and lays out sideways so no empty cell is left */
+@media(max-width:600px){
+ body #tilesBox .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 10px}
+ body #tilesBox .tile{padding:8px 8px 11px!important;border-radius:20px!important;gap:9px}
+ body #tilesBox .tile b{font-size:14px}body #tilesBox .tile small{font-size:11px}
+ body #tilesBox .tile:last-child:nth-child(odd){grid-column:1/-1;display:grid!important;grid-template-columns:minmax(0,46%) minmax(0,1fr);grid-template-areas:"cv tx" "cv pill";column-gap:14px;row-gap:7px;align-items:center;padding:10px 14px 10px 10px!important}
+ body #tilesBox .tile:last-child:nth-child(odd) .cv{grid-area:cv;max-width:200px}
+ body #tilesBox .tile:last-child:nth-child(odd) .tx{grid-area:tx;align-self:end}
+ body #tilesBox .tile:last-child:nth-child(odd) .tbs{grid-area:pill;align-self:start;margin:0}
+}
+@media(prefers-reduced-motion:reduce){body #tilesBox .tile{animation:none!important;transition:none!important}}

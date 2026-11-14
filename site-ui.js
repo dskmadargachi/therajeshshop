@@ -169,6 +169,15 @@ Object.assign(BN, {
 'Front Side': 'সামনের দিক', 'Back Side': 'পেছনের দিক',
 'Detect & adjust': 'শনাক্ত ও ঠিক করুন', 'Preview & download': 'প্রিভিউ ও ডাউনলোড', 'Next: preview →': 'পরবর্তী: প্রিভিউ →',
 'Cropped card preview': 'ক্রপ করা কার্ডের প্রিভিউ',
+/* card crop v12: grid pills, preview-first wizard, compact print sheet */
+'Instant Auto-Crop · 100% on-device': 'ইনস্ট্যান্ট অটো-ক্রপ · ১০০% আপনার ডিভাইসে',
+'Front & Back · PDF': 'সামনে ও পিছনে · PDF', 'Front & Back · PDF/JPG': 'সামনে ও পিছনে · PDF/JPG', 'Front · PDF/JPG': 'শুধু সামনে · PDF/JPG',
+'Adjust crop': 'ক্রপ ঠিক করুন', 'Apply & return to preview': 'প্রয়োগ করে প্রিভিউতে ফিরুন', 'You can fine-tune it.': 'আপনি নিজে ঠিক করে নিতে পারেন।',
+'Back uses the same area as Front for a single photo. Tap Adjust crop to place the Back box.': 'একটি ছবির ক্ষেত্রে পিছনের অংশ সামনের মতোই ধরা হয়। পিছনের বক্স বসাতে "ক্রপ ঠিক করুন" চাপুন।',
+'Print, save or download': 'প্রিন্ট, সেভ বা ডাউনলোড', 'Download JPG': 'JPG ডাউনলোড',
+'Both JPGs': 'দুটি JPG', 'Front + Back': 'সামনে + পিছনে', 'Sheet JPG': 'শিট JPG',
+'A4 Batch': 'A4 ব্যাচ', 'Add to Batch': 'ব্যাচে যোগ করুন', 'Clear': 'মুছুন',
+'Up to 5 pairs on one A4 sheet.': 'এক A4 শিটে সর্বোচ্চ ৫ জোড়া।', 'Print & Save use this batch.': 'প্রিন্ট ও সেভে এই ব্যাচ ব্যবহার হবে।',
 'Tap Download to save your file. Nothing was uploaded.': 'ফাইল সেভ করতে ডাউনলোড চাপুন। কিছুই আপলোড হয়নি।',
 'Download all': 'সব ডাউনলোড করুন'
 });

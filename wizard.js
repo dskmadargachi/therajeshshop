@@ -2,6 +2,8 @@
    Tiny shared controller for the multi-step bottom-sheet wizard, generic modals,
    copies steppers and body scroll-lock. No dependencies. Page scripts register their flows:
      Wiz.register('doc', {steps:3, titles:[...], guard:(from,to)=>true})
+   Optional flow settings: home (step a flow opens on, default 1; steps below it are optional
+   "side" views that get a back button returning home) and hideSteps (hide the "Step n of N" label + progress bar).
      Wiz.open('doc') / Wiz.go(2) / Wiz.close() / Wiz.sync('doc', count) / Wiz.showDone('doc')
    Every existing element id stays untouched: the wizard only decides which pane is visible. */
 (function () {
@@ -37,6 +39,8 @@
   function render(step, dir) {
     var r = root(), f = cfg[st.flow]; if (!r || !f) return;
     st.step = step;
+    var home = f.home || 1;
+    r.classList.toggle('wz-nosteps', !!f.hideSteps);
     [].forEach.call(r.querySelectorAll('.wz-pane'), function (p) {
       var on = p.dataset.flow === st.flow && +p.dataset.step === step;
       p.classList.toggle('rev', dir < 0);
@@ -52,7 +56,11 @@
     $('wzT').textContent = f.steps;
     $('wzBar').style.width = (step / f.steps * 100) + '%';
     $('wzTitle').textContent = (f.titles && f.titles[step - 1]) || f.title || '';
-    $('wzBack').hidden = step === 1 || !!st.done[st.flow];
+    /* back button: below home it returns home, above home it steps back; on home itself (or step 1) it is hidden */
+    var wb = $('wzBack'), wx = $('wzX');
+    wb.hidden = !!st.done[st.flow] || !(step < home || (step > home && step > 1));
+    wb.dataset.wz = step < home ? 'home' : 'prev';
+    if (wx) wx.dataset.wz = step < home ? 'home' : 'close';
     $('wzBody').scrollTop = 0;
     r.classList.toggle('is-done', !!st.done[st.flow] && step === f.steps);
     if (f.onStep) try { f.onStep(step); } catch (e) {}
@@ -62,7 +70,7 @@
     var r = root(); if (!r || !cfg[flow]) return;
     st.flow = flow; st.open = true;
     r.classList.add('on'); r.setAttribute('aria-hidden', 'false');
-    render(step || (st.done[flow] ? cfg[flow].steps : 1), 1);
+    render(step || (st.done[flow] ? cfg[flow].steps : (cfg[flow].home || 1)), 1);
     updateResume();
     lockSync();
   }
@@ -91,7 +99,7 @@
   /* called by page scripts whenever the number of chosen files changes */
   function sync(flow, n) {
     var prev = st.count[flow] || 0; st.count[flow] = n;
-    if (n > prev) { if (!(st.open && st.flow === flow)) open(flow, 1); }
+    if (n > prev) { if (!(st.open && st.flow === flow)) open(flow); }
     else if (n === 0 && st.open && st.flow === flow && !st.done[flow]) close();
     updateResume();
   }
@@ -133,6 +141,7 @@
       if (k === 'next') go(st.step + 1, 1);
       else if (k === 'prev') go(st.step - 1, -1);
       else if (k === 'close') close();
+      else if (k === 'home') go((cfg[st.flow] && cfg[st.flow].home) || 1);
       else if (/^go:\d+$/.test(k)) go(+k.slice(3));
       return;
     }
@@ -152,7 +161,11 @@
     if (e.key !== 'Escape') return;
     if (overlayAbove()) return;                      // the page's own preview/password handler closes that first
     var m = document.querySelector('.wzm.on'); if (m) { modal(m.id, false); return; }
-    if (st.open) close();
+    if (st.open) {
+      var f = cfg[st.flow];
+      if (f && f.home && st.step < f.home) go(f.home, 1);   // Escape inside a side view returns home first
+      else close();
+    }
   });
 
   /* #privacy links (from any page) open the compact privacy modal */

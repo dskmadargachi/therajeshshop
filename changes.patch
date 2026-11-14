@@ -1,0 +1,457 @@
+--- a/cards.html
++++ b/cards.html
+@@ -506,6 +506,42 @@
+ @media(max-width:600px){body .page-head{margin-bottom:10px}body .page-head h1{font-size:22px}body .page-head p{font-size:12.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}body .scan-quick{margin-bottom:10px;padding:10px 14px}}
+ .trust-m{margin:2px 0 0;padding:0}
+ @media (prefers-reduced-motion:reduce){body div.flow:after,body div.flow b:after{animation:none!important}}
++
++/* ===== v11: premium ID-card grid (scoped to #tilesBox so other pages keep their own tiles) ===== */
++body .page-head .trust-pill{display:inline-flex;align-items:center;gap:6px;margin:8px 0 2px;padding:5px 12px 5px 9px;border-radius:999px;font-size:11.5px;font-weight:800;line-height:1.3;letter-spacing:.01em;color:#3338d6;background:linear-gradient(135deg,rgba(79,91,255,.10),rgba(155,92,255,.12));border:1px solid rgba(79,91,255,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.75),0 6px 14px -10px rgba(79,91,255,.7);-webkit-text-fill-color:currentColor}
++body .page-head .trust-pill svg{width:13px;height:13px;flex:none;fill:currentColor}
++body #tilesBox .tiles{grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:14px 12px;padding:2px 0 4px}
++body #tilesBox .tile{position:relative;display:flex!important;flex-direction:column;gap:10px;min-width:0;overflow:hidden;padding:10px 10px 12px!important;border-radius:22px!important;border:1px solid rgba(15,23,42,.07)!important;border-left-width:1px!important;background:linear-gradient(180deg,#fff,#f8f9ff)!important;
++ box-shadow:inset 0 1px 0 #fff,0 1px 1px rgba(15,23,42,.04),0 3px 6px -2px rgba(15,23,42,.06),0 14px 28px -14px color-mix(in srgb,var(--c) 38%,rgba(15,23,42,.5))!important;
++ -webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .24s cubic-bezier(.2,.8,.2,1),box-shadow .24s ease,border-color .2s ease,background .2s ease!important;animation:tileIn .5s cubic-bezier(.2,.8,.2,1) calc(var(--i,0)*45ms) backwards}
++body #tilesBox .tile:before{content:"";position:absolute;inset:0;height:auto;border-radius:inherit;background:radial-gradient(120% 62% at 50% 0%,color-mix(in srgb,var(--c) 15%,transparent),transparent 72%);pointer-events:none}
++body #tilesBox .tile:after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 2px var(--c);opacity:0;transition:opacity .18s ease;pointer-events:none}
++body #tilesBox .tile>*{position:relative}
++body #tilesBox .tile .cv{position:relative;display:block;flex:none;border-radius:13px;overflow:hidden;background:#fff;box-shadow:0 0 0 1px rgba(15,23,42,.09),0 2px 3px rgba(15,23,42,.10),0 12px 18px -10px color-mix(in srgb,var(--c) 60%,#0f172a)}
++body #tilesBox .tile .cv:after{content:"";position:absolute;inset:0;background:linear-gradient(112deg,rgba(255,255,255,.62) 0%,rgba(255,255,255,.14) 30%,rgba(255,255,255,0) 46%),linear-gradient(0deg,rgba(15,23,42,.07),rgba(15,23,42,0) 28%);pointer-events:none}
++body #tilesBox .tile .ca{display:block;width:100%;height:auto;aspect-ratio:120/76;margin:0;border:0;border-radius:0;box-shadow:none;filter:saturate(1.16) contrast(1.04);text-rendering:geometricPrecision;shape-rendering:geometricPrecision;transition:none!important}
++body #tilesBox .tile .tx{display:block;min-width:0;padding:0 2px}
++body #tilesBox .tile b{display:block;margin:0;font-size:14.5px;font-weight:800;line-height:1.25;letter-spacing:-.012em;color:#0f172a}
++body #tilesBox .tile small{display:block;margin-top:2px;font-size:11.5px;font-weight:600;line-height:1.3;color:#64748b}
++body #tilesBox .tile .tbs{display:flex;margin:auto 0 0;padding:0 2px}
++body #tilesBox .tile .tbs i{display:inline-flex;align-items:center;max-width:100%;padding:3px 9px;border-radius:999px;font-style:normal;font-size:10.5px;font-weight:700;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:color-mix(in srgb,var(--c) 72%,#0f172a);background:color-mix(in srgb,var(--c) 9%,#fff);border:1px solid color-mix(in srgb,var(--c) 20%,#fff)}
++body #tilesBox .tile.on{background:linear-gradient(180deg,color-mix(in srgb,var(--c) 10%,#fff),#fff)!important}
++body #tilesBox .tile.on:after{opacity:1}
++body #tilesBox .tile:focus-visible:after{opacity:1}
++body #tilesBox .tile:active{transform:scale(.98)!important;box-shadow:inset 0 1px 0 #fff,0 1px 1px rgba(15,23,42,.05),0 6px 12px -8px color-mix(in srgb,var(--c) 45%,rgba(15,23,42,.5))!important}
++@media(hover:hover){body #tilesBox .tile:hover{transform:translateY(-3px)!important;border-color:color-mix(in srgb,var(--c) 30%,rgba(15,23,42,.07))!important;box-shadow:inset 0 1px 0 #fff,0 2px 4px rgba(15,23,42,.05),0 8px 14px -6px rgba(15,23,42,.10),0 24px 38px -18px color-mix(in srgb,var(--c) 55%,rgba(15,23,42,.5))!important}body #tilesBox .tile:hover:after{opacity:.55}body #tilesBox .tile:active:hover{transform:scale(.98)!important}}
++@keyframes tileIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
++/* phones: two columns; an odd last card spans the row and lays out sideways so no empty cell is left */
++@media(max-width:600px){
++ body #tilesBox .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 10px}
++ body #tilesBox .tile{padding:8px 8px 11px!important;border-radius:20px!important;gap:9px}
++ body #tilesBox .tile b{font-size:14px}body #tilesBox .tile small{font-size:11px}
++ body #tilesBox .tile:last-child:nth-child(odd){grid-column:1/-1;display:grid!important;grid-template-columns:minmax(0,46%) minmax(0,1fr);grid-template-areas:"cv tx" "cv pill";column-gap:14px;row-gap:7px;align-items:center;padding:10px 14px 10px 10px!important}
++ body #tilesBox .tile:last-child:nth-child(odd) .cv{grid-area:cv;max-width:200px}
++ body #tilesBox .tile:last-child:nth-child(odd) .tx{grid-area:tx;align-self:end}
++ body #tilesBox .tile:last-child:nth-child(odd) .tbs{grid-area:pill;align-self:start;margin:0}
++}
++@media(prefers-reduced-motion:reduce){body #tilesBox .tile{animation:none!important;transition:none!important}}
+ </style>
+ <style id="ctl-css">
+ .ctl{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;background:#f7f9ff;border:1px solid #e3e8f5;border-radius:16px;padding:12px 14px;margin:12px 0}
+@@ -594,7 +630,7 @@
+ 
+ <!-- ============ CARD CROP ============ -->
+ <section id="cardsMode">
+- <div class="page-head"><h1>Card crop</h1><p>Aadhaar, Ration, PAN, Ayushman, Voter, APAAR, ABHA. Crops to PVC size (85.60 × 53.98 mm). Files are processed in your browser and never uploaded until you send an order.</p></div>
++ <div class="page-head"><h1>Card crop</h1><span class="trust-pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.2 2 4.5 13.4h6.1L9.8 22l9.7-12.2h-6.2z"/></svg>Instant Auto-Crop · 100% on-device</span><p>Aadhaar, Ration, PAN, Ayushman, Voter, APAAR, ABHA. Crops to PVC size (85.60 × 53.98 mm). Files are processed in your browser and never uploaded until you send an order.</p></div>
+  <button type="button" class="scan-quick" id="scanQuick"><span class="sq-i">📸</span><span><b>Auto Crop Aadhaar PAN Voter</b><small>Take or choose a photo — the document is straightened and placed on A4</small></span></button>
+  <div id="tilesBox"><div class="tiles" id="tiles"></div></div>
+  <div class="panel hidden" id="tool">
+@@ -671,7 +707,7 @@
+  <div class="wz-sheet">
+   <header class="wz-h">
+    <button class="wz-back" id="wzBack" type="button" data-wz="prev" aria-label="Back" hidden>←</button>
+-   <div class="wz-hm"><b id="wzTitle">Detect &amp; adjust</b><span class="wz-st"><span>Step</span> <b id="wzN">1</b> <span>of</span> <b id="wzT">2</b></span></div>
++   <div class="wz-hm"><b id="wzTitle">Preview &amp; download</b><span class="wz-st"><span>Step</span> <b id="wzN">1</b> <span>of</span> <b id="wzT">2</b></span></div>
+    <button class="wz-x" id="wzX" type="button" data-wz="close" aria-label="Close">✕</button>
+   </header>
+   <div class="wz-prog"><i id="wzBar"></i></div>
+@@ -692,41 +728,42 @@
+     <div class="ctl-g"><span class="lab">Resolution</span><span class="seg" style="display:inline-flex;width:auto"><button data-dpi="300" type="button">300 DPI</button><button data-dpi="600" type="button">600 DPI</button></span></div>
+    </div>
+    <button class="b" type="button" data-popclose style="width:100%;margin-top:6px">Done</button></div>
++    </section>
++     <section class="wz-pane" data-flow="card" data-step="2">
++      <h3 style="margin:0 0 8px;font-size:16px">Cropped card preview</h3>
++      <div class="pv-bar"><button class="adj-chip" id="adjBtn" type="button" data-wz="go:1" aria-label="Adjust crop"><span aria-hidden="true">✂️</span>Adjust crop</button></div>
++      <div class="pv-warn" id="pvWarn" role="status" hidden><span id="pvWarnT"></span><button type="button" data-wz="go:1">Adjust crop</button></div>
+      <div class="row hidden" id="ccRow"><span class="lab">Output</span><span class="seg" style="display:inline-flex;width:auto"><button data-cc="0" class="on" type="button">Normal Aadhaar</button><button data-cc="1" type="button">Tricolour Aadhaar</button></span></div>
+    <div class="row hidden" id="fxRow">
+     <label class="sl">Brightness <input type="range" id="fb" min="70" max="140" value="100"></label>
+     <label class="sl">Contrast <input type="range" id="fc" min="70" max="150" value="100"></label>
+     <label class="sl">Saturation <input type="range" id="fs" min="0" max="200" value="100"></label></div>
+-    </section>
+-    <section class="wz-pane" data-flow="card" data-step="2">
+-     <h3 style="margin:0 0 8px;font-size:16px">Cropped card preview</h3>
+-     <div class="out">
++      <div class="out">
+     <div class="oc"><b id="fl">Front</b><canvas id="oF"></canvas><button class="b g sm" id="dF" type="button"><svg><use href="#i-down"/></svg>Front JPG</button></div>
+     <div class="oc" id="bWrap"><b>Back</b><canvas id="oB"></canvas><button class="b g sm" id="dB" type="button"><svg><use href="#i-down"/></svg>Back JPG</button></div>
+    </div>
+-    </section>
++     </section>
+     <div class="popbody" id="printBox"><div class="pop-h"><b>Print, save or download</b><button class="pop-x" type="button" aria-label="Close">✕</button></div>
+-   <div class="sect" style="border-top:0;margin-top:0;padding-top:0">
+-    <h3 style="display:none">Print or save</h3>
+-    <div class="ctl"><div class="ctl-g"><span class="lab">Sheet</span><span class="seg" id="paperSeg" style="display:inline-flex;width:auto"><button data-v="A4" class="on" type="button">A4 (up to 5 pairs)</button><button data-v="4x6" type="button">4×6 photo</button></span></div></div>
+-    <div class="actions two">
+-     <button class="b hero" id="addOrder" type="button"><svg><use href="#i-plus"/></svg>Add to print order</button>
+-     <button class="b g hero" id="savePdf" type="button"><svg><use href="#i-pdf"/></svg>Save as PDF</button>
+-    </div>
+-    <div class="lab2">Download</div>
+-    <div class="actions three">
+-     <button class="b g sm" id="dBoth" type="button">Download both JPG</button>
+-     <button class="b g sm" id="dA4" type="button">A4 sheet JPG</button>
+-     <button class="b g sm" id="d46" type="button">4×6 sheet JPG</button>
+-    </div>
+-    <div class="lab2">A4 batch</div>
+-    <div class="actions two">
+-     <button class="b g sm" id="add" type="button">Add this card to A4 batch</button>
+-     <button class="b g sm" id="clr" type="button">Clear batch</button>
+-    </div>
+-    <span class="note" id="bn"></span>
+-    <p class="note">A4 batch: up to 5 front and back pairs on one sheet. Add to print order and Save as PDF use the batch if it has cards, otherwise the card on screen.</p>
+-   </div></div>
++    <div class="pb">
++     <div class="pb-seg seg" id="paperSeg" role="group" aria-label="Sheet size"><button data-v="A4" class="on" type="button" aria-pressed="true">A4 (up to 5 pairs)</button><button data-v="4x6" type="button" aria-pressed="false">4×6 photo</button></div>
++     <div class="pb-row">
++      <button class="b hero" id="addOrder" type="button"><svg><use href="#i-plus"/></svg>Add to print order</button>
++      <button class="b g hero" id="savePdf" type="button"><svg><use href="#i-pdf"/></svg>Save as PDF</button>
++     </div>
++     <div class="pb-lab">Download JPG</div>
++     <div class="pb-row">
++      <button class="b g pb-dl" id="dBoth" type="button"><svg><use href="#i-down"/></svg><span class="t"><span class="t1">Both JPGs</span><span class="t2" id="dBothL">Front + Back</span></span></button>
++      <button class="b g pb-dl" id="dSheet" type="button"><svg><use href="#i-down"/></svg><span class="t"><span class="t1">Sheet JPG</span><span class="t2" id="dSheetL">A4</span></span></button>
++     </div>
++     <div class="pb-batch" id="batchBox">
++      <div class="pb-bh"><span class="pb-badge"><span>A4 Batch</span><i>·</i><b id="bBadge">0/5</b></span><span class="pb-dots" id="bDots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></div>
++      <div class="pb-bb">
++       <button class="b g" id="add" type="button"><svg><use href="#i-plus"/></svg>Add to Batch</button>
++       <button class="b g" id="clr" type="button" disabled><svg><use href="#i-trash"/></svg>Clear</button>
++      </div>
++      <span class="pb-cap" id="bn">Up to 5 pairs on one A4 sheet.</span>
++     </div>
++    </div></div>
+    </div>
+    <section class="wz-pane" data-flow="scan" data-step="1">
+     <h3 id="scTitle">File Received</h3>
+@@ -736,8 +773,8 @@
+    </section>
+   </div>
+   <footer class="wz-f">
+-   <div class="wz-act" data-flow="card" data-step="1"><button class="wz-btn pri" type="button" data-wz="next">Next: preview →</button></div>
+-   <div class="wz-act" data-flow="card" data-step="2"><button class="wz-btn" type="button" data-wz="prev" style="flex:none">←</button><button class="b hero" id="printBtn" type="button">Print · Save · Download</button></div>
++   <div class="wz-act" data-flow="card" data-step="1"><button class="wz-btn pri" type="button" data-wz="go:2">Apply &amp; return to preview</button></div>
++   <div class="wz-act" data-flow="card" data-step="2"><button class="b hero" id="printBtn" type="button">Print · Save · Download</button></div>
+    <div class="wz-act" data-flow="scan" data-step="1"><button class="b hero" id="scGo" type="button" style="width:100%">✅ All Good — Continue</button></div>
+   </footer>
+  </div>
+@@ -786,11 +823,11 @@
+ voter:bg('#f5f3ff')+'<rect width="120" height="76" fill="url(#vg)"/><defs><linearGradient id="vg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ede9fe"/><stop offset="1" stop-color="#fce7f3"/></linearGradient></defs>'+'<rect width="120" height="14" fill="#7c3aed"/>'+tx(8,9.5,'ভোটার কার্ড · ELECTOR PHOTO ID',5.8,'#fff',800)+ph(9,20,26,30,'#8b5cf6')+ln(42,23,48,'#c4b5fd')+ln(42,30,38,'#c4b5fd')+ln(42,37,44,'#c4b5fd')+tx(42,48,'WB/01/001/123456',6,'#5b21b6',800)+'<g fill="#1f2937">'+Array.from({length:30},(_,i)=>`<rect x="${10+i*3.4}" y="58" width="${i%3?1.4:2.4}" height="12"/>`).join('')+'</g>',
+ ayushman:bg('#fff')+'<rect width="120" height="5" fill="#ff9933"/><rect y="5" width="120" height="3" fill="#fff"/><rect y="8" width="120" height="3" fill="#138808"/><path d="M104 18c-3-4-9 0-5 5l5 5 5-5c4-5-2-9-5-5z" fill="#ef4444"/>'+tx(9,22,'AYUSHMAN BHARAT',7.5,'#0f766e',800)+tx(9,30,'আয়ুষ্মান কার্ড · PM-JAY',4.8,'#64748b',700)+ph(9,36,24,26,'#14b8a6')+ln(40,39,50,'#99f6e4')+ln(40,46,40,'#99f6e4')+ln(40,53,46,'#99f6e4')+tx(60,70.5,'12 3456 7890 1234',7,'#0f766e',800,'middle')+'<rect y="73" width="120" height="3" fill="#0f766e"/>',
+ abc:bg('#eff6ff')+'<rect width="120" height="16" fill="#2563eb"/>'+tx(8,11,'APAAR ID · ABC',8,'#fff',800)+'<path d="M100 5l10 4-10 4-10-4z" fill="#fff"/><path d="M95 10v4c3 2 7 2 10 0v-4" fill="none" stroke="#fff" stroke-width="1.4"/>'+ph(9,22,24,28,'#3b82f6')+ln(40,25,56,'#93c5fd')+ln(40,32,44,'#93c5fd')+tx(40,46,'Academic Bank of Credits',4.8,'#1d4ed8',700)+tx(60,64,'1234-5678-9012',9,'#1e3a8a',900,'middle')+'<rect y="73" width="120" height="3" fill="#2563eb"/>',
+-abha:bg('#ecfeff')+'<rect width="120" height="76" fill="url(#ag)"/><defs><linearGradient id="ag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ecfeff"/><stop offset="1" stop-color="#dbeafe"/></linearGradient></defs>'+'<rect width="120" height="15" fill="#0891b2"/>'+tx(8,10.5,'ABHA CARD · আভা',7.6,'#fff',800)+'<circle cx="107" cy="7.5" r="5.5" fill="#fff"/><path d="M107 4v7M103.500 7.500h7" stroke="#0891b2" stroke-width="2" stroke-linecap="round"/>'+ph(9,21,24,28,'#0ea5e9')+ln(40,24,50,'#a5f3fc')+ln(40,31,40,'#a5f3fc')+qr(90,36,22,'#0c4a6e')+tx(40,47,'Ayushman Bharat Digital Mission',4.2,'#0e7490',700)+tx(10,66,'12-3456-7890-1234',8,'#0c4a6e',900)+'<rect y="73" width="120" height="3" fill="#0891b2"/>'};
++abha:bg('#ecfeff')+'<rect width="120" height="76" fill="url(#ag)"/><defs><linearGradient id="ag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ecfeff"/><stop offset="1" stop-color="#dbeafe"/></linearGradient></defs>'+'<rect width="120" height="15" fill="#0891b2"/>'+tx(8,10.5,'ABHA CARD · আভা',7.6,'#fff',800)+'<circle cx="107" cy="7.5" r="5.5" fill="#fff"/><path d="M107 4v7M103.500 7.500h7" stroke="#0891b2" stroke-width="2" stroke-linecap="round"/>'+ph(9,21,24,28,'#0ea5e9')+ln(40,24,50,'#a5f3fc')+ln(40,31,40,'#a5f3fc')+qr(94,34,20,'#0c4a6e')+tx(40,47,'ABDM · Health Account',4.4,'#0e7490',700)+tx(10,66,'12-3456-7890-1234',8,'#0c4a6e',900)+'<rect y="73" width="120" height="3" fill="#0891b2"/>'};
+ })();
+ const cardSvg=k=>`<svg class="ca" viewBox="0 0 120 76" aria-hidden="true">${CA[k]||''}</svg>`;
+-const tb=t=>'<span class="tbs"><i>'+(t.one?'Front only':'Front & Back')+'</i><i>'+(t.pages?'2-page PDF':t.pw?'Password PDF':t.img?'PDF / JPG':'PDF')+'</i><i class="hot">\u26a1 Instant Auto-Crop</i></span>';
+-$('tiles').innerHTML=Object.entries(T).map(([k,t])=>`<button class="tile" data-k="${k}" type="button">${cardSvg(k)}<b>${t.n}</b><small>${t.bn}</small>${tb(t)}</button>`).join('');
++const tb=t=>'<span class="tbs"><i>'+(t.one?'Front':'Front & Back')+' · '+(t.img?'PDF/JPG':'PDF')+'</i></span>';
++$('tiles').innerHTML=Object.entries(T).map(([k,t],i)=>`<button class="tile" data-k="${k}" type="button" style="--i:${i}"><span class="cv">${cardSvg(k)}</span><span class="tx"><b>${t.n}</b><small>${t.bn}</small></span>${tb(t)}</button>`).join('');
+ document.querySelectorAll('.tile').forEach(b=>b.onclick=()=>{pick(b.dataset.k);$('tool').scrollIntoView({behavior:'auto',block:'start'});$('file').click()});
+ /* ---- popups: keep the page short. An element is moved to <body> while it is open and put back afterwards, so every id and handler keeps working ---- */
+ let popEl=null;const popBack=document.createElement('div');popBack.className='pop-back';document.body.appendChild(popBack);
+@@ -804,7 +841,7 @@
+  document.querySelectorAll('.tile').forEach(b=>b.classList.toggle('on',b.dataset.k==k));
+  $('file').accept=Tp.img?'.pdf,.jpg,.jpeg,.png':'.pdf';$('pickL').textContent='Select '+Tp.n+(Tp.img?' (PDF or image)':' (PDF)');
+  $('hint').textContent='Up to 15 MB · '+Tp.d;$('pwBtn').classList.add('hidden');$('pw').value='';$('ccRow').classList.toggle('hidden',!Tp.cc);
+- $('fxRow').classList.toggle('hidden',!Tp.fx);$('bWrap').classList.toggle('hidden',!!Tp.one);$('fl').textContent=Tp.one?Tp.n+' front':'Front';
++ $('fxRow').classList.toggle('hidden',!Tp.fx);$('bWrap').classList.toggle('hidden',!!Tp.one);$('dBothL').textContent=Tp.one?'Front only':'Front + Back';$('fl').textContent=Tp.one?Tp.n+' front':'Front';
+  $('work').classList.add('hidden');if(window.Wiz)Wiz.sync('card',0);st('')}
+ $('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  if(!Tp)return st('Tap a card type above first.',1);
+@@ -829,8 +866,9 @@
+  try{await open_(pass)}catch(err){
+   if(isPw(err))return showPw(pass?'Wrong password. Check it and try again.':'');
+   console.error(err);return st('Could not read this file: '+(err&&err.message||err),1)}
+- st('Finding the card edges…');await autoCrop();$('work').classList.remove('hidden');if(window.Wiz){Wiz.sync('card',1);Wiz.open('card',1)}
+- st(rMsg()||(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(isFree()?(redFull?'No red border found, so the whole page is used as the card. Drag the yellow boxes if you need less.':(Tp.det=='red'?'Red border found on both pages. Cropped exactly inside it.':'Front and back card edges found. Cropped exactly to each card.')):'Cards found and cropped. Adjust the boxes if needed.')),rMsg()?!greenOK:miss);layoutBoxes();update()}
++ st('Finding the card edges…');await autoCrop();$('work').classList.remove('hidden');if(window.Wiz){Wiz.sync('card',1);Wiz.open('card')}
++ st(rMsg()||(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(isFree()?(redFull?'No red border found, so the whole page is used as the card. Drag the yellow boxes if you need less.':(Tp.det=='red'?'Red border found on both pages. Cropped exactly inside it.':'Front and back card edges found. Cropped exactly to each card.')):'Cards found and cropped. Adjust the boxes if needed.')),rMsg()?!greenOK:miss);layoutBoxes();update();
++  if(window.pvWarn)pvWarn(!Tp.one&&bx.B&&bx.B===bx.F?'Back uses the same area as Front for a single photo. Tap Adjust crop to place the Back box.':'')}
+ async function render(pass){pages.forEach(freeCanvas);pages=[];pp=[];
+  if(!pdfBuf){const im=await new Promise((ok,no)=>{const i=new Image;i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(srcFile)});
+   const k=Math.min(1,4096/Math.max(im.naturalWidth,im.naturalHeight)),c=mk(Math.round(im.naturalWidth*k),Math.round(im.naturalHeight*k));
+@@ -1090,7 +1128,11 @@
+  await p.render({canvasContext:x,viewport:v,transform:[1,0,0,k,-b.x*v.width+ox,-b.y*v.height*k+oy]}).promise;x.restore();return style(o)}
+ function update(){if(!bx.F||!pages.length)return;const f=crop('F',200),g=$('oF');g.width=f.width;g.height=f.height;g.getContext('2d').drawImage(f,0,0);
+  if(!Tp.one&&bx.B){const b=crop('B',200),h=$('oB');h.width=b.width;h.height=b.height;h.getContext('2d').drawImage(b,0,0)}
+- $('bn').textContent=batch.length?batch.length+' of 5 pairs in batch':''}
++ batchUI()}
++/* A4 batch card: live count, progress dots, caption, Clear enabled only when there is something to clear */
++function batchUI(){const n=batch.length;$('bBadge').textContent=n+'/5';$('batchBox').classList.toggle('has',n>0);
++ [...$('bDots').children].forEach((d,i)=>d.classList.toggle('on',i<n));$('clr').disabled=!n;
++ $('bn').textContent=n?'Print & Save use this batch.':'Up to 5 pairs on one A4 sheet.'}
+ function blob(c,d){return new Promise(r=>c.toBlob(async b=>{if(!b)return r(null);const u=new Uint8Array(await b.arrayBuffer());
+  if(u[2]==0xFF&&u[3]==0xE0&&u[6]==0x4A){u[13]=1;u[14]=u[16]=(d>>8);u[15]=u[17]=d&255}r(new Blob([u],{type:'image/jpeg'}))},'image/jpeg',.95))}
+ function dl(b,name){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),8000)}
+@@ -1107,16 +1149,19 @@
+ const makeA4=items=>sheet(8.27,11.69,(x,d,mm,cw,ch)=>{let y=mm(8);items.forEach(p=>{const hf=cw*p.f.height/p.f.width,hb=p.b?cw*p.b.height/p.b.width:0;x.drawImage(p.f,mm(10),y,cw,hf);if(p.b)x.drawImage(p.b,mm(10)+cw+mm(4),y,cw,hb);y+=Math.max(hf,hb)+mm(3.5)})});
+ const make46=p=>sheet(4,6,(x,d,mm,cw,ch)=>{const X=(4*d-cw)/2,gap=mm(8),hf=cw*p.f.height/p.f.width,hb=p.b?cw*p.b.height/p.b.width:0;
+  if(p.b){const y=(6*d-hf-hb-gap)/2;x.drawImage(p.f,X,y,cw,hf);x.drawImage(p.b,X,y+hf+gap,cw,hb)}else x.drawImage(p.f,X,(6*d-hf)/2,cw,hf)});
+-$('dA4').onclick=()=>busy(async()=>{const items=batch.length?batch:[await pair()],c=makeA4(items);if(c.eff<dpi)st('Phone memory limit: A4 saved at '+c.eff+' DPI.');await save(c,'A4_'+nm()+'.jpg',c.eff)});
+-$('d46').onclick=()=>busy(async()=>{const c=make46(await pair());await save(c,'4x6_'+nm()+'.jpg',c.eff)});
++const jpgA4=()=>busy(async()=>{const items=batch.length?batch:[await pair()],c=makeA4(items);if(c.eff<dpi)st('Phone memory limit: A4 saved at '+c.eff+' DPI.');await save(c,'A4_'+nm()+'.jpg',c.eff)});
++const jpg46=()=>busy(async()=>{const c=make46(await pair());await save(c,'4x6_'+nm()+'.jpg',c.eff)});
++/* one "Sheet JPG" button: downloads whichever sheet is selected in the A4 / 4x6 toggle */
++$('dSheet').onclick=()=>sheetPaper==='A4'?jpgA4():jpg46();
+ $('add').onclick=()=>busy(async()=>{if(batch.length>=5)return st('Maximum 5 ID pairs per A4.',1);batch.push(await pair());update()});
+-$('clr').onclick=()=>{batch=[];update()};
++$('clr').onclick=()=>{batch=[];update();batchUI()};
+ document.querySelectorAll('[data-dpi]').forEach(b=>b.onclick=()=>{dpi=+b.dataset.dpi;mark();batch=[];update()});
+ document.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{cc=+b.dataset.cc;document.querySelectorAll('[data-cc]').forEach(x=>x.classList.toggle('on',x==b));update()});
+ ['fb','fc','fs'].forEach(i=>$(i).oninput=qUp);
+ document.querySelectorAll('[data-fit]').forEach(b=>b.onclick=()=>{fitMode=b.dataset.fit;try{localStorage.setItem('cardFit',fitMode)}catch(e){}mark();batch=[];update()});
+ function mark(){document.querySelectorAll('[data-fit]').forEach(b=>b.classList.toggle('on',b.dataset.fit==fitMode));document.querySelectorAll('[data-dpi]').forEach(b=>b.classList.toggle('on',+b.dataset.dpi==dpi))}mark();
+-document.querySelectorAll('#paperSeg button').forEach(b=>b.onclick=()=>{sheetPaper=b.dataset.v;document.querySelectorAll('#paperSeg button').forEach(x=>x.classList.toggle('on',x==b))});
++const paperUI=()=>{$('dSheetL').textContent=sheetPaper==='A4'?'A4':'4×6';document.querySelectorAll('#paperSeg button').forEach(x=>{const on=x.dataset.v===sheetPaper;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on)})};
++document.querySelectorAll('#paperSeg button').forEach(b=>b.onclick=()=>{sheetPaper=b.dataset.v;paperUI()});paperUI();
+ 
+ /* =====================================================================
+    PRINT ORDER (shared by Card crop and Smart scanner)
+@@ -1256,10 +1301,22 @@
+ <script>
+ (function(){
+   if(window.Wiz){
+-    Wiz.register('card',{steps:2,titles:['Detect & adjust','Preview & download']});
++    /* Card flow opens straight on Preview (step 2). Step 1 is the optional "Adjust crop" drawer, reached from the corner chip. */
++    var lastStep=0;
++    Wiz.register('card',{steps:2,home:2,hideSteps:true,titles:['Adjust crop','Preview & download'],
++      onStep:function(s){var w=document.getElementById('pvWarn');
++        if(s===2&&lastStep===1){if(w)w.hidden=true;try{update()}catch(e){}}   /* back from Adjust: refresh, and the warning has been dealt with */
++        lastStep=s}});
+     Wiz.register('scan',{steps:1,titles:['File Received']});
+     Wiz.mirror('st','st2');
+   }
++  /* Auto-crop is no longer reviewed on its own screen, so any "not sure" message is surfaced on the preview */
++  (function(){var s=document.getElementById('st'),w=document.getElementById('pvWarn'),t=document.getElementById('pvWarnT');if(!s||!w||!t)return;
++    var RE=/Card edge not found|Exact ration edge|No red border|yellow boxes/i;
++    window.pvWarn=function(m){if(m){t.textContent=m;w.hidden=false}else w.hidden=true};
++    new MutationObserver(function(){var m=(s.textContent||'').trim();
++      if(RE.test(m)){t.textContent=m.replace(/\s*(Drag|Adjust) the yellow boxes[^.]*\./i,'')+' You can fine-tune it.';w.hidden=false}
++      else if(/^(Reading file|Finding the card edges)/i.test(m))w.hidden=true}).observe(s,{childList:true,characterData:true,subtree:true,attributes:true})})();
+   var f=document.getElementById('sdF'),b=document.getElementById('sdB'),s1=document.getElementById('side1'),s2=document.getElementById('side2');
+   function side(back){f.classList.toggle('on',!back);b.classList.toggle('on',back);f.setAttribute('aria-selected',!back);b.setAttribute('aria-selected',back);s1.classList.toggle('off',back);s2.classList.toggle('off',!back)}
+   if(f&&b){f.onclick=function(){side(false)};b.onclick=function(){side(true)}}
+--- a/wizard.js
++++ b/wizard.js
+@@ -2,6 +2,8 @@
+    Tiny shared controller for the multi-step bottom-sheet wizard, generic modals,
+    copies steppers and body scroll-lock. No dependencies. Page scripts register their flows:
+      Wiz.register('doc', {steps:3, titles:[...], guard:(from,to)=>true})
++   Optional flow settings: home (step a flow opens on, default 1; steps below it are optional
++   "side" views that get a back button returning home) and hideSteps (hide the "Step n of N" label + progress bar).
+      Wiz.open('doc') / Wiz.go(2) / Wiz.close() / Wiz.sync('doc', count) / Wiz.showDone('doc')
+    Every existing element id stays untouched: the wizard only decides which pane is visible. */
+ (function () {
+@@ -37,6 +39,8 @@
+   function render(step, dir) {
+     var r = root(), f = cfg[st.flow]; if (!r || !f) return;
+     st.step = step;
++    var home = f.home || 1;
++    r.classList.toggle('wz-nosteps', !!f.hideSteps);
+     [].forEach.call(r.querySelectorAll('.wz-pane'), function (p) {
+       var on = p.dataset.flow === st.flow && +p.dataset.step === step;
+       p.classList.toggle('rev', dir < 0);
+@@ -52,7 +56,11 @@
+     $('wzT').textContent = f.steps;
+     $('wzBar').style.width = (step / f.steps * 100) + '%';
+     $('wzTitle').textContent = (f.titles && f.titles[step - 1]) || f.title || '';
+-    $('wzBack').hidden = step === 1 || !!st.done[st.flow];
++    /* back button: below home it returns home, above home it steps back; on home itself (or step 1) it is hidden */
++    var wb = $('wzBack'), wx = $('wzX');
++    wb.hidden = !!st.done[st.flow] || !(step < home || (step > home && step > 1));
++    wb.dataset.wz = step < home ? 'home' : 'prev';
++    if (wx) wx.dataset.wz = step < home ? 'home' : 'close';
+     $('wzBody').scrollTop = 0;
+     r.classList.toggle('is-done', !!st.done[st.flow] && step === f.steps);
+     if (f.onStep) try { f.onStep(step); } catch (e) {}
+@@ -62,7 +70,7 @@
+     var r = root(); if (!r || !cfg[flow]) return;
+     st.flow = flow; st.open = true;
+     r.classList.add('on'); r.setAttribute('aria-hidden', 'false');
+-    render(step || (st.done[flow] ? cfg[flow].steps : 1), 1);
++    render(step || (st.done[flow] ? cfg[flow].steps : (cfg[flow].home || 1)), 1);
+     updateResume();
+     lockSync();
+   }
+@@ -91,7 +99,7 @@
+   /* called by page scripts whenever the number of chosen files changes */
+   function sync(flow, n) {
+     var prev = st.count[flow] || 0; st.count[flow] = n;
+-    if (n > prev) { if (!(st.open && st.flow === flow)) open(flow, 1); }
++    if (n > prev) { if (!(st.open && st.flow === flow)) open(flow); }
+     else if (n === 0 && st.open && st.flow === flow && !st.done[flow]) close();
+     updateResume();
+   }
+@@ -133,6 +141,7 @@
+       if (k === 'next') go(st.step + 1, 1);
+       else if (k === 'prev') go(st.step - 1, -1);
+       else if (k === 'close') close();
++      else if (k === 'home') go((cfg[st.flow] && cfg[st.flow].home) || 1);
+       else if (/^go:\d+$/.test(k)) go(+k.slice(3));
+       return;
+     }
+@@ -152,7 +161,11 @@
+     if (e.key !== 'Escape') return;
+     if (overlayAbove()) return;                      // the page's own preview/password handler closes that first
+     var m = document.querySelector('.wzm.on'); if (m) { modal(m.id, false); return; }
+-    if (st.open) close();
++    if (st.open) {
++      var f = cfg[st.flow];
++      if (f && f.home && st.step < f.home) go(f.home, 1);   // Escape inside a side view returns home first
++      else close();
++    }
+   });
+ 
+   /* #privacy links (from any page) open the compact privacy modal */
+--- a/wizard.css
++++ b/wizard.css
+@@ -238,3 +238,82 @@
+   .bar #sq{padding:9px 14px!important;font-size:15px!important;margin:0 0 4px!important}
+   .grid .card{padding:9px!important}
+ }
++
++/* ===== v12: card flow lands on Preview; "Adjust crop" is an optional drawer ===== */
++/* no "Step n of 2" label or progress bar when a flow opts out (cfg.hideSteps) */
++.wz.wz-nosteps .wz-st,.wz.wz-nosteps .wz-prog{display:none}
++.wz.wz-nosteps .wz-hm b#wzTitle{font-size:16px}
++/* adjust = slides up like a drawer, preview = gentle fade/zoom back in */
++.wz-pane[data-flow="card"][data-step="1"].on{animation:wzUp .4s var(--wz-ease) both}
++.wz-pane[data-flow="card"][data-step="2"].on{animation:wzSettle .32s var(--wz-ease) both}
++@keyframes wzUp{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
++@keyframes wzSettle{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:none}}
++/* small chip, top-right of the preview */
++.pv-bar{display:flex;justify-content:flex-end;align-items:center;min-height:30px;margin:-2px 0 8px}
++.adj-chip{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px 0 10px;border-radius:999px;cursor:pointer;font:800 12.5px/1 Figtree,system-ui,sans-serif;color:#3338d6;background:#fff;border:1px solid #d6dbff;box-shadow:0 1px 2px rgba(20,22,63,.06),0 6px 12px -8px rgba(79,91,255,.55);-webkit-tap-highlight-color:transparent;transition:transform .18s var(--wz-ease),box-shadow .2s,background .2s,border-color .2s}
++.adj-chip span{font-size:13px;line-height:1}
++@media(hover:hover){.adj-chip:hover{background:#f3f4ff;border-color:#b6bdff}}
++.adj-chip:active{transform:scale(.95)}
++.adj-chip:focus-visible{outline:2px solid #4f5bff;outline-offset:2px}
++/* shown only when auto-crop was unsure (set from cards.html) */
++.pv-warn{display:flex;align-items:center;gap:10px;margin:0 0 10px;padding:9px 10px 9px 12px;border-radius:14px;background:#fff7e6;border:1px solid #fde1a6;color:#7a4a00;font-size:12.5px;font-weight:600;line-height:1.35;animation:wzSettle .3s var(--wz-ease) both}
++.pv-warn[hidden]{display:none}
++.pv-warn span{flex:1;min-width:0}
++.pv-warn button{all:unset;box-sizing:border-box;flex:none;cursor:pointer;padding:6px 11px;border-radius:999px;background:#fff;border:1px solid #f3c779;color:#7a4a00;font-weight:800;font-size:12px}
++.pv-warn button:active{transform:scale(.95)}
++/* output tweaks that used to live in the adjust step now sit above the preview */
++.wz-pane[data-step="2"] #ccRow,.wz-pane[data-step="2"] #fxRow{margin:0 0 10px}
++.wz-pane[data-step="2"] #fxRow{padding:8px 10px;border-radius:14px;background:#fff;border:1px solid #e3e8f5}
++/* compact preview cards: label + JPG button share a row, so Front and Back both fit on a phone screen */
++@media(max-width:430px){
++ .wz .out{grid-template-columns:1fr;gap:8px}
++ .wz .out .oc{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"lab btn" "cv cv";align-items:center;column-gap:8px;row-gap:6px;padding:8px 10px 10px}
++ .wz .out .oc>b{grid-area:lab;font-size:13px}
++ .wz .out .oc>.b{grid-area:btn;padding:5px 11px;font-size:12px}
++ .wz .out .oc>canvas{grid-area:cv;margin:0;justify-self:center;width:auto;max-width:100%;max-height:25svh}
++}
++@media(prefers-reduced-motion:reduce){.wz-pane[data-flow="card"].on,.pv-warn{animation:none!important}}
++
++/* ===== v12: "Print, save or download" sheet (compact, thumb-friendly) ===== */
++#printBox{--pb-blue:#2563eb}
++#printBox .pb{display:flex;flex-direction:column;gap:12px}
++#printBox .pb-seg{display:grid!important;grid-template-columns:1fr 1fr;gap:3px;padding:3px!important;border:0!important;border-radius:14px!important;background:#eef1f8!important;overflow:visible!important}
++#printBox .pb-seg button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;min-width:0;padding:10px 6px;border-radius:11px;font:700 13.5px/1.2 Figtree,system-ui,sans-serif;color:#475569;white-space:nowrap;transition:background .22s var(--ease,ease),color .22s,box-shadow .22s,transform .12s;-webkit-tap-highlight-color:transparent}
++#printBox .pb-seg button:active{transform:scale(.97)}
++#printBox .pb-seg button.on{background:var(--pb-blue)!important;color:#fff!important;-webkit-text-fill-color:#fff!important;box-shadow:0 5px 12px -6px rgba(37,99,235,.8)}
++#printBox .pb-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
++#printBox .pb-row .b{min-height:54px;padding:8px 10px!important;border-radius:14px!important;font-size:14px!important;font-weight:800;line-height:1.15;text-align:center;gap:7px;transition:transform .15s,box-shadow .2s,filter .2s,background .2s}
++#printBox .pb-row .b svg{width:18px;height:18px}
++#printBox .pb-row #addOrder{box-shadow:0 12px 20px -12px rgba(219,39,119,.85)}
++#printBox .pb-row .b:active{transform:scale(.97)}
++#printBox .pb-lab{margin:2px 0 -4px;font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.08em}
++#printBox .pb-dl{justify-content:flex-start!important;min-height:52px;padding:8px 12px!important;border-radius:14px!important;gap:10px;text-align:left}
++#printBox .pb-dl svg{width:20px;height:20px;color:var(--pb-blue)}
++#printBox .pb-dl .t{display:flex;flex-direction:column;min-width:0;line-height:1.15}
++#printBox .pb-dl .t1{font-size:14px;font-weight:800;color:#0f172a}
++#printBox .pb-dl .t2{margin-top:2px;font-size:11.5px;font-weight:700;color:#64748b;transition:color .2s}
++#printBox #dSheetL{display:inline-block;padding:0 6px;border-radius:6px;background:#e8efff;color:var(--pb-blue)}
++#printBox .pb-dl:active{transform:scale(.97)}
++#printBox .pb-batch{padding:10px 12px 11px;border-radius:16px;background:#f7f9ff;border:1px solid #e3e8f5}
++#printBox .pb-bh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
++#printBox .pb-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;background:#fff;border:1px solid #d6dbff;font-size:12px;font-weight:800;color:#334155;transition:background .25s,color .25s,border-color .25s}
++#printBox .pb-badge i{font-style:normal;opacity:.5}
++#printBox .pb-batch.has .pb-badge{background:var(--pb-blue);border-color:var(--pb-blue);color:#fff}
++#printBox .pb-dots{display:inline-flex;gap:4px}
++#printBox .pb-dots i{width:16px;height:6px;border-radius:99px;background:#dbe2f3;transition:background .25s,transform .25s}
++#printBox .pb-dots i.on{background:var(--pb-blue);transform:scaleY(1.15)}
++#printBox .pb-bb{display:grid;grid-template-columns:1.5fr 1fr;gap:8px}
++#printBox .pb-bb .b{min-height:40px;padding:0 10px!important;border-radius:12px!important;font-size:13px!important;font-weight:800;gap:5px}
++#printBox .pb-bb .b svg{width:15px;height:15px}
++#printBox .pb-bb .b:active{transform:scale(.97)}
++#printBox .pb-cap{display:block;margin:8px 2px 0;font-size:12px;line-height:1.3;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
++@media(max-width:600px){
++ /* grab handle + tighter sheet so everything fits a 360x640 screen */
++ #printBox.is-pop{padding:6px 14px calc(14px + env(safe-area-inset-bottom,0px))!important}
++ #printBox.is-pop:before{content:"";display:block;width:38px;height:4px;margin:2px auto 0;border-radius:99px;background:#d5dbea}
++ #printBox .pop-h{margin:0 0 8px;padding:8px 0 6px;top:-6px}
++ #printBox .pop-h b{font-size:16px}
++ #printBox .pop-x{width:34px;height:34px}
++ #printBox .pb{gap:10px}
++}
++@media(max-width:350px){#printBox .pb-seg button{font-size:12.5px;padding:10px 4px}#printBox .pb-row .b{font-size:13px!important}}
+--- a/site-theme.css
++++ b/site-theme.css
+@@ -228,3 +228,39 @@
+ @media(max-width:600px){body .page-head{margin-bottom:10px}body .page-head h1{font-size:22px}body .page-head p{font-size:12.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}body .scan-quick{margin-bottom:10px;padding:10px 14px}}
+ .trust-m{margin:2px 0 0;padding:0}
+ @media (prefers-reduced-motion:reduce){body div.flow:after,body div.flow b:after{animation:none!important}}
++
++/* ===== v11: premium ID-card grid (scoped to #tilesBox so other pages keep their own tiles) ===== */
++body .page-head .trust-pill{display:inline-flex;align-items:center;gap:6px;margin:8px 0 2px;padding:5px 12px 5px 9px;border-radius:999px;font-size:11.5px;font-weight:800;line-height:1.3;letter-spacing:.01em;color:#3338d6;background:linear-gradient(135deg,rgba(79,91,255,.10),rgba(155,92,255,.12));border:1px solid rgba(79,91,255,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.75),0 6px 14px -10px rgba(79,91,255,.7);-webkit-text-fill-color:currentColor}
++body .page-head .trust-pill svg{width:13px;height:13px;flex:none;fill:currentColor}
++body #tilesBox .tiles{grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:14px 12px;padding:2px 0 4px}
++body #tilesBox .tile{position:relative;display:flex!important;flex-direction:column;gap:10px;min-width:0;overflow:hidden;padding:10px 10px 12px!important;border-radius:22px!important;border:1px solid rgba(15,23,42,.07)!important;border-left-width:1px!important;background:linear-gradient(180deg,#fff,#f8f9ff)!important;
++ box-shadow:inset 0 1px 0 #fff,0 1px 1px rgba(15,23,42,.04),0 3px 6px -2px rgba(15,23,42,.06),0 14px 28px -14px color-mix(in srgb,var(--c) 38%,rgba(15,23,42,.5))!important;
++ -webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .24s cubic-bezier(.2,.8,.2,1),box-shadow .24s ease,border-color .2s ease,background .2s ease!important;animation:tileIn .5s cubic-bezier(.2,.8,.2,1) calc(var(--i,0)*45ms) backwards}
++body #tilesBox .tile:before{content:"";position:absolute;inset:0;height:auto;border-radius:inherit;background:radial-gradient(120% 62% at 50% 0%,color-mix(in srgb,var(--c) 15%,transparent),transparent 72%);pointer-events:none}
++body #tilesBox .tile:after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 2px var(--c);opacity:0;transition:opacity .18s ease;pointer-events:none}
++body #tilesBox .tile>*{position:relative}
++body #tilesBox .tile .cv{position:relative;display:block;flex:none;border-radius:13px;overflow:hidden;background:#fff;box-shadow:0 0 0 1px rgba(15,23,42,.09),0 2px 3px rgba(15,23,42,.10),0 12px 18px -10px color-mix(in srgb,var(--c) 60%,#0f172a)}
++body #tilesBox .tile .cv:after{content:"";position:absolute;inset:0;background:linear-gradient(112deg,rgba(255,255,255,.62) 0%,rgba(255,255,255,.14) 30%,rgba(255,255,255,0) 46%),linear-gradient(0deg,rgba(15,23,42,.07),rgba(15,23,42,0) 28%);pointer-events:none}
++body #tilesBox .tile .ca{display:block;width:100%;height:auto;aspect-ratio:120/76;margin:0;border:0;border-radius:0;box-shadow:none;filter:saturate(1.16) contrast(1.04);text-rendering:geometricPrecision;shape-rendering:geometricPrecision;transition:none!important}
++body #tilesBox .tile .tx{display:block;min-width:0;padding:0 2px}
++body #tilesBox .tile b{display:block;margin:0;font-size:14.5px;font-weight:800;line-height:1.25;letter-spacing:-.012em;color:#0f172a}
++body #tilesBox .tile small{display:block;margin-top:2px;font-size:11.5px;font-weight:600;line-height:1.3;color:#64748b}
++body #tilesBox .tile .tbs{display:flex;margin:auto 0 0;padding:0 2px}
++body #tilesBox .tile .tbs i{display:inline-flex;align-items:center;max-width:100%;padding:3px 9px;border-radius:999px;font-style:normal;font-size:10.5px;font-weight:700;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:color-mix(in srgb,var(--c) 72%,#0f172a);background:color-mix(in srgb,var(--c) 9%,#fff);border:1px solid color-mix(in srgb,var(--c) 20%,#fff)}
++body #tilesBox .tile.on{background:linear-gradient(180deg,color-mix(in srgb,var(--c) 10%,#fff),#fff)!important}
++body #tilesBox .tile.on:after{opacity:1}
++body #tilesBox .tile:focus-visible:after{opacity:1}
++body #tilesBox .tile:active{transform:scale(.98)!important;box-shadow:inset 0 1px 0 #fff,0 1px 1px rgba(15,23,42,.05),0 6px 12px -8px color-mix(in srgb,var(--c) 45%,rgba(15,23,42,.5))!important}
++@media(hover:hover){body #tilesBox .tile:hover{transform:translateY(-3px)!important;border-color:color-mix(in srgb,var(--c) 30%,rgba(15,23,42,.07))!important;box-shadow:inset 0 1px 0 #fff,0 2px 4px rgba(15,23,42,.05),0 8px 14px -6px rgba(15,23,42,.10),0 24px 38px -18px color-mix(in srgb,var(--c) 55%,rgba(15,23,42,.5))!important}body #tilesBox .tile:hover:after{opacity:.55}body #tilesBox .tile:active:hover{transform:scale(.98)!important}}
++@keyframes tileIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
++/* phones: two columns; an odd last card spans the row and lays out sideways so no empty cell is left */
++@media(max-width:600px){
++ body #tilesBox .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 10px}
++ body #tilesBox .tile{padding:8px 8px 11px!important;border-radius:20px!important;gap:9px}
++ body #tilesBox .tile b{font-size:14px}body #tilesBox .tile small{font-size:11px}
++ body #tilesBox .tile:last-child:nth-child(odd){grid-column:1/-1;display:grid!important;grid-template-columns:minmax(0,46%) minmax(0,1fr);grid-template-areas:"cv tx" "cv pill";column-gap:14px;row-gap:7px;align-items:center;padding:10px 14px 10px 10px!important}
++ body #tilesBox .tile:last-child:nth-child(odd) .cv{grid-area:cv;max-width:200px}
++ body #tilesBox .tile:last-child:nth-child(odd) .tx{grid-area:tx;align-self:end}
++ body #tilesBox .tile:last-child:nth-child(odd) .tbs{grid-area:pill;align-self:start;margin:0}
++}
++@media(prefers-reduced-motion:reduce){body #tilesBox .tile{animation:none!important;transition:none!important}}
+--- a/site-ui.js
++++ b/site-ui.js
+@@ -169,6 +169,15 @@
+ 'Front Side': 'সামনের দিক', 'Back Side': 'পেছনের দিক',
+ 'Detect & adjust': 'শনাক্ত ও ঠিক করুন', 'Preview & download': 'প্রিভিউ ও ডাউনলোড', 'Next: preview →': 'পরবর্তী: প্রিভিউ →',
+ 'Cropped card preview': 'ক্রপ করা কার্ডের প্রিভিউ',
++/* card crop v12: grid pills, preview-first wizard, compact print sheet */
++'Instant Auto-Crop · 100% on-device': 'ইনস্ট্যান্ট অটো-ক্রপ · ১০০% আপনার ডিভাইসে',
++'Front & Back · PDF': 'সামনে ও পিছনে · PDF', 'Front & Back · PDF/JPG': 'সামনে ও পিছনে · PDF/JPG', 'Front · PDF/JPG': 'শুধু সামনে · PDF/JPG',
++'Adjust crop': 'ক্রপ ঠিক করুন', 'Apply & return to preview': 'প্রয়োগ করে প্রিভিউতে ফিরুন', 'You can fine-tune it.': 'আপনি নিজে ঠিক করে নিতে পারেন।',
++'Back uses the same area as Front for a single photo. Tap Adjust crop to place the Back box.': 'একটি ছবির ক্ষেত্রে পিছনের অংশ সামনের মতোই ধরা হয়। পিছনের বক্স বসাতে "ক্রপ ঠিক করুন" চাপুন।',
++'Print, save or download': 'প্রিন্ট, সেভ বা ডাউনলোড', 'Download JPG': 'JPG ডাউনলোড',
++'Both JPGs': 'দুটি JPG', 'Front + Back': 'সামনে + পিছনে', 'Sheet JPG': 'শিট JPG',
++'A4 Batch': 'A4 ব্যাচ', 'Add to Batch': 'ব্যাচে যোগ করুন', 'Clear': 'মুছুন',
++'Up to 5 pairs on one A4 sheet.': 'এক A4 শিটে সর্বোচ্চ ৫ জোড়া।', 'Print & Save use this batch.': 'প্রিন্ট ও সেভে এই ব্যাচ ব্যবহার হবে।',
+ 'Tap Download to save your file. Nothing was uploaded.': 'ফাইল সেভ করতে ডাউনলোড চাপুন। কিছুই আপলোড হয়নি।',
+ 'Download all': 'সব ডাউনলোড করুন'
+ });
