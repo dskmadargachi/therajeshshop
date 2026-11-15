@@ -514,3 +514,32 @@ function init() {
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
+
+
+/* ---------- cross-subdomain navigation ----------
+   On cards./counter./pdf-tools.therajesh.shop a root-relative link like "/" or "/#pp" would stay on that subdomain
+   (and "/" would just reload the same tool). Rewrite the shop's own page links so Home -> https://therajesh.shop/
+   and tool links -> that tool's own subdomain. The main domain and *.pages.dev are left alone (links already work). */
+(function () {
+  var ROOT = 'therajesh.shop', h = location.hostname.toLowerCase();
+  if (h.slice(-(ROOT.length + 1)) !== '.' + ROOT) return;
+  if (!/^(cards|counter|pdf-tools)$/.test(h.slice(0, -(ROOT.length + 1)))) return;
+  var TOOL = { '/cards': 'cards', '/cards.html': 'cards', '/counter': 'counter', '/counter.html': 'counter', '/pdf-tools': 'pdf-tools', '/pdf-tools.html': 'pdf-tools' };
+  function fix(a) {
+    var raw = a.getAttribute && a.getAttribute('href');
+    if (!raw || raw.charAt(0) !== '/' || raw.charAt(1) === '/') return;
+    var m = /^([^?#]*)([?#][\s\S]*)?$/.exec(raw), p = m[1], rest = m[2] || '', to = '';
+    if (p === '/' || p === '/index.html') to = 'https://' + ROOT + '/';
+    else if (TOOL[p]) to = 'https://' + TOOL[p] + '.' + ROOT + '/';
+    else if (p === '/poster' || p === '/poster.html') to = 'https://' + ROOT + '/poster';
+    if (to) a.setAttribute('href', to + rest);
+  }
+  function scan(root) { var l = (root || document).querySelectorAll ? (root || document).querySelectorAll('a[href]') : []; for (var i = 0; i < l.length; i++) fix(l[i]); }
+  function start() {
+    scan(document);
+    new MutationObserver(function (ms) { ms.forEach(function (m) { m.addedNodes.forEach(function (n) { if (n.nodeType === 1) { if (n.tagName === 'A') fix(n); scan(n); } }); }); }).observe(document.documentElement, { childList: true, subtree: true });
+  }
+  /* safety net: fix the link at click time too (covers anything inserted in the same tick) */
+  document.addEventListener('click', function (e) { var a = e.target && e.target.closest && e.target.closest('a[href]'); if (a) fix(a); }, true);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();

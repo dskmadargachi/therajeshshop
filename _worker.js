@@ -55,7 +55,7 @@ function newId() {
   return Array.from(bytes, (b) => chars[b % chars.length]).join('');
 }
 
-export default {
+const mainWorker = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
@@ -1365,3 +1365,74 @@ async function waCloudReply(env, to, r) {
   }
   return waCloudSend(env, to, r.text);
 }
+
+
+/* =====================================================================================
+   HOST ROUTING + CORS  (added)
+   One Pages project serves therajesh.shop AND the tool subdomains. Every page calls the API with a
+   relative /api/... URL, so a card/PDF order sent from cards.* or pdf-tools.* lands in the SAME D1 / KV
+   as the counter and shows up on counter.therajesh.shop at once. The wrapper below only adds:
+     1. subdomain root -> the matching page (browser URL is NOT changed, no redirect)
+     2. CORS for the shop's own origins (only needed if a page ever calls another subdomain's /api)
+   ===================================================================================== */
+const TOOL_HOSTS = {
+  'cards.therajesh.shop': '/cards.html',
+  'counter.therajesh.shop': '/counter.html',
+  'pdf-tools.therajesh.shop': '/pdf-tools.html',
+};
+const ALLOWED_ORIGINS = new Set([
+  'https://therajesh.shop', 'https://www.therajesh.shop',
+  'https://cards.therajesh.shop', 'https://counter.therajesh.shop', 'https://pdf-tools.therajesh.shop',
+]);
+
+// Serve an asset at another path. Pages "pretty URLs" answer /cards.html with a redirect to /cards;
+// follow that redirect INSIDE the worker so the visitor's address bar never changes.
+async function serveAsset(request, env, url, assetPath) {
+  const target = new URL(url.toString()); target.pathname = assetPath;
+  let res = await env.ASSETS.fetch(new Request(target.toString(), request));
+  for (let i = 0; i < 3 && res.status >= 300 && res.status < 400; i++) {
+    const loc = res.headers.get('location'); if (!loc) break;
+    res = await env.ASSETS.fetch(new Request(new URL(loc, target).toString(), request));
+  }
+  return res;
+}
+
+function corsHeaders(origin, request) {
+  const h = new Headers();
+  h.set('Access-Control-Allow-Origin', origin);
+  h.set('Vary', 'Origin');
+  h.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  h.set('Access-Control-Allow-Headers', (request && request.headers.get('Access-Control-Request-Headers')) || 'content-type,authorization,x-agent-key');
+  h.set('Access-Control-Max-Age', '86400');
+  return h;
+}
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    const host = url.hostname.toLowerCase();
+
+    // ---- API: same handler for every hostname; CORS only for the shop's own origins ----
+    if (url.pathname.startsWith('/api/')) {
+      const origin = request.headers.get('Origin');
+      const okOrigin = !!origin && ALLOWED_ORIGINS.has(origin);
+      if (okOrigin && request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(origin, request) });
+      const res = await mainWorker.fetch(request, env, ctx);
+      if (!okOrigin || res.webSocket) return res;
+      const h = new Headers(res.headers);
+      corsHeaders(origin, null).forEach((v, k) => { if (k !== 'access-control-allow-headers' && k !== 'access-control-max-age' && k !== 'access-control-allow-methods') h.set(k, v); });
+      return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+    }
+
+    // ---- subdomain root -> its page (URL stays https://cards.therajesh.shop/ etc.) ----
+    // ?autoOpenWizard=1 is the PDF Studio -> print page hand-off, which must open the print page on the SAME origin
+    // (the file waits in that origin's IndexedDB), so it is the one root request that is not rewritten.
+    const page = TOOL_HOSTS[host];
+    if (page && (request.method === 'GET' || request.method === 'HEAD') && (url.pathname === '/' || url.pathname === '') && !url.searchParams.has('autoOpenWizard')) {
+      return serveAsset(request, env, url, page);
+    }
+
+    // main domain + every other path (static assets, /cards, /cards.html, /counter, /pdf-tools ...) behave exactly as before
+    return env.ASSETS.fetch(request);
+  }
+};

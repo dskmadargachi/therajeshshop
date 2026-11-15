@@ -2203,5 +2203,36 @@ if (window.Wiz) {
   new MutationObserver(() => { $('ppBadge').textContent = $('ppAmt').textContent; }).observe($('ppAmt'), { childList: true, characterData: true, subtree: true });
 }
 </script>
+<script>
+/* PDF Studio -> Print page hand-off. pdf-tools.html parks the finished PDF in this origin's IndexedDB and opens
+   /?source=pdf-tools&autoOpenWizard=1 ; pick it up here, feed it to the normal file picker (so page counting, thumbnails and the
+   print wizard all work as usual), then delete it. Stale entries (> 30 min) are discarded. */
+(function () {
+  var q = new URLSearchParams(location.search);
+  if (!window.indexedDB || (!q.has('autoOpenWizard') && q.get('source') !== 'pdf-tools')) return;
+  var HDB = 'therajesh_handoff', HST = 'files', HKEY = 'pending_print_file';
+  try {
+    var rq = indexedDB.open(HDB, 1);
+    rq.onupgradeneeded = function () { rq.result.createObjectStore(HST); };
+    rq.onerror = function () {};
+    rq.onsuccess = function () {
+      var db = rq.result, tx, os, g;
+      try { tx = db.transaction(HST, 'readwrite'); os = tx.objectStore(HST); g = os.get(HKEY); } catch (e) { db.close(); return; }
+      var v = null;
+      g.onsuccess = function () { v = g.result; if (v) os.delete(HKEY); };
+      tx.oncomplete = function () {
+        db.close();
+        if (!v || !v.buf || Date.now() - (v.ts || 0) > 30 * 60 * 1000) return;
+        var inp = document.getElementById('pick'); if (!inp || !window.DataTransfer) return;
+        try {
+          var dt = new DataTransfer(); dt.items.add(new File([v.buf], v.name || 'document.pdf', { type: v.type || 'application/pdf' }));
+          inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true }));
+          history.replaceState(null, '', location.pathname);
+        } catch (e) { console.error(e); }
+      };
+    };
+  } catch (e) { console.error(e); }
+})();
+</script>
 </body>
 </html>

@@ -1463,7 +1463,7 @@ async function sendToCounter(file, btn) {
     const db = await new Promise((res, rej) => { const r = indexedDB.open(HDB, 1); r.onupgradeneeded = () => r.result.createObjectStore(HST); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
     await new Promise((res, rej) => { const tx = db.transaction(HST, 'readwrite'); tx.objectStore(HST).put({buf, name: file.name, type: file.type || 'application/pdf', size: file.size, tool: cur ? cur.slug : '', ts: Date.now()}, HKEY); tx.oncomplete = res; tx.onerror = tx.onabort = () => rej(tx.error); });
     db.close();
-    location.href = '/index.html?source=pdf-tools&autoOpenWizard=1';
+    location.href = '/?source=pdf-tools&autoOpenWizard=1';   /* same origin as this page, so the file saved above is found */
   } catch (e) { console.error(e); btn.disabled = false; btn.textContent = SEND_LABEL; setWn('Could not send the file to the print page. Please download it and upload it there.'); }
 }
 function dlLabel(file) { return file.type === 'application/pdf' ? (cur.dlKey || '⬇️ Download PDF') : file.type === 'image/jpeg' ? '⬇️ Download JPG' : '⬇️ Download File'; }
