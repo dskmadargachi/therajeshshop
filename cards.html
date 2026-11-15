@@ -618,7 +618,7 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
 .wz-pane .s3set{margin-top:12px}
 .wz-done-slot .donebox{border:0!important;box-shadow:none!important;background:none!important;padding:0!important;margin:0}
 </style>
-<link rel="stylesheet" href="/wizard.css?v=6">
+<link rel="stylesheet" href="/wizard.css?v=7">
 <script src="/wizard.js"></script>
 </head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -783,10 +783,7 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
      </section>
     <div class="popbody" id="printBox"><div class="pop-h"><b>Print, save or download</b><button class="pop-x" type="button" aria-label="Close">✕</button></div>
     <div class="pb">
-     <div class="pb-seg seg" id="paperSeg" role="group" aria-label="Sheet size"><button data-v="A4" class="on" type="button" aria-pressed="true">A4 (up to 5 pairs)</button><button data-v="4x6" type="button" aria-pressed="false">4×6 photo</button></div>
-     <div class="pb-row pb-send">
-      <button class="b hero" id="sendCounter" type="button"><svg><use href="#i-send"/></svg>Send to counter</button>
-     </div>
+     <div class="pb-seg seg" id="paperSeg" role="group" aria-label="Sheet size"><button data-v="A4" class="on" type="button" aria-pressed="true">A4 (one card per page)</button><button data-v="4x6" type="button" aria-pressed="false">4×6 photo</button></div>
      <div class="pb-row">
       <button class="b hero" id="addOrder" type="button"><svg><use href="#i-plus"/></svg>Add to print order</button>
       <button class="b g hero" id="savePdf" type="button"><svg><use href="#i-pdf"/></svg>Save as PDF</button>
@@ -796,13 +793,8 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
       <button class="b g pb-dl" id="dBoth" type="button"><svg><use href="#i-down"/></svg><span class="t"><span class="t1">Both JPGs</span><span class="t2" id="dBothL">Front + Back</span></span></button>
       <button class="b g pb-dl" id="dSheet" type="button"><svg><use href="#i-down"/></svg><span class="t"><span class="t1">Sheet JPG</span><span class="t2" id="dSheetL">A4</span></span></button>
      </div>
-     <div class="pb-batch" id="batchBox">
-      <div class="pb-bh"><span class="pb-badge"><span>A4 Batch</span><i>·</i><b id="bBadge">0/5</b></span><span class="pb-dots" id="bDots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></div>
-      <div class="pb-bb">
-       <button class="b g" id="add" type="button"><svg><use href="#i-plus"/></svg>Add to Batch</button>
-       <button class="b g" id="clr" type="button" disabled><svg><use href="#i-trash"/></svg>Clear</button>
-      </div>
-      <span class="pb-cap" id="bn">Up to 5 pairs on one A4 sheet.</span>
+     <div class="pb-row pb-send">
+      <button class="b hero" id="sendCounter" type="button"><svg><use href="#i-send"/></svg>Send to counter</button>
      </div>
     </div></div>
    </div>
@@ -823,7 +815,7 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
  </div>
 </div>
 
-<script src="/scan-wizard.js?v=6"></script>
+<script src="/scan-wizard.js?v=7"></script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const $=i=>document.getElementById(i),CW=85.6,CH=53.98,R=CW/CH,MM=25.4;
@@ -852,7 +844,7 @@ voter:{n:'Voter Card',bn:'ভোটার কার্ড',d:'e-EPIC PDF · fron
 abc:{minW:.4,maxW:1,n:'ABC / APAAR ID',bn:'অ্যাপার',d:'PDF, JPG or PNG · front only',img:1,pdf:1,one:1,fx:1,F:[.04,.03,.92,.4],det:'ink',inset:.002},
 abha:{n:'ABHA Card',bn:'আভা কার্ড',d:'PDF · front and back',pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'cards',inset:.004},
 eshram:{minW:.3,maxW:1,n:'e-Shram Card',bn:'ই-শ্রম কার্ড',d:'PDF, JPG or PNG · front and back',img:1,pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'cards',inset:.004}};
-let fitMode=(()=>{try{return localStorage.getItem('cardFit')==='keep'?'keep':'fill'}catch(e){return 'fill'}})(),K,Tp,pp=[],pages=[],bx={},dpi=300,cc=0,batch=[],pdfBuf=null,srcFile=null,selS='F',sheetPaper='A4',deck=[],ai=-1,autoBatch=false,deckAdded=false,srcImg=false,sendItems=[];
+let fitMode=(()=>{try{return localStorage.getItem('cardFit')==='keep'?'keep':'fill'}catch(e){return 'fill'}})(),K,Tp,pp=[],pages=[],bx={},dpi=300,cc=0,pdfBuf=null,srcFile=null,selS='F',sheetPaper='A4',deck=[],ai=-1,deckAdded=false,srcImg=false,sendItems=[];
 
 const CA=(()=>{
 const ph=(x,y,w,h,c)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${c}"/><circle cx="${x+w/2}" cy="${y+h*.36}" r="${w*.2}" fill="#fff" opacity=".9"/><path d="M${x+w*.14} ${y+h}Q${x+w/2} ${y+h*.5} ${x+w*.86} ${y+h}Z" fill="#fff" opacity=".9"/>`;
@@ -888,7 +880,7 @@ function pick(k){K=k;Tp=T[k];$('tool').classList.remove('hidden');freeDeck();pag
  $('hint').textContent='Up to 5 files at once · 15 MB each · '+Tp.d;$('pwBtn').classList.add('hidden');$('pw').value='';$('ccRow').classList.toggle('hidden',!Tp.cc);
  $('fxRow').classList.toggle('hidden',!Tp.fx);$('dBothL').textContent=Tp.one?'Front only':'Front + Back';
  $('work').classList.add('hidden');if(window.Wiz)Wiz.sync('card',0);st('')}
-/* ---- multi-file: up to 5 files in one go. Each file is auto-cropped and added to the A4 batch (5 pairs per sheet) ---- */
+/* ---- multi-file: up to 5 files in one go. Each file is auto-cropped and kept as its own separate A4 page (nothing is merged onto one sheet) ---- */
 const MAXF=5;let Q=[],lastPw='',multiN=0,multiDone=0;
 async function checkFile(f){
  if(f.size>15*1048576)return'File is too large. Maximum is 15 MB.';
@@ -902,7 +894,7 @@ $('file').onchange=async e=>{let files=[...e.target.files];if(!files.length)retu
  e.target.value='';
  const ok=[];for(const f of files){const err=await checkFile(f);if(err){toast(f.name.slice(0,28)+': '+err);if(files.length==1)return st(err,1)}else ok.push(f)}
  if(!ok.length)return st('No usable file was selected.',1);
- freeDeck();pages=[];pp=[];bx={};batch=[];batchUI();multiN=ok.length>1?ok.length:0;multiDone=0;lastPw='';Q=ok.slice();rpEnd(false);nextFile()};
+ freeDeck();pages=[];pp=[];bx={};multiN=ok.length>1?ok.length:0;multiDone=0;lastPw='';Q=ok.slice();rpEnd(false);nextFile()};
 /* ---- live "Reading files… n%" : bytes read (FileReader.onprogress) -> PDF/image decode -> page render -> edge detect; multi-file aware ---- */
 let rpT=null;
 const rpGet=()=>rpT||(rpT=window.Prog?Prog.start('Reading files…'):{part(){},done(){},fail(){}});
@@ -932,26 +924,25 @@ async function load(pass){fileProg(0.25);pages=[];pp=[];bx={};
    if(multiN){toast('Skipped '+srcFile.name.slice(0,24)+' (could not read)');pages=[];pp=[];bx={};multiDone++;if(Q.length)return nextFile();return finishDeck()}
    rpEnd(false);return st('Could not read this file: '+(err&&err.message||err),1)}
   fileProg(0.88);await autoCrop();fileProg(1);
-  /* every file keeps its own pages + crop boxes, so ALL selected cards reach the preview and the A4 batch */
+  /* every file keeps its own pages + crop boxes, so ALL selected cards reach the preview, each on its own page */
   deck.push({name:srcFile.name,pages,pp,bx,img:srcImg});multiDone++;
   pages=[];pp=[];bx={};ai=-1;
   if(Q.length)return nextFile()
   return finishDeck()}
-function freeDeck(){deck.forEach(E=>(E.pages||[]).forEach(freeCanvas));deck=[];ai=-1;autoBatch=false;deckAdded=false;const o=$('deckOut');if(o)o.innerHTML=''}
+function freeDeck(){deck.forEach(E=>(E.pages||[]).forEach(freeCanvas));deck=[];ai=-1;deckAdded=false;const o=$('deckOut');if(o)o.innerHTML=''}
 function commit(){const E=deck[ai];if(E){E.pages=pages;E.pp=pp;E.bx=bx}}
 function useCard(i){const E=deck[i];if(!E)return;if(ai>=0&&ai!==i)commit();ai=i;pages=E.pages;pp=E.pp;bx=E.bx;srcImg=E.img}
 async function finishDeck(){
   if(!deck.length){rpEnd(false);return st('Could not read any of the selected files.',1)}
   rpEnd(true);useCard(0);const many=deck.length>1;
-  st(many?deck.length+' cards are ready in the preview and the A4 batch.':(rMsg()||(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(redFull?'':(isFree()?(Tp.det=='red'?'Red border found on both pages. Cropped exactly inside it.':'Front and back card edges found. Cropped exactly to each card.'):'Cards found and cropped. Adjust the boxes if needed.')))),many?0:(rMsg()?!greenOK:miss));
+  st(many?deck.length+' cards are ready. Each one prints on its own page.':(rMsg()||(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(redFull?'':(isFree()?(Tp.det=='red'?'Red border found on both pages. Cropped exactly inside it.':'Front and back card edges found. Cropped exactly to each card.'):'Cards found and cropped. Adjust the boxes if needed.')))),many?0:(rMsg()?!greenOK:miss));
   $('work').classList.remove('hidden');
-  autoBatch=many;batch=[];
   const t1=$('dBoth').querySelector('.t1');if(t1)t1.textContent=many?'All JPGs':'Both JPGs';
   $('dBothL').textContent=many?'All cards':(Tp.one?'Front only':'Front + Back');
   buildDeckUI();
-  if(many){st('Adding all cards to the A4 batch…');try{await rebuildBatch()}catch(e){console.error(e)}st(deck.length+' cards are ready in the preview and the A4 batch.');toast(deck.length+' cards added to the A4 batch')}
+  if(many)toast(deck.length+' cards ready · one page each');
   if(window.Wiz){Wiz.resetDone('card');Wiz.open('card',2);Wiz.sync('card',1)}
-  deck.forEach((_,i)=>drawCard(i));batchUI()}
+  deck.forEach((_,i)=>drawCard(i))}
 /* ---- preview of every selected card ---- */
 function buildDeckUI(){const box=$('deckOut');box.innerHTML='';const many=deck.length>1;
   deck.forEach((E,i)=>{const sec=document.createElement('section');sec.className='dk'+(many?' multi':'');sec.dataset.i=i;
@@ -967,17 +958,13 @@ function drawCard(i){const E=deck[i];if(!E||!E.bx||!E.bx.F)return;
 function adjustCard(i){useCard(i);mount();selS='F';layoutBoxes();update();
   const many=deck.length>1,w=$('adjWho');w.hidden=!many;if(many){$('adjWhoT').textContent='Card '+(i+1);$('adjWhoN').textContent=deck[i].name}
   if(window.Wiz)Wiz.go(1)}
-function deckBack(){commit();deck.forEach((_,i)=>drawCard(i));if(autoBatch)queueRB();batchUI()}
+function deckBack(){commit();deck.forEach((_,i)=>drawCard(i))}
 $('deckOut').addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-adj],[data-dl]');if(!t)return;
   if(t.dataset.adj!=null)return adjustCard(+t.dataset.adj);
   const i=+t.dataset.i,sd=t.dataset.dl,E=deck[i];if(!E)return;
   busy(async()=>save(await cropHQ(sd,dpi,E),nm(i)+(sd==='F'?'_front.jpg':'_back.jpg')))});
-/* the A4 batch mirrors the deck: one pair per selected card (queued so quick changes never overlap) */
-async function rebuildBatch(){commit();const out=[];for(const E of deck.slice(0,5))out.push(await pair(E));batch=out;batchUI()}
-let rbQ=Promise.resolve(),rbT=0;
-const queueRB=()=>{rbQ=rbQ.then(()=>autoBatch?rebuildBatch():0).catch(e=>console.error(e));return rbQ};
-const dRB=()=>{clearTimeout(rbT);rbT=setTimeout(queueRB,450)};
-const curItems=async()=>{await rbQ;return batch.length?batch:[await pair()]};
+/* every selected card becomes its own page: one front|back pair per card, never packed onto a shared sheet */
+const curItems=async()=>{commit();if(!deck.length)return[await pair()];const out=[];for(const E of deck)out.push(await pair(E));return out};
 async function render(pass){pages.forEach(freeCanvas);pages=[];pp=[];
  if(!pdfBuf){const im=await new Promise((ok,no)=>{const i=new Image;i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(srcFile._blob||srcFile)});fileProg(0.6);
   const k=Math.min(1,4096/Math.max(im.naturalWidth,im.naturalHeight)),c=mk(Math.round(im.naturalWidth*k),Math.round(im.naturalHeight*k));
@@ -1236,12 +1223,7 @@ async function cropHQ(s,d,E){E=E||{bx,pages,pp};const b=E.bx[s],p=E.pp[b.p];if(!
  x.fillStyle='#fff';x.fillRect(0,0,W,H);x.save();x.beginPath();x.rect(ox,oy,rw,rh);x.clip();
  await p.render({canvasContext:x,viewport:v,transform:[1,0,0,k,-b.x*v.width+ox,-b.y*v.height*k+oy]}).promise;x.restore();return style(o)}
 function update(){if(!deck.length)return;
-  if(window.Wiz&&Wiz.isOpen()&&Wiz.step()===1&&ai>=0)drawCard(ai);else deck.forEach((_,i)=>drawCard(i));
-  batchUI()}
-/* A4 batch card: live count, progress dots, caption, Clear enabled only when there is something to clear */
-function batchUI(){const n=batch.length;$('bBadge').textContent=n+'/5';$('batchBox').classList.toggle('has',n>0);
- [...$('bDots').children].forEach((d,i)=>d.classList.toggle('on',i<n));$('clr').disabled=!n;
- $('bn').textContent=n?'Print & Save use this batch.':'Up to 5 pairs on one A4 sheet.'}
+  if(window.Wiz&&Wiz.isOpen()&&Wiz.step()===1&&ai>=0)drawCard(ai);else deck.forEach((_,i)=>drawCard(i))}
 function blob(c,d){return new Promise(r=>c.toBlob(async b=>{if(!b)return r(null);const u=new Uint8Array(await b.arrayBuffer());
  if(u[2]==0xFF&&u[3]==0xE0&&u[6]==0x4A){u[13]=1;u[14]=u[16]=(d>>8);u[15]=u[17]=d&255}r(new Blob([u],{type:'image/jpeg'}))},'image/jpeg',.95))}
 function dl(b,name){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),8000)}
@@ -1256,16 +1238,14 @@ function sheet(wIn,hIn,place){let d=dpi;if(wIn*hIn*d*d>LIM)d=Math.floor(Math.sqr
 const makeA4=items=>sheet(8.27,11.69,(x,d,mm,cw,ch)=>{let y=mm(8);items.forEach(p=>{const hf=cw*p.f.height/p.f.width,hb=p.b?cw*p.b.height/p.b.width:0;x.drawImage(p.f,mm(10),y,cw,hf);if(p.b)x.drawImage(p.b,mm(10)+cw+mm(4),y,cw,hb);y+=Math.max(hf,hb)+mm(3.5)})});
 const make46=p=>sheet(4,6,(x,d,mm,cw,ch)=>{const X=(4*d-cw)/2,gap=mm(8),hf=cw*p.f.height/p.f.width,hb=p.b?cw*p.b.height/p.b.width:0;
  if(p.b){const y=(6*d-hf-hb-gap)/2;x.drawImage(p.f,X,y,cw,hf);x.drawImage(p.b,X,y+hf+gap,cw,hb)}else x.drawImage(p.f,X,(6*d-hf)/2,cw,hf)});
-const jpgA4=()=>busy(async()=>{const items=await curItems(),c=makeA4(items);if(c.eff<dpi)st('Phone memory limit: A4 saved at '+c.eff+' DPI.');await save(c,'A4_'+nm()+'.jpg',c.eff)});
+const jpgA4=()=>busy(async()=>{const its=await curItems();for(let i=0;i<its.length;i++){const c=makeA4([its[i]]);if(c.eff<dpi)st('Phone memory limit: A4 saved at '+c.eff+' DPI.');await save(c,'A4_'+nm(its.length>1?i:null)+'.jpg',c.eff);if(i<its.length-1)await wait(500)}});
 const jpg46=()=>busy(async()=>{const its=await curItems();for(let i=0;i<its.length;i++){const c=make46(its[i]);await save(c,'4x6_'+nm(its.length>1?i:null)+'.jpg',c.eff);if(i<its.length-1)await wait(500)}});
 /* one "Sheet JPG" button: downloads whichever sheet is selected in the A4 / 4x6 toggle */
 $('dSheet').onclick=()=>sheetPaper==='A4'?jpgA4():jpg46();
-$('add').onclick=()=>busy(async()=>{if(batch.length>=5)return st('Maximum 5 ID pairs per A4.',1);autoBatch=false;batch.push(await pair());update()});
-$('clr').onclick=()=>{batch=[];autoBatch=false;update();batchUI()};
-document.querySelectorAll('[data-dpi]').forEach(b=>b.onclick=()=>{dpi=+b.dataset.dpi;mark();batch=[];update();if(autoBatch)queueRB()});
-document.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{cc=+b.dataset.cc;document.querySelectorAll('[data-cc]').forEach(x=>x.classList.toggle('on',x==b));update();if(autoBatch)dRB()});
-['fb','fc','fs'].forEach(i=>$(i).oninput=()=>{qUp();if(autoBatch)dRB()});
-document.querySelectorAll('[data-fit]').forEach(b=>b.onclick=()=>{fitMode=b.dataset.fit;try{localStorage.setItem('cardFit',fitMode)}catch(e){}mark();batch=[];update();if(autoBatch)queueRB()});
+document.querySelectorAll('[data-dpi]').forEach(b=>b.onclick=()=>{dpi=+b.dataset.dpi;mark();update()});
+document.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{cc=+b.dataset.cc;document.querySelectorAll('[data-cc]').forEach(x=>x.classList.toggle('on',x==b));update()});
+['fb','fc','fs'].forEach(i=>$(i).oninput=()=>{qUp()});
+document.querySelectorAll('[data-fit]').forEach(b=>b.onclick=()=>{fitMode=b.dataset.fit;try{localStorage.setItem('cardFit',fitMode)}catch(e){}mark();update()});
 function mark(){document.querySelectorAll('[data-fit]').forEach(b=>b.classList.toggle('on',b.dataset.fit==fitMode));document.querySelectorAll('[data-dpi]').forEach(b=>b.classList.toggle('on',+b.dataset.dpi==dpi))}mark();
 const paperUI=()=>{$('dSheetL').textContent=sheetPaper==='A4'?'A4':'4×6';document.querySelectorAll('#paperSeg button').forEach(x=>{const on=x.dataset.v===sheetPaper;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on)})};
 document.querySelectorAll('#paperSeg button').forEach(b=>b.onclick=()=>{sheetPaper=b.dataset.v;paperUI()});paperUI();
@@ -1309,13 +1289,13 @@ $('oPdf').onclick=async()=>{if(!cart.length)return;try{dl(new Blob([await pdfFro
 
 /* Add to print order / Send to counter (card crop): put the current cards into the order, then open the final Order & payment step */
 const dropSend=()=>{if(sendItems.length){cart=cart.filter(x=>!sendItems.includes(x));sendItems=[];drawCart()}};
-const lblFor=(items,paper)=>Tp.n+(paper==='A4'?(items.length>1?' · '+items.length+' pairs':(Tp.one?'':' · front and back')):(Tp.one?'':' · front and back'));
+const lblFor=(items,paper)=>Tp.n+(Tp.one?'':' · front and back')+(items.length>1?' · '+items.length+' cards, one page each':'');
 async function toOrder(keep){
   dropSend();
   if(!keep&&deckAdded&&cart.length)return true;                       /* these cards are already in the order */
-  const items=await curItems(),paper=sheetPaper,cvs=paper==='A4'?[makeA4(items)]:items.map(make46);
-  if(!(await pushCart(cvs,paper,lblFor(items,paper),paper==='A4'?[items.length]:items.map(()=>1))))return false;
-  if(keep){batch=[];autoBatch=false;sendItems=[];deckAdded=true;update()}else sendItems=pushCart.last.slice();
+  const items=await curItems(),paper=sheetPaper,cvs=paper==='A4'?items.map(it=>makeA4([it])):items.map(make46);
+  if(!(await pushCart(cvs,paper,lblFor(items,paper),items.map(()=>1))))return false;
+  if(keep){sendItems=[];deckAdded=true;update()}else sendItems=pushCart.last.slice();
   return true}
 async function toSummary(keep){if(!(await toOrder(keep)))return false;closePop();if(window.Wiz)Wiz.go(3);return true}
 $('addOrder').addEventListener('click',()=>setTimeout(closePop,60));
@@ -1323,7 +1303,7 @@ $('addOrder').onclick=()=>busy(async()=>{if(await toSummary(true))toast('Added t
 $('sendCounter').onclick=()=>busy(()=>toSummary(false),'Preparing your order…');
 /* Save as PDF (card crop) */
 $('savePdf').onclick=()=>busy(async()=>{
- const items=await curItems(),paper=sheetPaper,cvs=paper==='A4'?[makeA4(items)]:items.map(make46),list=[],PT=window.Prog?Prog.start('Processing…'):null;
+ const items=await curItems(),paper=sheetPaper,cvs=paper==='A4'?items.map(it=>makeA4([it])):items.map(make46),list=[],PT=window.Prog?Prog.start('Processing…'):null;
  try{for(const [k,c] of cvs.entries()){PT&&PT.part(k,cvs.length+1,0);const b=await blob(c,c.eff||200);if(!b)throw new Error('Image too large');list.push({blob:b,paper})}
  const bytes=await pdfFrom(list,(i,n)=>PT&&PT.part(cvs.length,n+1,i/n));PT&&PT.done();
  dl(new Blob([bytes],{type:'application/pdf'}),nm()+'_'+paper.replace('x','x')+'.pdf')}catch(e){PT&&PT.fail();throw e}},'Creating PDF…');
@@ -1447,7 +1427,7 @@ setTimeout(()=>{cvReady().catch(()=>{})},1500);   /* warm up OpenCV quietly in t
     var lastStep=0;
     Wiz.register('card',{steps:3,home:2,hideSteps:function(s){return s!==3},doneTitle:'Order placed',titles:['Adjust crop','Preview & download','Order & payment'],
       onStep:function(s){
-        if(s===2&&lastStep===1){try{deckBack()}catch(e){}}      /* back from Adjust: redraw every card + refresh the A4 batch */
+        if(s===2&&lastStep===1){try{deckBack()}catch(e){}}      /* back from Adjust: redraw every card */
         if(s===3){try{fillSummary()}catch(e){}}
         lastStep=s}});
     Wiz.register('scan',{steps:1,titles:['File Received']});

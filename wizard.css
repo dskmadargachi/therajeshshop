@@ -294,19 +294,9 @@ html{scroll-padding-top:calc(var(--wz-bar) + 8px)}
 #printBox .pb-dl .t2{margin-top:2px;font-size:11.5px;font-weight:700;color:#64748b;transition:color .2s}
 #printBox #dSheetL{display:inline-block;padding:0 6px;border-radius:6px;background:#e8efff;color:var(--pb-blue)}
 #printBox .pb-dl:active{transform:scale(.97)}
-#printBox .pb-batch{padding:10px 12px 11px;border-radius:16px;background:#f7f9ff;border:1px solid #e3e8f5}
-#printBox .pb-bh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
-#printBox .pb-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;background:#fff;border:1px solid #d6dbff;font-size:12px;font-weight:800;color:#334155;transition:background .25s,color .25s,border-color .25s}
-#printBox .pb-badge i{font-style:normal;opacity:.5}
-#printBox .pb-batch.has .pb-badge{background:var(--pb-blue);border-color:var(--pb-blue);color:#fff}
-#printBox .pb-dots{display:inline-flex;gap:4px}
-#printBox .pb-dots i{width:16px;height:6px;border-radius:99px;background:#dbe2f3;transition:background .25s,transform .25s}
-#printBox .pb-dots i.on{background:var(--pb-blue);transform:scaleY(1.15)}
-#printBox .pb-bb{display:grid;grid-template-columns:1.5fr 1fr;gap:8px}
-#printBox .pb-bb .b{min-height:40px;padding:0 10px!important;border-radius:12px!important;font-size:13px!important;font-weight:800;gap:5px}
-#printBox .pb-bb .b svg{width:15px;height:15px}
-#printBox .pb-bb .b:active{transform:scale(.97)}
-#printBox .pb-cap{display:block;margin:8px 2px 0;font-size:12px;line-height:1.3;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Send to counter = last (bottom-most) action of the sheet */
+#printBox .pb-row.pb-send{grid-template-columns:1fr;margin-top:4px}
+#printBox .pb-row.pb-send .b{min-height:56px;font-size:16px!important}
 @media(max-width:600px){
  /* grab handle + tighter sheet so everything fits a 360x640 screen */
  #printBox.is-pop{padding:6px 14px calc(14px + env(safe-area-inset-bottom,0px))!important}
@@ -428,6 +418,7 @@ body .wz .sw label.cust{min-height:36px;font-weight:700}
      primary   = blue > purple > pink gradient, 14px radius, 50px high, white 600     (.sw-btn.pri)
      secondary = white, 1px #e2e8f0 border, 14px radius, 46px high, slate / blue text   (.sw-btn, .sw-btn.line)
      filters   = even 3-column grid, 12px radius, solid #2563eb when active          (.sw-pill)
+   Step 5/5 footer: [+ Add More Page | ← Edit] on top, full-width primary "Continue to Print Options" at the very bottom.
    scan-wizard.js embeds the same rules so the popup is correct even before this file loads;
    the `body #sw` prefix here makes this copy win, so the site-wide look is tuned from one place.
    ===================================================================================================== */
@@ -475,7 +466,8 @@ body #sw .sw-badge{display:inline-block;padding:6px 12px;border-radius:10px;back
 body #sw .sw-badge.full{background:#dcfce7;color:#166534;border-color:#86efac}
 body #sw .sw-lh{margin:4px 2px 8px;font-size:12.5px;font-weight:700;color:#64748b}
 body #sw .sw-list{display:flex;flex-direction:column;gap:8px;margin:0 0 6px}
-body #sw .sw-li{display:flex;align-items:center;gap:10px;padding:8px;background:#fff;border:1px solid #e2e8f0;border-radius:14px}
+body #sw .sw-li{display:flex;align-items:center;gap:10px;padding:8px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;cursor:pointer;transition:border-color .2s,box-shadow .2s}
+body #sw .sw-li.cur{border-color:#2563eb;box-shadow:0 0 0 1px #2563eb}
 body #sw .sw-li img{flex:none;width:48px;height:48px;object-fit:contain;border-radius:8px;background:#f1f5f9;box-shadow:0 0 0 1px #e2e8f0}
 body #sw .sw-lt{flex:1;min-width:0}
 body #sw .sw-lt b{display:block;font-size:14px;font-weight:700;color:#0f172a;line-height:1.25}
@@ -488,7 +480,10 @@ body #sw #sw-ok .sw-sc,body #sw #sw-a4 .sw-sc{justify-content:flex-start;padding
 body #sw #sw-ok .sw-in,body #sw #sw-a4 .sw-in{margin:0 auto}
 body #sw #sw-ok h2,body #sw #sw-a4 h2{padding-top:2px;overflow-wrap:anywhere}
 body #sw #sw-ok .sw-p,body #sw #sw-a4 .sw-p{margin:0 0 16px;padding:0 2px;line-height:1.5;overflow-wrap:anywhere}
-body #sw .sw-pv.a4 img{max-height:min(30vh,280px);max-width:min(56vw,230px)}
+body #sw .sw-pv.a4 img{max-height:min(34vh,320px);max-width:min(64vw,250px)}
+body #sw .sw-pager{display:flex;align-items:center;justify-content:center;gap:12px;margin:0 0 10px}
+body #sw .sw-pager .sw-btn.sm{width:44px;padding:0;font-size:20px;line-height:1}
+body #sw .sw-pgc{min-width:112px;text-align:center;font-size:14px;font-weight:700;color:#1e293b}
 body #sw .sw-info{text-align:center;color:#64748b;font-size:12.5px;font-weight:600;margin:0 0 14px}
 
 @media(prefers-reduced-motion:reduce){body #sw .sw-btn,body #sw .sw-pill{transition:none!important;transform:none!important}}

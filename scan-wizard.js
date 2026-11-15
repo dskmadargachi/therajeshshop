@@ -1,9 +1,10 @@
-/* therajesh.shop — scan-wizard.js  (v3 · light theme · multi-page)
+/* therajesh.shop — scan-wizard.js  (v4 · light theme · one page per document)
    Smart Scanner popup wizard — matches the site's light UI.
    Steps: 1 type -> 2 source -> 3 auto 4-corner detect + perspective crop -> 4 side confirmation (filters / rotate / back side / + Add More Page)
           -> 5 A4 sheet composition (300 DPI, page list with Edit / Remove, + Add More Page) -> hand-over to the print flow.
    Every one of the 4 modes (ID card, Certificate, Admit card / Marksheet, Auto detect) can add more pages: each extra photo goes
    through the same crop / straighten / filter pipeline and is appended to the batch.
+   Every scanned card / document keeps its OWN A4 page (nothing is packed onto a shared sheet); the preview has a page switcher.
    No dependencies. OpenCV.js is used for edge detection only when the page already loaded it (window.cv / window.cvReady);
    otherwise a built-in canvas edge finder runs. The warp itself is pure JS (works everywhere).
 
@@ -11,7 +12,7 @@
            SmartScan.onDone = function (res) { res.pages  -> array of A4 canvases (2480 x 3508, .eff = 300)
                                                res.label  -> 'ID card' | 'Certificate' | 'Admit card / Marksheet'
                                                res.layout -> 'id' | 'cert' | 'admit' | 'mixed'
-                                               res.counts -> cards on each A4 page (array, same length as res.pages)
+                                               res.counts -> cards on each A4 page (array, same length as res.pages; always 1 each)
                                                res.count  -> number of scanned pages / cards
                                                res.hasBack -> boolean } */
 (function () {
@@ -44,11 +45,12 @@
       'slots.id': '{n}/5 pairs on A4', 'slots.doc': '{n}/{m} pages', 'slots.full': 'Limit reached',
       pageOf: 'Page {n} of {m}', onePage: '1 page', nPages: '{n} pages', pgN: 'Page {n}',
       sheet: 'Sheet {n} of {m}', sheets: 'sheets', sideBoth: 'Front + Back', sideFront: 'Front only',
+      pgRange: 'Pages {a}–{b}', pgPrev: 'Previous page', pgNext: 'Next page',
       'list.t': 'Pages in this scan', del: 'Remove', edit2: 'Edit', saving: 'Saving page…',
       'src.qadd': 'Page {n} — choose photo source', limit: 'You have reached the page limit for this mode.',
       reading: 'Reading photo…', ready: 'Almost ready…',
       side_front: 'Front', side_back: 'Back', backFor: 'Back side',
-      'a4.t': 'Your A4 sheet is ready', 'a4.s': 'Check the layout — this exact page goes to print.',
+      'a4.t': 'Your A4 pages are ready', 'a4.s': 'Every card or document is on its own page. Check each page — this is exactly what prints.',
       'a4.info': 'A4 · 300 DPI', page: 'Page', pages: 'pages',
       cont: 'Continue to Print Options', edit: '← Edit',
       readErr: 'Could not read this image. Try another photo.',
@@ -79,11 +81,12 @@
       'slots.id': '{n}/5 জোড়া A4-এ', 'slots.doc': '{n}/{m} পাতা', 'slots.full': 'সীমা পূর্ণ',
       pageOf: 'পাতা {n} / {m}', onePage: '1টি পাতা', nPages: '{n}টি পাতা', pgN: 'পাতা {n}',
       sheet: 'শিট {n} / {m}', sheets: 'শিট', sideBoth: 'সামনে + পেছন', sideFront: 'শুধু সামনে',
+      pgRange: 'পাতা {a}–{b}', pgPrev: 'আগের পাতা', pgNext: 'পরের পাতা',
       'list.t': 'এই স্ক্যানের পাতাগুলি', del: 'মুছুন', edit2: 'এডিট', saving: 'পাতা সেভ হচ্ছে…',
       'src.qadd': 'পাতা {n} — ছবি কোথা থেকে নেবেন?', limit: 'এই মোডে পাতার সীমা পূর্ণ হয়েছে।',
       reading: 'ছবি পড়া হচ্ছে…', ready: 'প্রায় তৈরি…',
       side_front: 'সামনে', side_back: 'পেছন', backFor: 'পেছনের দিক',
-      'a4.t': 'আপনার A4 শিট তৈরি', 'a4.s': 'লেআউট দেখে নিন — ঠিক এই পাতাটিই প্রিন্ট হবে।',
+      'a4.t': 'আপনার A4 পাতাগুলি তৈরি', 'a4.s': 'প্রতিটি কার্ড বা ডকুমেন্ট আলাদা পাতায়। প্রতিটি পাতা দেখে নিন — ঠিক এটাই প্রিন্ট হবে।',
       'a4.info': 'A4 · ৩০০ DPI', page: 'পাতা', pages: 'পাতা',
       cont: 'প্রিন্ট অপশনে যান', edit: '← সম্পাদনা',
       readErr: 'এই ছবিটি পড়া গেল না। অন্য ছবি চেষ্টা করুন।',
@@ -92,8 +95,7 @@
   };
   function lang() { return document.documentElement.lang === 'bn' ? 'bn' : 'en'; }
   function t(k) { return (TXT[lang()] && TXT[lang()][k]) || TXT.en[k] || k; }
-  var MAXI = 5;                                         // ID mode: max card pairs on one A4 sheet
-  var MAXD = 8;                                         // other modes: max pages in one batch (keeps phone memory safe)
+  var MAXD = 8;                                         // max scanned pages in one batch (each is its own A4 page; keeps phone memory safe)
   function tf(k, o) { var v = t(k); for (var p in o) v = v.split('{' + p + '}').join(o[p]); return v; }
 
   /* ------------------------------------------------------------------ geometry (pure functions) */
@@ -518,7 +520,8 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
 #sw .sw-badge.full{background:#dcfce7;color:#166534;border-color:#86efac}
 #sw .sw-lh{margin:4px 2px 8px;font-size:12.5px;font-weight:700;color:#64748b}
 #sw .sw-list{display:flex;flex-direction:column;gap:8px;margin:0 0 6px}
-#sw .sw-li{display:flex;align-items:center;gap:10px;padding:8px;background:#fff;border:1px solid #e2e8f0;border-radius:14px}
+#sw .sw-li{display:flex;align-items:center;gap:10px;padding:8px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;cursor:pointer;transition:border-color .2s,box-shadow .2s}
+#sw .sw-li.cur{border-color:#2563eb;box-shadow:0 0 0 1px #2563eb}
 #sw .sw-li img{flex:none;width:48px;height:48px;object-fit:contain;border-radius:8px;background:#f1f5f9;box-shadow:0 0 0 1px #e2e8f0}
 #sw .sw-lt{flex:1;min-width:0}
 #sw .sw-lt b{display:block;font-size:14px;font-weight:700;color:#0f172a;line-height:1.25}
@@ -531,7 +534,10 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
 #sw #sw-ok .sw-in,#sw #sw-a4 .sw-in{margin:0 auto}
 #sw #sw-ok h2,#sw #sw-a4 h2{padding-top:2px;overflow-wrap:anywhere}
 #sw #sw-ok .sw-p,#sw #sw-a4 .sw-p{margin:0 0 16px;padding:0 2px;line-height:1.5;overflow-wrap:anywhere}
-#sw .sw-pv.a4 img{max-height:min(30vh,280px);max-width:min(56vw,230px)}
+#sw .sw-pv.a4 img{max-height:min(34vh,320px);max-width:min(64vw,250px)}
+#sw .sw-pager{display:flex;align-items:center;justify-content:center;gap:12px;margin:0 0 10px}
+#sw .sw-pager .sw-btn.sm{width:44px;padding:0;font-size:20px;line-height:1}
+#sw .sw-pgc{min-width:112px;text-align:center;font-size:14px;font-weight:700;color:#1e293b}
 #sw .sw-info{text-align:center;color:#64748b;font-size:12.5px;font-weight:600;margin:0 0 14px}
 #sw .sw-ct{flex:none;text-align:center;padding:4px 20px 8px}
 #sw .sw-ct b{display:block;font-size:17px;font-weight:700;color:#0f172a}
@@ -585,7 +591,7 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
   var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   function reset() {
-    S = { layout: 'id', side: 'front', src: null, quad: null, raw: { front: null, back: null }, cache: {}, filter: 'clean', pages: null, view: null, tok: 0, rtok: 0, busy: false, items: [], curIdx: -1, adding: false, addPrev: -1, addFrom: 'a4', counts: null, finalLayout: null };
+    S = { layout: 'id', side: 'front', src: null, quad: null, raw: { front: null, back: null }, cache: {}, filter: 'clean', pages: null, view: null, tok: 0, rtok: 0, busy: false, items: [], curIdx: -1, adding: false, addPrev: -1, addFrom: 'a4', counts: null, finalLayout: null, pv: 0, itemPages: [], thumbs: [] };
   }
   reset();
 
@@ -638,17 +644,19 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
       /* 5 A4 sheet */
       '<div class="sw-v" id="sw-a4"><div class="sw-sc"><div class="sw-in">' +
         '<h2 data-i="a4.t"></h2><p class="sw-p" data-i="a4.s"></p>' +
+        '<div class="sw-pager" id="sw-pager"><button class="sw-btn sm" type="button" data-a="pvprev" id="sw-pvprev">‹</button><span class="sw-pgc" id="sw-pgc" aria-live="polite"></span><button class="sw-btn sm" type="button" data-a="pvnext" id="sw-pvnext">›</button></div>' +
         '<div class="sw-frame"><div class="sw-pv a4" id="sw-a4pv"></div></div>' +
         '<div class="sw-slots"><span class="sw-badge" id="sw-badge"></span><span class="sw-badge" id="sw-badge2"></span></div><div class="sw-info" id="sw-a4info"></div>' +
         '<div class="sw-lh" data-i="list.t"></div><div class="sw-list" id="sw-list"></div>' +
       '</div></div>' +
-      '<div class="sw-ft"><button class="sw-btn pri" type="button" data-a="cont" data-i="cont"></button>' +
+      '<div class="sw-ft">' +
         '<div class="sw-grid2"><button class="sw-btn line" type="button" data-a="addmore" id="sw-addmore" data-i="addmore"></button>' +
-        '<button class="sw-btn" type="button" data-a="edit" data-i="edit"></button></div></div>' +
+        '<button class="sw-btn" type="button" data-a="edit" data-i="edit"></button></div>' +
+        '<button class="sw-btn pri" type="button" data-a="cont" data-i="cont"></button></div>' +
       '<div class="sw-busy" id="sw-busy3"></div></div>' +
       '</div></div>';
     document.body.appendChild(root);
-    ['stage', 'cw', 'cv', 'lp', 'lpc', 'busy', 'busy2', 'busy3', 'okt', 'pv', 'acts', 'pgb', 'addmore', 'badge', 'badge2', 'list', 'fcam', 'ffile', 'srcq', 'stp', 'pf', 'a4pv', 'a4info', 'docrop'].forEach(function (k) { els[k] = document.getElementById('sw-' + k); });
+    ['stage', 'cw', 'cv', 'lp', 'lpc', 'busy', 'busy2', 'busy3', 'okt', 'pv', 'acts', 'pgb', 'addmore', 'badge', 'badge2', 'list', 'pager', 'pgc', 'pvprev', 'pvnext', 'fcam', 'ffile', 'srcq', 'stp', 'pf', 'a4pv', 'a4info', 'docrop'].forEach(function (k) { els[k] = document.getElementById('sw-' + k); });
 
     root.addEventListener('click', onClick);
     els.fcam.onchange = els.ffile.onchange = function (e) { var f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) onPhoto(f); };
@@ -742,6 +750,9 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
       case 'edit': editPage(S.curIdx >= 0 && S.items[S.curIdx] ? S.curIdx : S.items.length - 1); break;
       case 'addmore': addMore(); break;
       case 'addmoreok': addFromOk(); break;
+      case 'pvprev': S.pv--; renderA4(); break;
+      case 'pvnext': S.pv++; renderA4(); break;
+      case 'showp': S.pv = +a.dataset.n; renderA4(); break;
       case 'editp': editPage(+a.dataset.n); break;
       case 'delp': removePage(+a.dataset.n); break;
     }
@@ -941,7 +952,7 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
     S.raw[side] = rotateCW(S.raw[side]); delete S.cache[side + ':orig']; delete S.cache[side + ':clean']; delete S.cache[side + ':bw'];
     renderOk();
   }
-  function maxPages() { return S.layout === 'id' ? MAXI : MAXD; }
+  function maxPages() { return MAXD; }
   function actBtn(a, label, cls) {
     var x = document.createElement('button'); x.type = 'button'; x.className = 'sw-btn' + (cls ? ' ' + cls : ''); x.dataset.a = a; x.textContent = label; return x;
   }
@@ -983,32 +994,23 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
 
   /* ---- Step 5: A4 composition (300 DPI) ---- */
   function isIdItem(it) { return it.raw.front ? isIdLike(it.raw.front) : false; }
-  /* build the printable A4 pages from every scanned page.
-     id    -> one A4 sheet, one row per card (front | back), up to 5 rows
-     admit -> one A4 page per scanned page (front top half, back bottom half)
+  /* build the printable A4 pages: every scanned card / document gets its OWN A4 page, in scan order.
+     id    -> that card's front | back on its own A4 page
+     admit -> front on the top half, back on the bottom half of its own A4 page
      cert  -> one A4 page per side
-     auto  -> ID-sized pages share an ID sheet (placed where the first card was scanned), everything else gets its own full A4 page */
+     auto  -> ID-sized photos use the ID page layout, everything else a full A4 page */
   function buildSheets() {
-    var items = S.items, L = S.layout, pages = [], counts = [], fl, i;
-    if (L === 'auto') {
-      var idList = [], seq = [], seen = false;
-      items.forEach(function (it) {
-        if (isIdItem(it)) { if (!seen) { seen = true; seq.push(null); } idList.push(it.out); } else seq.push(it.out);
-      });
-      seq.forEach(function (e) {
-        if (e === null) {
-          for (i = 0; i < idList.length; i += MAXI) {
-            var ch = idList.slice(i, i + MAXI);
-            compose('id', ch).forEach(function (p) { pages.push(p); counts.push(ch.length); });
-          }
-        } else compose('cert', [e]).forEach(function (p) { pages.push(p); counts.push(1); });
-      });
-      fl = idList.length === items.length ? 'id' : idList.length ? 'mixed' : 'cert';
-    } else {
-      fl = L; pages = compose(L, items.map(function (it) { return it.out; }));
-      counts = L === 'id' ? [items.length] : pages.map(function () { return 1; });
-    }
-    S.pages = pages; S.counts = counts; S.finalLayout = fl;
+    var items = S.items, L = S.layout, pages = [], counts = [], ip = [], hasId = false, hasDoc = false;
+    items.forEach(function (it) {
+      var start = pages.length, ps;
+      if (L === 'id' || (L === 'auto' && isIdItem(it))) { ps = compose('id', [it.out]); hasId = true; }
+      else if (L === 'admit') { ps = compose('admit', [it.out]); hasDoc = true; }
+      else { ps = compose('cert', [it.out]); hasDoc = true; }
+      ps.forEach(function (p) { pages.push(p); counts.push(1); });
+      ip.push([start, pages.length - 1]);
+    });
+    S.pages = pages; S.counts = counts; S.itemPages = ip; S.thumbs = [];
+    S.finalLayout = L === 'auto' ? (hasId && hasDoc ? 'mixed' : hasId ? 'id' : 'cert') : L;
   }
   /* save the page that is on screen (new, or an edited one) into the batch */
   function commitCurrent() {
@@ -1023,7 +1025,7 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
     try {
       commitCurrent();
       setBusy(t('building'), els.busy2, 45); await frame();
-      buildSheets();
+      buildSheets(); S.pv = (S.itemPages[S.curIdx] || [0])[0];
       setBusy(t('building'), els.busy2, 100); await frame();
       S.busy = false; setBusy('', els.busy2);
       show('a4'); renderA4();
@@ -1063,6 +1065,7 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
       S.busy = false; setBusy('', els.busy3); show('src'); return;
     }
     try { buildSheets(); } catch (e) { alert(t('readErr')); }
+    S.pv = Math.min(S.pv, S.pages.length - 1);
     S.busy = false; setBusy('', els.busy3); renderA4();
   }
   function kindOf(it) {
@@ -1071,36 +1074,38 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
   function renderList() {
     els.list.innerHTML = '';
     S.items.forEach(function (it, i) {
+      var r = S.itemPages[i] || [i, i], cur = S.pv >= r[0] && S.pv <= r[1];
       var li = document.createElement('div'), im = document.createElement('img'), tx = document.createElement('div'), b = document.createElement('b'), sm = document.createElement('small');
-      li.className = 'sw-li'; tx.className = 'sw-lt';
+      li.className = 'sw-li' + (cur ? ' cur' : ''); li.dataset.a = 'showp'; li.dataset.n = r[0]; tx.className = 'sw-lt';
       if (!it.th) it.th = thumb(it.out.front, 160);
       im.alt = ''; im.src = it.th;
-      b.textContent = tf('pgN', { n: i + 1 });
+      b.textContent = r[0] === r[1] ? tf('pgN', { n: r[0] + 1 }) : tf('pgRange', { a: r[0] + 1, b: r[1] + 1 });
       sm.textContent = kindOf(it) + ' · ' + t(it.out.back ? 'sideBoth' : 'sideFront');
       tx.appendChild(b); tx.appendChild(sm); li.appendChild(im); li.appendChild(tx);
       var ed = actBtn('editp', t('edit2'), 'sm'), del = actBtn('delp', t('del'), 'sm del');
       ed.dataset.n = del.dataset.n = i;
-      ed.setAttribute('aria-label', t('edit2') + ' ' + tf('pgN', { n: i + 1 })); del.setAttribute('aria-label', t('del') + ' ' + tf('pgN', { n: i + 1 }));
+      ed.setAttribute('aria-label', t('edit2') + ' ' + b.textContent); del.setAttribute('aria-label', t('del') + ' ' + b.textContent);
       li.appendChild(ed); li.appendChild(del); els.list.appendChild(li);
     });
   }
   function renderA4() {
     if (!S.pages) return;
+    var N = S.pages.length; S.pv = Math.max(0, Math.min(N - 1, S.pv || 0));
     els.a4pv.innerHTML = '';
-    S.pages.forEach(function (p, i) {
-      var fig = document.createElement('figure'), im = document.createElement('img'), cap = document.createElement('figcaption');
-      im.alt = 'A4 ' + (i + 1); im.src = thumb(p, 900); im.style.boxShadow = '0 6px 18px rgba(15,23,42,.14),0 0 0 1px #e2e8f0';
-      fig.appendChild(im);
-      if (S.pages.length > 1) { cap.textContent = tf('sheet', { n: i + 1, m: S.pages.length }); fig.appendChild(cap); }
-      els.a4pv.appendChild(fig);
-    });
-    var n = S.items.length, cap = maxPages(), full = n >= cap;
-    els.badge.textContent = n === 1 ? t('onePage') : tf('nPages', { n: n });
-    els.badge2.textContent = (S.layout === 'id' ? tf('slots.id', { n: n }) : tf('slots.doc', { n: n, m: cap })) + (full ? ' · ' + t('slots.full') : '');
-    els.badge2.classList.toggle('full', full);
+    var fig = document.createElement('figure'), im = document.createElement('img');
+    if (!S.thumbs[S.pv]) S.thumbs[S.pv] = thumb(S.pages[S.pv], 900);
+    im.alt = 'A4 ' + (S.pv + 1); im.src = S.thumbs[S.pv]; im.style.boxShadow = '0 6px 18px rgba(15,23,42,.14),0 0 0 1px #e2e8f0';
+    fig.appendChild(im); els.a4pv.appendChild(fig);
+    els.pager.style.display = N > 1 ? '' : 'none';
+    els.pgc.textContent = tf('pageOf', { n: S.pv + 1, m: N });
+    els.pvprev.disabled = S.pv <= 0; els.pvnext.disabled = S.pv >= N - 1;
+    els.pvprev.setAttribute('aria-label', t('pgPrev')); els.pvnext.setAttribute('aria-label', t('pgNext'));
+    var full = S.items.length >= maxPages();
+    els.badge.textContent = N === 1 ? t('onePage') : tf('nPages', { n: N });
+    els.badge2.textContent = t('slots.full'); els.badge2.style.display = full ? '' : 'none'; els.badge2.classList.toggle('full', full);
     els.addmore.disabled = full; els.addmore.setAttribute('aria-disabled', full ? 'true' : 'false');
     var fl = S.finalLayout;
-    els.a4info.textContent = t('a4.info') + ' · ' + t(fl === 'id' ? 'lblid' : fl === 'admit' ? 'lbladmit' : fl === 'mixed' ? 'lblmix' : 'lblcert') + (S.pages.length > 1 ? ' · ' + S.pages.length + ' ' + t('sheets') : '');
+    els.a4info.textContent = t('a4.info') + ' · ' + t(fl === 'id' ? 'lblid' : fl === 'admit' ? 'lbladmit' : fl === 'mixed' ? 'lblmix' : 'lblcert');
     renderList();
   }
 
