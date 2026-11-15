@@ -284,6 +284,7 @@ button{border-radius:12px;transition:transform .15s,box-shadow .2s}button:active
 @media (prefers-reduced-motion:reduce){.qp *{animation:none!important}.qp .sheet,.qp .ln,.qp .pqr{transform:translateY(-46px)}.qp .ok{opacity:1}}
 </style>
 <script src="/site-ui.js"></script>
+<script src="/voice-alerts.js"></script>
 <style id="site-theme">
 /* therajesh.shop — modern aurora theme v2 */
 :root{--brand:#4f5bff;--brand-ink:#3338d6;--brand-soft:#f0f2ff;--brand-line:#d6dbff;--brand-dk:#14163f;--brand-md:#2c2a8f;--brand-lt:#a5b4ff;--brand-lt2:#d4c7ff;--brand-pale:#e6e9ff;--ac:#4f5bff;
@@ -355,6 +356,7 @@ h1,.hd h1{background-color:transparent;background-image:var(--rgb2);-webkit-back
 button{transition:transform .4s var(--spring),box-shadow .4s var(--spring),background .2s,color .2s,filter .2s!important}
 .mu-btn{background:linear-gradient(135deg,#7c3aed,#db2777)!important;color:#fff!important;font-size:12.5px;padding:8px 14px;box-shadow:0 10px 20px -10px #db2777}
 #sndBtn{background:rgba(255,255,255,.18)!important;color:#fff!important;font-size:15px;padding:6px 11px}
+#sndTest{background:rgba(255,255,255,.18)!important;color:#fff!important;font-size:12.5px;padding:8px 14px}
 /* revenue strip */
 .rev-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:0 0 16px}
 @media(max-width:820px){.rev-grid{grid-template-columns:repeat(2,1fr)}}
@@ -482,7 +484,8 @@ button{transition:transform .4s var(--spring),box-shadow .4s var(--spring),backg
       <div class="top-actions">
         <span id="count" style="background:rgba(255,255,255,.16);padding:7px 14px;border-radius:999px;font-size:13px;font-weight:700"></span>
         <button id="muBtn" class="mu-btn" type="button">➕ Manual Upload &amp; Print</button>
-        <button id="sndBtn" type="button" title="Sound alerts on / off">🔔</button>
+        <button id="sndBtn" type="button" data-voice-toggle title="Voice alerts on / off">🔊</button>
+        <button id="sndTest" type="button" data-voice-test title="Play the three Bangla voice alerts">🔊 Test Sound</button>
         <button id="stBtn" style="background:#dcfce7;color:#166534;font-size:12.5px;padding:8px 14px">📒 Statement</button>
         <button id="priceBtn" style="background:#fef3c7;color:#92400e;font-size:12.5px;padding:8px 14px">💰 Prices</button>
         <button id="clr" style="background:#fee2e2;color:#b91c1c;font-size:12.5px;padding:8px 14px">🗑️ Remove All</button>
@@ -1011,6 +1014,7 @@ async function decide(action, id) {
   if (action === 'reject' && !confirm('Reject and delete this order?')) return;
   if (action === 'done' && !confirm('Files will be deleted. Continue?')) return;
   await api(`${action}/${id}`, { method: 'POST' }); load();
+  if (action === 'approve') { try { window.ShopVoice && ShopVoice.printing({ id }); } catch {} }
   if (action === 'approve') { setTimeout(load, 1500); setTimeout(load, 3500); } // show 'Printing…' / 'Printed' quickly
 }
 
@@ -1069,6 +1073,7 @@ async function printOrderManually(o, files, finish) {
   const paper = PAPER_MM[o.paper] ? o.paper : 'A4';
   const imgs = files.filter((f) => isImg(f.name)), others = files.filter((f) => !isImg(f.name));
   if (!imgs.length && !others.length) return;
+  if (finish) { try { window.ShopVoice && ShopVoice.printing({ id: o.id }); } catch {} }
   try {
     if (finish && ['pending', 'approved', 'error'].includes(o.status)) await api('start/' + o.id, { method: 'POST' }); // keeps the PC agent from also printing it
     // non-image files (PDF/Office): open in a tab, print with the browser/PDF viewer (choose paper there)
@@ -1277,6 +1282,11 @@ function applyFlags(f, wa, force) {
 }
 
 let actx, soundOn = ls.get('snd') !== '0';
+if (window.ShopVoice) {                       // one switch for beeps + Bangla voice; honour an old muted setting once
+  try { if (ls.get('snd') === '0' && localStorage.getItem('shopvoice:on') === null) ShopVoice.setEnabled(false); } catch {}
+  soundOn = ShopVoice.enabled();
+  window.addEventListener('shopvoice:change', (e) => { soundOn = e.detail.enabled; ls.set('snd', soundOn ? '1' : '0'); });
+}
 function beep(kind) {
   if (!soundOn) return;
   try {
@@ -1286,9 +1296,6 @@ function beep(kind) {
   } catch {}
 }
 document.addEventListener('click', () => { try { if (actx && actx.state === 'suspended') actx.resume(); } catch {} }, { once: true });
-function paintSound() { $('sndBtn').textContent = soundOn ? '🔔' : '🔕'; }
-$('sndBtn').onclick = () => { soundOn = !soundOn; ls.set('snd', soundOn ? '1' : '0'); paintSound(); if (soundOn) beep(); };
-paintSound();
 function toast(t, sub, cls) {
   const d = document.createElement('div'); d.className = 'toast' + (cls ? ' ' + cls : ''); d.innerHTML = esc(t) + (sub ? '<small>' + esc(sub) + '</small>' : '');
   document.body.appendChild(d); setTimeout(() => d.remove(), 6500);
@@ -1302,6 +1309,27 @@ function announceNew(orders) {   // 🔔 sound + toast for new WhatsApp / web jo
     else if (fresh.length) { beep(); const o = fresh[0]; toast('🔔 New Print Job!', (o.source === 'whatsapp' ? '💬 WhatsApp' : '🌐 Web') + ' · ' + (o.name || 'Customer') + (fresh.length > 1 ? ' (+' + (fresh.length - 1) + ' more)' : '')); }
   }
   seen = cur;
+  voiceTrack(orders);
+}
+/* 🗣️ Bangla voice: paid order arrives / printing starts / print finished (first load is only a baseline) */
+let vSeen = null;
+function voiceTrack(orders) {
+  const cur = new Map(orders.map((o) => [o.id, { paid: o.pay_status === 'paid' || o.pay_status === 'cash_received', st: o.status }]));
+  if (vSeen && window.ShopVoice) {
+    let pay = null, prn = null, fin = null;
+    orders.forEach((o) => {
+      const c = cur.get(o.id), p = vSeen.get(o.id);
+      if (c.paid && (!p || !p.paid) && o.source !== 'counter') pay = pay || o;
+      if (c.st === 'printed' && p && p.st !== 'printed') fin = fin || o;
+      else if (c.st === 'printing' && (!p || p.st !== 'printing')) prn = prn || o;
+    });
+    setTimeout(() => {                              // after the short "new job" beep
+      if (pay) ShopVoice.paymentSuccess({ id: pay.id });
+      if (prn) ShopVoice.printing({ id: prn.id });
+      if (fin) ShopVoice.printComplete({ id: fin.id });
+    }, 600);
+  }
+  vSeen = cur;
 }
 const RS = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
 function countTo(el, to, fmt) {

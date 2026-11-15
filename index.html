@@ -354,6 +354,7 @@ input:focus,select:focus,textarea:focus{outline:3px solid color-mix(in srgb,var(
 .pvp a{color:var(--brand-lt);font-weight:700}
 </style>
 <script src="/site-ui.js"></script>
+<script src="/voice-alerts.js"></script>
 <style id="site-theme">
 /* therajesh.shop — modern aurora theme v2 */
 :root{--brand:#4f5bff;--brand-ink:#3338d6;--brand-soft:#f0f2ff;--brand-line:#d6dbff;--brand-dk:#14163f;--brand-md:#2c2a8f;--brand-lt:#a5b4ff;--brand-lt2:#d4c7ff;--brand-pale:#e6e9ff;--ac:#4f5bff;
@@ -2010,7 +2011,7 @@ function showDone(d) {
           $('ost').textContent = 'Confirming your payment…'; msg('Verifying your payment…');
           try {
             await postJSON('/api/verify-payment', { orderId: d.id, razorpay_payment_id: resp.razorpay_payment_id, razorpay_order_id: resp.razorpay_order_id, razorpay_signature: resp.razorpay_signature });
-            msg('Payment verified. Printing starts automatically.');
+            msg('Payment verified. Printing starts automatically.'); try { window.ShopVoice && ShopVoice.paymentSuccess({ id: d.id }); } catch (e) {}
           } catch (e) { msg((e.message || 'Could not verify the payment') + '. If money was deducted, show this token at the counter.'); showPayBtn('Try payment again'); }
         },
         modal: { ondismiss: () => { msg('Payment cancelled.'); showPayBtn('Pay ₹' + amount.toFixed(2) + ' now'); } },
@@ -2036,6 +2037,7 @@ function showDone(d) {
       $('ost').className = 'status s-' + o.status; $('ost').textContent = (o.status === 'pending' && (o.paying || usePay)) ? 'Waiting for your payment…' : (LABEL[o.status] || o.status);
       if (o.pay_status === 'paid') { $('paymentBox').innerHTML = '<div style="font-weight:800;color:var(--brand-ink);font-size:18px">Payment received. Thank you!</div>'; if (o.status === 'approved') $('ost').textContent = 'Payment received. Sending to printer…'; }
       updateTracker(o);
+      try { window.ShopVoice && ShopVoice.trackOrder(d.id, o); } catch (e) {}
       if (['approved', 'printing'].includes(o.status) || (o.status === 'printed' && !o.srv_deleted)) delay = 1200;
       if (['rejected', 'expired'].includes(o.status)) return;
       if (o.status === 'printed') { printedSeen = printedSeen || Date.now(); if ((o.srv_deleted && o.pc_deleted) || Date.now() - printedSeen > 120000) return; }
