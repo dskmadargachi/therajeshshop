@@ -191,3 +191,106 @@
   function init() { initHeader(); watchLock(); hashModal(); updateResume(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
+
+
+/* =====================================================================================================================
+   Prog — one progress bar + live percentage for every upload / read / processing job on the site.
+     var t = Prog.start('Reading files…');   t.set(45);  t.set(45, 'Processing…');  t.done();   t.fail();
+     t.part(i, n, frac)            multi-file batch: overall % = (i + frac) / n         (i = 0-based file index, frac = 0..1)
+     Prog.readBuffer(file, cb)     FileReader.readAsArrayBuffer with onprogress -> cb(0..1)   (resolves an ArrayBuffer)
+     Prog.upload(url, formData, {label})   XMLHttpRequest upload.onprogress: "Uploading… n%", then "Processing… n%" while the server
+                                           works; resolves a fetch-like { ok, status, json(), text() }
+   The percentage never goes backwards, and the card hides itself shortly after 100%.
+   ===================================================================================================================== */
+(function () {
+  if (window.Prog) return;
+  var css = '#pg{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:2600;width:min(92vw,400px);box-sizing:border-box;padding:12px 15px 13px;' +
+    'border-radius:16px;background:#fff;color:#0f172a;box-shadow:0 18px 44px -10px rgba(15,23,42,.38),0 0 0 1px rgba(99,102,241,.2);opacity:0;transform:translate(-50%,22px);' +
+    'pointer-events:none;transition:opacity .2s ease,transform .28s cubic-bezier(.16,1,.3,1);font-family:inherit}' +
+    '#pg.on{opacity:1;transform:translate(-50%,0)}' +
+    '#pg .pg-t{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:13.5px;font-weight:700;line-height:1.3}' +
+    '#pg .pg-l{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '#pg .pg-p{flex:none;font-variant-numeric:tabular-nums;color:#4f46e5;font-size:14px}' +
+    '#pg .pg-b{height:8px;margin-top:9px;border-radius:99px;background:#e2e8f0;overflow:hidden}' +
+    '#pg .pg-b i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#3b82f6,#8b5cf6,#ec4899);transition:width .25s ease}' +
+    '@media (prefers-reduced-motion:reduce){#pg,#pg .pg-b i{transition:none}}';
+  var el = null, hideT = 0, cur = null, seq = 0;
+  function build() {
+    if (el) return;
+    var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+    el = document.createElement('div'); el.id = 'pg'; el.setAttribute('role', 'progressbar'); el.setAttribute('aria-live', 'polite');
+    el.setAttribute('aria-valuemin', '0'); el.setAttribute('aria-valuemax', '100');
+    el.innerHTML = '<div class="pg-t"><span class="pg-l"></span><b class="pg-p">0%</b></div><div class="pg-b"><i></i></div>';
+    document.body.appendChild(el);
+  }
+  function paint(task) {
+    build(); clearTimeout(hideT);
+    var p = Math.round(task.pct);
+    var l = el.querySelector('.pg-l'); if (l._k !== task.label) { l._k = task.label; l.textContent = task.label; }      // (compare the source text: site-ui may have translated the node)
+    el.querySelector('.pg-p').textContent = p + '%';
+    el.querySelector('.pg-b i').style.width = p + '%';
+    el.setAttribute('aria-valuenow', p); el.setAttribute('aria-label', task.label + ' ' + p + '%');
+    el.classList.add('on');
+  }
+  function hide(delay) { clearTimeout(hideT); hideT = setTimeout(function () { if (el) el.classList.remove('on'); }, delay || 0); }
+
+  function start(label) {
+    var id = ++seq, task = { id: id, label: label || 'Processing…', pct: 0, live: true };
+    cur = task; paint(task);
+    var api = {
+      set: function (pct, lab) {
+        if (!task.live) return api;
+        if (lab) task.label = lab;
+        pct = Math.max(0, Math.min(100, +pct || 0));
+        if (pct > task.pct) task.pct = pct;                                  // never backwards
+        if (cur === task) paint(task);
+        return api;
+      },
+      part: function (i, n, frac, lab) { return api.set(((i + Math.max(0, Math.min(1, frac || 0))) / Math.max(1, n)) * 100, lab); },
+      label: function (lab) { return api.set(task.pct, lab); },
+      reset: function (lab) { if (!task.live) return api; task.pct = 0; if (lab) task.label = lab; if (cur === task) paint(task); return api; },     // new phase: starts again at 0 %
+      done: function () { if (!task.live) return; task.pct = 100; if (cur === task) { paint(task); hide(450); } task.live = false; if (cur === task) cur = null; },
+      fail: function () { task.live = false; if (cur === task) { cur = null; hide(0); } }
+    };
+    return api;
+  }
+
+  /* FileReader with real onprogress */
+  function readBuffer(file, cb) {
+    return new Promise(function (ok, no) {
+      var r = new FileReader();
+      r.onprogress = function (e) { if (cb && e.lengthComputable && e.total) cb(e.loaded / e.total); };
+      r.onload = function () { if (cb) cb(1); ok(r.result); };
+      r.onerror = function () { no(r.error || new Error('read')); };
+      r.onabort = function () { no(new Error('abort')); };
+      try { r.readAsArrayBuffer(file); } catch (e) { no(e); }
+    });
+  }
+
+  /* XHR upload with upload.onprogress, then a "Processing…" phase while the server answers */
+  function upload(url, body, o) {
+    o = o || {};
+    return new Promise(function (ok, no) {
+      var t = start(o.label || 'Uploading…'), x = new XMLHttpRequest(), trick = 0, proc = 0;
+      function stopTrick() { clearInterval(trick); }
+      x.open(o.method || 'POST', url, true);
+      if (o.headers) Object.keys(o.headers).forEach(function (k) { x.setRequestHeader(k, o.headers[k]); });
+      x.upload.onprogress = function (e) { if (e.lengthComputable && e.total) t.set(Math.min(e.loaded / e.total, 1) * 100); };      // exact bytes sent
+      x.upload.onload = function () {                                          // all bytes sent: server is working
+        t.set(100); t.reset(o.processLabel || 'Processing…'); proc = 0;                // phase 2: server is working, 0 -> 97 %
+        trick = setInterval(function () { proc += (97 - proc) * 0.14; t.set(proc); }, 250);
+      };
+      x.onload = function () {
+        stopTrick(); t.done();
+        var txt = x.responseText || '';
+        ok({ ok: x.status >= 200 && x.status < 300, status: x.status, text: function () { return Promise.resolve(txt); },
+             json: function () { try { return Promise.resolve(JSON.parse(txt)); } catch (e) { return Promise.reject(e); } } });
+      };
+      x.onerror = x.ontimeout = function () { stopTrick(); t.fail(); no(new TypeError('Network error. Check your internet and try again.')); };
+      x.onabort = function () { stopTrick(); t.fail(); no(new Error('Upload cancelled')); };
+      try { x.send(body); } catch (e) { stopTrick(); t.fail(); no(e); }
+    });
+  }
+
+  window.Prog = { start: start, readBuffer: readBuffer, upload: upload };
+})();

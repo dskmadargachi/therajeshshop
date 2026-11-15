@@ -7,6 +7,7 @@ var LS = {get: function (k) { try { return localStorage.getItem(k); } catch (e) 
 
 /* ---------------- Bengali ---------------- */
 var BN = {
+'Reading files…': 'ফাইল পড়া হচ্ছে…', 'Reading photo…': 'ছবি পড়া হচ্ছে…', 'Uploading…': 'আপলোড হচ্ছে…', 'Removing background…': 'ব্যাকগ্রাউন্ড সরানো হচ্ছে…', 
 'Card 1': 'কার্ড ১', 'Card 2': 'কার্ড ২', 'Card 3': 'কার্ড ৩', 'Card 4': 'কার্ড ৪', 'Card 5': 'কার্ড ৫',
 'All JPGs': 'সব JPG', 'All cards': 'সব কার্ড',
 'Card shape': 'কার্ডের আকার',

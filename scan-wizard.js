@@ -34,9 +34,11 @@
       detecting: 'Finding the edges…', processing: 'Straightening…', building: 'Building your A4 sheet…', applying: 'Applying filter…',
       'ok.front': 'Front side ready', 'ok.back': 'Back side ready', 'ok.both': 'Both sides ready',
       'ok.hint': 'Looks good? Generate the print preview. If the other side is printed too, add it first.',
-      'f.orig': 'Original', 'f.clean': 'Clean Scan', 'f.bw': 'B&W High Contrast',
+      'f.orig': 'Original', 'f.clean': 'Clean Scan', 'f.bw': 'B&W',
       rotate: '🔄 Rotate 90°', rotF: '🔄 Rotate front', rotB: '🔄 Rotate back',
-      done: '✅ Done — Generate Print Preview', addback: '➕ Add Back Side',
+      done: '✅ Generate Print Preview', addback: '➕ Add Back Side', addmore: '+ Add More',
+      'slots.id': '{n}/5 pairs on A4', 'slots.doc': '{n}/5 documents', 'slots.full': 'Sheet full',
+      reading: 'Reading photo…', ready: 'Almost ready…',
       side_front: 'Front', side_back: 'Back', backFor: 'Back side',
       'a4.t': 'Your A4 sheet is ready', 'a4.s': 'Check the layout — this exact page goes to print.',
       'a4.info': 'A4 · 300 DPI', page: 'Page', pages: 'pages',
@@ -63,9 +65,11 @@
       detecting: 'কিনারা খোঁজা হচ্ছে…', processing: 'সোজা করা হচ্ছে…', building: 'A4 শিট তৈরি হচ্ছে…', applying: 'ফিল্টার বসানো হচ্ছে…',
       'ok.front': 'সামনের অংশ তৈরি', 'ok.back': 'পেছনের অংশ তৈরি', 'ok.both': 'দুই দিকই তৈরি',
       'ok.hint': 'ঠিক আছে? প্রিন্ট প্রিভিউ তৈরি করুন। উল্টো পাশেও ছাপা থাকলে আগে সেটি যোগ করুন।',
-      'f.orig': 'আসল', 'f.clean': 'ক্লিন স্ক্যান', 'f.bw': 'সাদা-কালো (হাই কনট্রাস্ট)',
+      'f.orig': 'আসল', 'f.clean': 'ক্লিন স্ক্যান', 'f.bw': 'সাদা-কালো',
       rotate: '🔄 ৯০° ঘোরান', rotF: '🔄 সামনে ঘোরান', rotB: '🔄 পেছন ঘোরান',
-      done: '✅ হয়ে গেছে — প্রিন্ট প্রিভিউ তৈরি করুন', addback: '➕ পেছনের দিক যোগ করুন',
+      done: '✅ প্রিন্ট প্রিভিউ তৈরি করুন', addback: '➕ পেছনের দিক যোগ করুন', addmore: '+ আরও যোগ করুন',
+      'slots.id': '{n}/5 জোড়া A4-এ', 'slots.doc': '{n}/5 ডকুমেন্ট', 'slots.full': 'শিট পূর্ণ',
+      reading: 'ছবি পড়া হচ্ছে…', ready: 'প্রায় তৈরি…',
       side_front: 'সামনে', side_back: 'পেছন', backFor: 'পেছনের দিক',
       'a4.t': 'আপনার A4 শিট তৈরি', 'a4.s': 'লেআউট দেখে নিন — ঠিক এই পাতাটিই প্রিন্ট হবে।',
       'a4.info': 'A4 · ৩০০ DPI', page: 'পাতা', pages: 'পাতা',
@@ -76,6 +80,7 @@
   };
   function lang() { return document.documentElement.lang === 'bn' ? 'bn' : 'en'; }
   function t(k) { return (TXT[lang()] && TXT[lang()][k]) || TXT.en[k] || k; }
+  var MAXI = 5;                                         // max cards / documents on one A4 order
 
   /* ------------------------------------------------------------------ geometry (pure functions) */
   function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
@@ -352,28 +357,39 @@
     var k = Math.min(bw / img.width, bh / img.height), w = img.width * k, h = img.height * k;
     x.drawImage(img, bx + (bw - w) / 2, by + (bh - h) / 2, w, h);
   }
-  function compose(layout, front, back) {
-    var pages = [], x, p;
+  /* compose(layout, items) : items = [{front, back}, ...]   (compose(layout, front, back) still works for one item)
+     id    -> ONE A4 sheet, one row per card (front | back), up to 5 rows
+     admit -> one A4 page per item (front top half, back bottom half)
+     cert  -> one A4 page per side */
+  function compose(layout, a, b) {
+    var items = Array.isArray(a) ? a : [{ front: a, back: b }], pages = [], x, p;
     if (layout === 'id') {
       p = a4(); x = p.getContext('2d');
-      var gap = 90, n = back ? 2 : 1, total = n * CW + (n - 1) * gap, x0 = Math.round((A4W - total) / 2), y0 = 150;
-      [front, back].forEach(function (im, i) {
-        if (!im) return;
-        var cx = x0 + i * (CW + gap);
-        x.drawImage(im, cx, y0, CW, CH);
-        x.strokeStyle = '#d4d8e0'; x.lineWidth = 2; x.strokeRect(cx, y0, CW, CH);
+      var N = items.length, gapX = 90, gapY = N > 1 ? Math.max(12, Math.min(90, Math.floor((A4H - 180 - N * CH) / (N - 1)))) : 0, y0 = N > 1 ? 90 : 150;
+      items.forEach(function (it, r) {
+        var n = it.back ? 2 : 1, total = n * CW + (n - 1) * gapX, x0 = Math.round((A4W - total) / 2), y = y0 + r * (CH + gapY);
+        [it.front, it.back].forEach(function (im, i) {
+          if (!im) return;
+          var cx = x0 + i * (CW + gapX);
+          x.drawImage(im, cx, y, CW, CH);
+          x.strokeStyle = '#d4d8e0'; x.lineWidth = 2; x.strokeRect(cx, y, CW, CH);
+        });
       });
       pages.push(p);
     } else if (layout === 'admit') {
-      p = a4(); x = p.getContext('2d');
-      var m = 90, hh = A4H / 2;
-      contain(x, front, m, m, A4W - 2 * m, hh - 1.5 * m);
-      if (back) contain(x, back, m, hh + m / 2, A4W - 2 * m, hh - 1.5 * m);
-      pages.push(p);
+      items.forEach(function (it) {
+        p = a4(); x = p.getContext('2d');
+        var m = 90, hh = A4H / 2;
+        contain(x, it.front, m, m, A4W - 2 * m, hh - 1.5 * m);
+        if (it.back) contain(x, it.back, m, hh + m / 2, A4W - 2 * m, hh - 1.5 * m);
+        pages.push(p);
+      });
     } else {
-      [front, back].forEach(function (im) {
-        if (!im) return;
-        p = a4(); x = p.getContext('2d'); contain(x, im, 94, 94, A4W - 188, A4H - 188); pages.push(p);
+      items.forEach(function (it) {
+        [it.front, it.back].forEach(function (im) {
+          if (!im) return;
+          p = a4(); x = p.getContext('2d'); contain(x, im, 94, 94, A4W - 188, A4H - 188); pages.push(p);
+        });
       });
     }
     return pages;
@@ -473,28 +489,47 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
 #sw .sw-bar{flex:none;display:flex;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px))}
 #sw .sw-bar .sw-btn{flex:1;padding:13px 6px;font-size:13px;white-space:nowrap;min-width:0}
 #sw .sw-bar .sw-btn.pri{flex:1.7}
-#sw .sw-busy{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:none;align-items:center;gap:9px;padding:9px 16px;border-radius:999px;background:#fff;color:#334155;font-weight:700;font-size:13.5px;box-shadow:0 10px 26px rgba(37,99,235,.18);z-index:4;white-space:nowrap}
-#sw .sw-busy.on{display:flex}
+#sw .sw-busy{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:none;grid-template-columns:auto 1fr auto;column-gap:9px;align-items:center;min-width:min(78vw,230px);max-width:92%;padding:10px 16px 11px;border-radius:16px;background:#fff;color:#334155;font-weight:700;font-size:13.5px;box-shadow:0 10px 26px rgba(37,99,235,.2),0 0 0 1px #e0e7ff;z-index:4;white-space:nowrap}
+#sw .sw-busy.on{display:grid}
 #sw .sw-busy:before{content:"";width:14px;height:14px;border-radius:50%;border:2.5px solid #c7d2fe;border-top-color:#2563eb;animation:swSpin .7s linear infinite}
+#sw .sw-bt{overflow:hidden;text-overflow:ellipsis}
+#sw .sw-bp{font-variant-numeric:tabular-nums;color:#4f46e5;font-size:14px}
+#sw .sw-bb{grid-column:1/-1;display:none;height:7px;margin-top:8px;border-radius:99px;background:#e2e8f0;overflow:hidden}
+#sw .sw-busy.prog .sw-bb{display:block}
+#sw .sw-bb u{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#3b82f6,#8b5cf6,#ec4899);transition:width .22s ease}
+#sw #sw-busy2{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+#sw #sw-busy3{bottom:calc(158px + env(safe-area-inset-bottom,0px))}
 @keyframes swSpin{to{transform:rotate(360deg)}}
 #sw .sw-frame{background:#fff;border-radius:16px;padding:14px;box-shadow:0 12px 32px -12px rgba(15,23,42,.22),0 0 0 1px #e2e8f0;margin:6px 0 16px}
 #sw .sw-pv{display:flex;gap:12px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
 #sw .sw-pv figure{margin:0;text-align:center;max-width:100%}
-#sw .sw-pv img{display:block;max-width:100%;max-height:36vh;border-radius:6px;background:#fff;box-shadow:0 0 0 1px #e2e8f0;animation:swPop .35s cubic-bezier(.16,1,.3,1)}
+#sw .sw-pv img{display:block;max-width:100%;max-height:min(32vh,300px);border-radius:6px;background:#fff;box-shadow:0 0 0 1px #e2e8f0;animation:swPop .35s cubic-bezier(.16,1,.3,1)}
 #sw .sw-pv.two img{max-width:min(38vw,230px)}
-#sw .sw-pv.a4 img{max-height:40vh;max-width:min(60vw,260px)}
+#sw .sw-pv.a4 img{max-height:min(38vh,340px);max-width:min(60vw,260px)}
 @keyframes swPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
 #sw .sw-pv figcaption{margin-top:7px;color:#64748b;font-size:12px;font-weight:700}
-#sw .sw-pills{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 14px}
-#sw .sw-pill{all:unset;box-sizing:border-box;cursor:pointer;padding:8px 14px;border-radius:999px;background:#f8fafc;border:1.5px solid #e2e8f0;color:#475569;font-size:13px;font-weight:700;transition:transform .2s cubic-bezier(.16,1,.3,1),background .2s,border-color .2s,color .2s}
-#sw .sw-pill:hover{border-color:#3b82f6;background:#eff6ff;transform:translateY(-2px)}
+#sw .sw-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;margin:0 0 10px;border-radius:14px;background:#e2e8f0}
+#sw .sw-pill{all:unset;box-sizing:border-box;cursor:pointer;min-width:0;padding:10px 4px;border-radius:10px;color:#475569;font-size:13px;font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .2s,color .2s,box-shadow .2s}
+#sw .sw-pill:hover{background:rgba(255,255,255,.7)}
 #sw .sw-pill:active{transform:scale(.98)}
-#sw .sw-pill.on{background:linear-gradient(135deg,#2563eb,#7c3aed);border-color:transparent;color:#fff;box-shadow:0 6px 16px rgba(37,99,235,.25)}
-#sw .sw-stk{display:flex;flex-direction:column;align-items:center;gap:10px}
-#sw .sw-stk .sw-btn{min-width:min(100%,290px)}
-#sw .sw-rots{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
-#sw .sw-rots .sw-btn{min-width:0;padding:10px 16px;background:#fff;color:#475569;border-color:#cbd5e1}
-#sw .sw-rots .sw-btn:hover{border-color:#3b82f6;color:#2563eb;background:#eff6ff}
+#sw .sw-pill.on{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;box-shadow:0 6px 16px rgba(37,99,235,.28)}
+#sw .sw-sec{display:flex;gap:8px;margin:0}
+#sw .sw-rots{display:contents}
+#sw .sw-sec .sw-btn{flex:1 1 0;min-width:0;min-height:44px;padding:0 8px;border-radius:12px;font-size:13px;white-space:nowrap;background:#fff;color:#475569;border:1.5px solid #cbd5e1}
+#sw .sw-sec .sw-btn:hover{border-color:#3b82f6;color:#2563eb;background:#eff6ff}
+#sw .sw-sec .sw-btn.ind{color:#4f46e5;border-color:#a5b4fc}
+#sw .sw-ft{flex:none;display:flex;flex-direction:column;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid #e2e8f0;box-shadow:0 -10px 24px -16px rgba(15,23,42,.28);position:relative;z-index:3}
+#sw .sw-ft .sw-btn{width:100%;min-height:50px;padding:0 14px;border-radius:14px;font-size:15px}
+#sw .sw-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#sw .sw-grid2 .sw-btn{min-height:48px;font-size:14px;background:#fff;color:#334155;border:1.5px solid #cbd5e1}
+#sw .sw-grid2 .sw-btn.line{color:#2563eb;border-color:#93c5fd}
+#sw .sw-grid2 .sw-btn:hover{background:#f8fafc;border-color:#94a3b8}
+#sw .sw-grid2 .sw-btn.line:hover{background:#eff6ff;border-color:#2563eb}
+#sw .sw-grid2 .sw-btn:disabled{opacity:.45;background:#f1f5f9}
+#sw .sw-slots{display:flex;justify-content:center;margin:0 0 8px}
+#sw .sw-badge{display:inline-block;padding:6px 14px;border-radius:999px;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;font-size:13px;font-weight:800}
+#sw .sw-badge.full{background:#dcfce7;color:#166534;border-color:#86efac}
+#sw #sw-ok .sw-sc,#sw #sw-a4 .sw-sc{padding-bottom:14px}
 #sw .sw-info{text-align:center;color:#64748b;font-size:12.5px;font-weight:600;margin:-6px 0 16px}
 @media (max-width:640px){
  #sw{align-items:flex-end;padding:0}
@@ -516,7 +551,7 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
   var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   function reset() {
-    S = { layout: 'id', side: 'front', src: null, quad: null, raw: { front: null, back: null }, cache: {}, filter: 'clean', pages: null, view: null, tok: 0, rtok: 0, busy: false };
+    S = { layout: 'id', side: 'front', src: null, quad: null, raw: { front: null, back: null }, cache: {}, filter: 'clean', pages: null, view: null, tok: 0, rtok: 0, busy: false, items: [], curIdx: -1, adding: false };
   }
   reset();
 
@@ -556,25 +591,29 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
       '<div class="sw-v" id="sw-ok"><div class="sw-sc"><div class="sw-in">' +
         '<h2 id="sw-okt"></h2><p class="sw-p" data-i="ok.hint"></p>' +
         '<div class="sw-frame"><div class="sw-pv" id="sw-pv"></div></div>' +
-        '<div class="sw-pills" role="radiogroup">' +
+        '<div class="sw-seg" role="radiogroup">' +
           '<button class="sw-pill" type="button" role="radio" data-f="orig" data-i="f.orig"></button>' +
           '<button class="sw-pill" type="button" role="radio" data-f="clean" data-i="f.clean"></button>' +
           '<button class="sw-pill" type="button" role="radio" data-f="bw" data-i="f.bw"></button>' +
         '</div>' +
-        '<div class="sw-stk"><div class="sw-rots" id="sw-rots"></div>' +
-          '<button class="sw-btn ok" type="button" data-a="done" data-i="done"></button>' +
+        '<div class="sw-sec"><div class="sw-rots" id="sw-rots"></div>' +
           '<button class="sw-btn ind" type="button" data-a="addback" id="sw-addback" data-i="addback"></button></div>' +
-      '</div></div><div class="sw-busy" id="sw-busy2"></div></div>' +
+      '</div></div>' +
+      '<div class="sw-ft"><button class="sw-btn ok" type="button" data-a="done" data-i="done"></button></div>' +
+      '<div class="sw-busy" id="sw-busy2"></div></div>' +
       /* 5 A4 sheet */
       '<div class="sw-v" id="sw-a4"><div class="sw-sc"><div class="sw-in">' +
         '<h2 data-i="a4.t"></h2><p class="sw-p" data-i="a4.s"></p>' +
-        '<div class="sw-frame"><div class="sw-pv a4" id="sw-a4pv"></div></div><div class="sw-info" id="sw-a4info"></div>' +
-        '<div class="sw-stk"><button class="sw-btn pri" type="button" data-a="cont" data-i="cont"></button>' +
-        '<button class="sw-btn soft" type="button" data-a="edit" data-i="edit"></button></div>' +
-      '</div></div><div class="sw-busy" id="sw-busy3"></div></div>' +
+        '<div class="sw-frame"><div class="sw-pv a4" id="sw-a4pv"></div></div>' +
+        '<div class="sw-slots"><span class="sw-badge" id="sw-badge"></span></div><div class="sw-info" id="sw-a4info"></div>' +
+      '</div></div>' +
+      '<div class="sw-ft"><button class="sw-btn pri" type="button" data-a="cont" data-i="cont"></button>' +
+        '<div class="sw-grid2"><button class="sw-btn line" type="button" data-a="addmore" id="sw-addmore" data-i="addmore"></button>' +
+        '<button class="sw-btn" type="button" data-a="edit" data-i="edit"></button></div></div>' +
+      '<div class="sw-busy" id="sw-busy3"></div></div>' +
       '</div></div>';
     document.body.appendChild(root);
-    ['stage', 'cw', 'cv', 'lp', 'lpc', 'busy', 'busy2', 'busy3', 'okt', 'pv', 'rots', 'addback', 'fcam', 'ffile', 'srcq', 'stp', 'pf', 'a4pv', 'a4info', 'docrop'].forEach(function (k) { els[k] = document.getElementById('sw-' + k); });
+    ['stage', 'cw', 'cv', 'lp', 'lpc', 'busy', 'busy2', 'busy3', 'okt', 'pv', 'rots', 'addback', 'addmore', 'badge', 'fcam', 'ffile', 'srcq', 'stp', 'pf', 'a4pv', 'a4info', 'docrop'].forEach(function (k) { els[k] = document.getElementById('sw-' + k); });
 
     root.addEventListener('click', onClick);
     els.fcam.onchange = els.ffile.onchange = function (e) { var f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) onPhoto(f); };
@@ -643,7 +682,11 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
     if (a.dataset.type) { S.layout = a.dataset.type; S.side = 'front'; show('src'); return; }
     switch (a.dataset.a) {
       case 'close': close(); break;
-      case 'srcback': if (S.side === 'back') { S.side = 'front'; show('ok'); renderOk(); } else show('type'); break;
+      case 'srcback':
+        if (S.side === 'back') { S.side = 'front'; show('ok'); renderOk(); }
+        else if (S.adding && S.items.length) { restoreLast(); show('a4'); renderA4(); }   // changed my mind about adding another card
+        else show('type');
+        break;
       case 'cam': els.fcam.click(); break;
       case 'file': els.ffile.click(); break;
       case 'cancel': S.tok++; animId++; S.src = null; setBusy(''); laser(false); show('src'); break;
@@ -655,30 +698,57 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
       case 'addback': S.side = 'back'; show('src'); break;
       case 'cont': finish(); break;
       case 'edit': show('ok'); renderOk(); break;
+      case 'addmore': addMore(); break;
     }
   }
 
   /* ---- photo loading ---- */
-  async function readImage(file) {
+  async function readImage(file, onp) {
+    onp = onp || function () {};
+    var blob = file, buf = null;
+    try { buf = await readBuf(file, function (f) { onp(f * 0.6); }); blob = new Blob([buf], { type: file.type || 'image/jpeg' }); } catch (e) { blob = file; }
+    onp(0.62);
     var bmp = null;
-    try { if (window.createImageBitmap) bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch (e) { bmp = null; }
+    try { if (window.createImageBitmap) bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' }); } catch (e) { bmp = null; }
+    onp(0.8);
     var w, h, drawable;
     if (bmp) { w = bmp.width; h = bmp.height; drawable = bmp; }
     else {
       drawable = await new Promise(function (ok, no) {
-        var u = URL.createObjectURL(file), im = new Image();
+        var u = URL.createObjectURL(blob), im = new Image();
         im.onload = function () { URL.revokeObjectURL(u); ok(im); };
         im.onerror = function () { URL.revokeObjectURL(u); no(new Error('img')); };
         im.src = u;
       });
       w = drawable.naturalWidth; h = drawable.naturalHeight;
     }
+    onp(0.9);
     var k = Math.min(1, 3000 / Math.max(w, h)), c = newCanvas(Math.round(w * k), Math.round(h * k));
     c.getContext('2d').drawImage(drawable, 0, 0, c.width, c.height);
     if (bmp && bmp.close) bmp.close();
+    onp(1);
     return c;
   }
-  function setBusy(msg, el) { el = el || els.busy; el.textContent = msg || ''; el.classList.toggle('on', !!msg); }
+  function setBusy(msg, el, pct) {
+    el = el || els.busy;
+    if (!msg) { el.classList.remove('on', 'prog'); el.textContent = ''; el._k = 0; return; }
+    if (!el._k) { el.innerHTML = '<span class="sw-bt"></span><b class="sw-bp"></b><i class="sw-bb"><u></u></i>'; el._k = 1; }
+    var has = typeof pct === 'number' && isFinite(pct), p = has ? Math.max(0, Math.min(100, Math.round(pct))) : 0;
+    el.querySelector('.sw-bt').textContent = msg;
+    el.querySelector('.sw-bp').textContent = has ? p + '%' : '';
+    el.querySelector('.sw-bb u').style.width = p + '%';
+    el.classList.toggle('prog', has); el.classList.add('on');
+    el.setAttribute('role', 'status'); el.setAttribute('aria-label', msg + (has ? ' ' + p + '%' : ''));
+  }
+  function readBuf(file, cb) {                           // FileReader.onprogress -> cb(0..1)
+    return new Promise(function (ok, no) {
+      var r = new FileReader();
+      r.onprogress = function (e) { if (e.lengthComputable && e.total) cb(e.loaded / e.total); };
+      r.onload = function () { cb(1); ok(r.result); };
+      r.onerror = r.onabort = function () { no(r.error || new Error('read')); };
+      try { r.readAsArrayBuffer(file); } catch (e) { no(e); }
+    });
+  }
   function laser(on) { els.cw.classList.toggle('scan', !!on); }
 
   function animateQuad(to, ms) {
@@ -698,14 +768,22 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
 
   async function onPhoto(file) {
     var tok = ++S.tok;
-    show('crop'); S.src = null; S.quad = null; els.cv.width = els.cv.height = 1; setBusy(t('detecting'));
+    show('crop'); S.src = null; S.quad = null; els.cv.width = els.cv.height = 1; setBusy(t('reading'), null, 0);
     try {
-      var img = await readImage(file);
+      var img = await readImage(file, function (f) { if (tok === S.tok) setBusy(t('reading'), null, f * 50); });   // 0-50 %: read + decode
       if (tok !== S.tok) return;
       S.src = img; fit(); S.quad = defaultQuad(img.width, img.height); draw();
       laser(!reduced);
-      var r = await Promise.all([detectQuad(img), sleep(reduced ? 0 : 1100)]);
+      var t0 = performance.now(), minMs = reduced ? 0 : 1100, ticker = setInterval(function () {            // 50-98 %: finding the edges
+        if (tok !== S.tok) { clearInterval(ticker); return; }
+        var k = Math.min(1, (performance.now() - t0) / Math.max(1, minMs));
+        setBusy(t('detecting'), null, 50 + k * 48);
+      }, 90);
+      setBusy(t('detecting'), null, 50);
+      var r;
+      try { r = await Promise.all([detectQuad(img), sleep(minMs)]); } finally { clearInterval(ticker); }
       if (tok !== S.tok) return;
+      setBusy(t('detecting'), null, 100);
       laser(false); setBusy('');
       await animateQuad(r[0], 650);
     } catch (e) {
@@ -789,15 +867,18 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
   /* ---- crop -> perspective warp (raw, unfiltered; filters are applied on the confirmation step) ---- */
   async function doCrop() {
     if (!S.src || !S.quad || S.busy) return;
-    S.busy = true; S.tok++; animId++; laser(false); setBusy(t('processing')); await frame();
+    S.busy = true; S.tok++; animId++; laser(false); setBusy(t('processing'), null, 8); await frame();
     try {
       var q = S.quad, W = Math.round(Math.max(dist(q[0], q[1]), dist(q[3], q[2]))), H = Math.round(Math.max(dist(q[0], q[3]), dist(q[1], q[2])));
       if (W < 20 || H < 20) throw new Error('small');
       var k = Math.min(1, 2600 / Math.max(W, H)); W = Math.max(20, Math.round(W * k)); H = Math.max(20, Math.round(H * k));
+      setBusy(t('processing'), null, 25); await frame();
       var out = warp(S.src, q, W, H);
+      setBusy(t('processing'), null, 85); await frame();
       var idMode = S.layout === 'id' || (S.layout === 'auto' && isIdLike(out));
       if (idMode && out.height > out.width) out = rotateCW(out);
       S.raw[S.side] = out; S.cache = {}; S.src = null;
+      setBusy(t('processing'), null, 100); await frame();
       S.busy = false; setBusy('');
       show('ok'); renderOk();
     } catch (e) { S.busy = false; setBusy(''); alert(t('readErr')); }
@@ -818,7 +899,7 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
   async function renderOk() {
     var f = S.raw.front, b = S.raw.back; if (!f) return;
     var tok = ++S.rtok;
-    S.busy = true; setBusy(t('applying'), els.busy2);
+    S.busy = true; setBusy(t('applying'), els.busy2, 10);
     [].forEach.call(root.querySelectorAll('[data-f]'), function (p) { var on = p.dataset.f === S.filter; p.classList.toggle('on', on); p.setAttribute('aria-checked', on); });
     els.okt.textContent = b ? t('ok.both') : (S.side === 'back' ? t('ok.back') : t('ok.front'));
     els.rots.innerHTML = '';
@@ -828,7 +909,8 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
     await frame();
     if (tok !== S.rtok) return;
     try {
-      var figs = [[sideImg('front'), 'side_front'], b ? [sideImg('back'), 'side_back'] : null];
+      var fi = sideImg('front'); setBusy(t('applying'), els.busy2, b ? 50 : 85); if (b) { await frame(); if (tok !== S.rtok) return; }
+      var figs = [[fi, 'side_front'], b ? [sideImg('back'), 'side_back'] : null];
       els.pv.className = 'sw-pv' + (b ? ' two' : ''); els.pv.innerHTML = '';
       figs.forEach(function (p) {
         if (!p) return;
@@ -836,24 +918,40 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
         im.alt = ''; im.src = thumb(p[0]); cap.textContent = t(p[1]); fig.appendChild(im); if (b) fig.appendChild(cap); els.pv.appendChild(fig);
       });
     } catch (e) { /* keep previous preview */ }
-    if (tok === S.rtok) { S.busy = false; setBusy('', els.busy2); }
+    if (tok === S.rtok) { setBusy(t('applying'), els.busy2, 100); S.busy = false; setBusy('', els.busy2); }
   }
 
   /* ---- Step 5: A4 composition (300 DPI) ---- */
   function resolveLayout() {
-    var l = S.layout;
-    return l === 'auto' ? (isIdLike(S.raw.front) ? 'id' : 'cert') : l;
+    var l = S.layout, f = (S.items[0] && S.items[0].raw.front) || S.raw.front;
+    return l === 'auto' ? (isIdLike(f) ? 'id' : 'cert') : l;
   }
   async function toA4() {
     if (!S.raw.front || S.busy) return;
-    S.busy = true; setBusy(t('building'), els.busy2); await frame();
+    S.busy = true; setBusy(t('building'), els.busy2, 5); await frame();
     try {
+      var item = { raw: S.raw, filter: S.filter, out: { front: sideImg('front'), back: null } };
+      setBusy(t('building'), els.busy2, 35); await frame();
+      if (S.raw.back) item.out.back = sideImg('back');
+      if (S.curIdx >= 0 && S.items[S.curIdx]) S.items[S.curIdx] = item; else { S.items.push(item); S.curIdx = S.items.length - 1; }
+      S.adding = false;
+      setBusy(t('building'), els.busy2, 65); await frame();
       var layout = resolveLayout();
-      S.pages = compose(layout, sideImg('front'), S.raw.back ? sideImg('back') : null);
+      S.pages = compose(layout, S.items.map(function (it) { return it.out; }));
       S.finalLayout = layout;
+      setBusy(t('building'), els.busy2, 100); await frame();
       S.busy = false; setBusy('', els.busy2);
       show('a4'); renderA4();
     } catch (e) { S.busy = false; setBusy('', els.busy2); alert(t('readErr')); }
+  }
+  function restoreLast() {                                // leave "add more" without adding: back to the last finished card
+    S.curIdx = S.items.length - 1; var it = S.items[S.curIdx];
+    S.raw = it.raw; S.filter = it.filter; S.cache = {}; S.adding = false; S.side = 'front';
+  }
+  function addMore() {
+    if (S.items.length >= MAXI || S.busy) return;
+    S.curIdx = -1; S.raw = { front: null, back: null }; S.cache = {}; S.side = 'front'; S.adding = true; S.src = null;
+    show('src');
   }
   function renderA4() {
     if (!S.pages) return;
@@ -865,6 +963,10 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
       if (S.pages.length > 1) { cap.textContent = t('page') + ' ' + (i + 1); fig.appendChild(cap); }
       els.a4pv.appendChild(fig);
     });
+    var n = S.items.length, full = n >= MAXI;
+    els.badge.textContent = t(S.finalLayout === 'id' ? 'slots.id' : 'slots.doc').replace('{n}', n) + (full ? ' · ' + t('slots.full') : '');
+    els.badge.classList.toggle('full', full);
+    els.addmore.disabled = full; els.addmore.setAttribute('aria-disabled', full ? 'true' : 'false');
     els.a4info.textContent = t('a4.info') + ' · ' + t(S.finalLayout === 'id' ? 'lblid' : S.finalLayout === 'admit' ? 'lbladmit' : 'lblcert') + (S.pages.length > 1 ? ' · ' + S.pages.length + ' ' + t('pages') : '');
   }
 
@@ -872,7 +974,7 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
   function finish() {
     if (!S.pages) return;
     var layout = S.finalLayout, label = t(layout === 'id' ? 'lblid' : layout === 'admit' ? 'lbladmit' : 'lblcert');
-    var res = { pages: S.pages, layout: layout, label: label, hasBack: !!S.raw.back };
+    var res = { pages: S.pages, layout: layout, label: label, hasBack: S.items.some(function (it) { return !!it.out.back; }), count: S.items.length };
     close(); reset();
     if (typeof SmartScan.onDone === 'function') SmartScan.onDone(res);
   }

@@ -1326,15 +1326,19 @@ $('pick').addEventListener('change', async (e) => {
   $('err').textContent = '';
   const selected = Array.from(e.target.files || []);
   e.target.value = '';
-  for (const original of selected) {
+  const RP = window.Prog && selected.length ? Prog.start('Reading files…') : null;          // live % across all selected files
+  try {
+  for (const [fi, original] of selected.entries()) {
+    const part = (fr) => RP && RP.part(fi, selected.length, fr);
+    part(0);
     if (items.length >= 10) { $('err').textContent = 'Maximum 10 files per order.'; break; }
     if (original.size > 25 * 1024 * 1024) { $('err').textContent = `${original.name} is over 25 MB.`; continue; }
     let f = original, pages = 1, canCount = false, orient = 'portrait';
     const x = ext(original.name);
     if (x === 'pdf') {
       try {
-        const doc = await PDFLib.PDFDocument.load(await original.arrayBuffer());
-        pages = doc.getPageCount(); canCount = true;
+        const doc = await PDFLib.PDFDocument.load(window.Prog ? await Prog.readBuffer(original, (fr) => part(fr * 0.6)) : await original.arrayBuffer());
+        pages = doc.getPageCount(); canCount = true; part(0.7);
       } catch (err) {
         const encrypted = /encrypt|password|protected/i.test((err && err.message) || '');
         if (!encrypted) {
@@ -1353,10 +1357,13 @@ $('pick').addEventListener('change', async (e) => {
           continue;
         }
       }
-    } else if (isImg(f.name)) { canCount = true; orient = await imgOrient(f); }
+    } else if (isImg(f.name)) { canCount = true; if (window.Prog) await Prog.readBuffer(f, (fr) => part(fr * 0.6)); orient = await imgOrient(f); part(0.7); }
     const thumb = await generateThumb(f);
+    part(0.95);
     items.push({ file: f, pages, total: pages, canCount, orient, thumb, rot: 0, sel: null, selText: '' });
+    part(1);
   }
+  } finally { if (RP) RP.done(); }
   render();
 });
 
@@ -1498,7 +1505,9 @@ $('submit').onclick = async () => {
   const btn = $('submit'); btn.disabled = true; btn.textContent = 'Preparing…';
   try {
     const prepared = [];
-    for (const it of items) prepared.push(await applyEdits(it));
+    const PR = window.Prog ? Prog.start('Processing…') : null;
+    try { for (const [k, it] of items.entries()) { PR && PR.part(k, items.length, 0); prepared.push(await applyEdits(it)); } } catch (pe) { PR && PR.fail(); throw pe; }
+    PR && PR.done();
     btn.textContent = 'Uploading…';
     const fd = new FormData();
     fd.append('meta', JSON.stringify({
@@ -1513,7 +1522,7 @@ $('submit').onclick = async () => {
 };
 
 async function post(fd) {
-  const r = await fetch('/api/orders', { method: 'POST', body: fd });
+  const r = await (window.Prog ? Prog.upload('/api/orders', fd, { label: 'Uploading…' }) : fetch('/api/orders', { method: 'POST', body: fd }));
   const d = await r.json();
   if (!r.ok) throw new Error(d.error || 'Upload failed');
   return d;
@@ -1605,10 +1614,16 @@ crop.addEventListener('pointerup', endDrag); crop.addEventListener('pointercance
 $('zoom').addEventListener('input', (e) => { pp.zoom = parseFloat(e.target.value); redraw(false); updateSheet(); });
 
 async function loadBase(file) {
-  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const RP = window.Prog ? Prog.start('Reading photo…') : null;
+  let src = file;
+  try { if (RP) { const buf = await Prog.readBuffer(file, (fr) => RP.set(fr * 70)); src = new Blob([buf], { type: file.type || 'image/jpeg' }); } } catch { src = file; }
+  RP && RP.set(75);
+  let bmp; try { bmp = await createImageBitmap(src, { imageOrientation: 'from-image' }); } catch (e) { RP && RP.fail(); throw e; }
+  RP && RP.set(90);
   const max = 1600; const sc = Math.min(1, max / Math.max(bmp.width, bmp.height));
   const c = document.createElement('canvas'); c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc);
   c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  RP && RP.done();
   return c;
 }
 
@@ -1620,7 +1635,7 @@ $('ppCam').addEventListener('change', (e) => {
 $('ppPick').addEventListener('change', async (e) => {
   const f = e.target.files[0]; if (!f) return; $('ppErr').textContent = '';
   try {
-    pp.base = await loadBase(f); pp.cutout = null; pp.cutoutKind = ''; aiBase = null; aiPromise = null; bgIdle(); setTimeout(startAI, 250); pp.bg = ''; pp.zoom = 1; pp.ox = 0; pp.oy = 0;
+    pp.base = await loadBase(f); pp.cutout = null; pp.cutoutKind = ''; aiBase = null; aiPromise = null; bgReset(); bgIdle(); setTimeout(startAI, 250); pp.bg = ''; pp.zoom = 1; pp.ox = 0; pp.oy = 0;
     $('zoom').value = 1;
     $('ppWork').classList.remove('hidden');
     $('ppOpts').classList.remove('hidden');
@@ -1709,21 +1724,32 @@ function getBgWorker() {
         try {
           if (m.warm) { if (lib.preload) await lib.preload({ model: 'isnet_quint8', device: 'cpu' }); return; }
           const run = (device) => rb(m.blob, { model: 'isnet_quint8', device, output: { format: 'image/png' },
-            progress: (k, cur, total) => self.postMessage({ id: m.id, p: total ? cur / total : 0 }) });
+            progress: (k, cur, total) => self.postMessage({ id: m.id, k: String(k), c: cur, t: total }) });
           let out; try { out = await run(m.gpu ? 'gpu' : 'cpu'); } catch (err) { if (!m.gpu) throw err; out = await run('cpu'); }
           self.postMessage({ id: m.id, out });
         } catch (err) { self.postMessage({ id: m.id, err: String(err && err.message || err) }); }
       };`;
     bgWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })), { type: 'module' });
-    bgWorker.onmessage = (e) => { const m = e.data, j = bgJobs.get(m.id); if (!j) return; if (m.p != null) j.prog(m.p); else { bgJobs.delete(m.id); if (m.out) j.ok(m.out); else j.no(new Error(m.err || 'failed')); } };
+    bgWorker.onmessage = (e) => { const m = e.data, j = bgJobs.get(m.id); if (!j) return; if (m.k !== undefined) j.prog(m.k, m.c, m.t); else { bgJobs.delete(m.id); if (m.out) j.ok(m.out); else j.no(new Error(m.err || 'failed')); } };
     bgWorker.onerror = () => { bgWorkerBad = true; try { bgWorker.terminate(); } catch {} bgWorker = null; bgJobs.forEach((j) => j.no(new Error('worker'))); bgJobs.clear(); };
     return bgWorker;
   } catch { bgWorkerBad = true; return null; }
 }
 function warmBg() { const w = getBgWorker(); if (w) try { w.postMessage({ warm: 1 }); } catch {} }    // downloads the model while the customer picks a photo
 
-function runBgModel(blob, onProg) {
-  const w = getBgWorker();
+/* model download + inference reports several keys (fetch:… / compute:…): fold them into ONE monotonic 0..1 value */
+function bgAgg(cb) {
+  const m = new Map(); let last = 0;
+  return (k, c, t) => {
+    if (!t) return; m.set(String(k), { c, t });
+    let fc = 0, ft = 0, inf = 0;
+    m.forEach((v, key) => { if (/^compute/i.test(key)) inf = Math.max(inf, v.c / v.t); else { fc += v.c; ft += v.t; } });
+    const f = (fc / Math.max(ft, 4e7)) * 0.82 + inf * 0.18;          // the model file is ~40 MB: don't jump ahead while only small files are known
+    if (f > last) last = f; cb(Math.min(last, 0.99));
+  };
+}
+function runBgModel(blob, rawProg) {
+  const onProg = bgAgg(rawProg), w = getBgWorker();
   if (w) return new Promise((ok, no) => {
     const id = Date.now() + Math.random(); const guard = setTimeout(() => { bgWorkerBad = true; no(new Error('worker timeout')); }, 45000);
     bgJobs.set(id, { prog: onProg, ok: (o) => { clearTimeout(guard); ok(o); }, no: (e) => { clearTimeout(guard); no(e); } });
@@ -1735,7 +1761,7 @@ async function runBgModelMain(blob, onProg) {                       // fallback:
   await new Promise((r) => (window.requestIdleCallback ? requestIdleCallback(r, { timeout: 1200 }) : setTimeout(r, 400)));
   if (!bgLib) bgLib = await import(BG_LIB);
   const rb = bgLib.removeBackground || bgLib.default;
-  const run = (device) => rb(blob, { model: 'isnet_quint8', device, output: { format: 'image/png' }, progress: (k, c, t) => t && onProg(c / t) });
+  const run = (device) => rb(blob, { model: 'isnet_quint8', device, output: { format: 'image/png' }, progress: (k, c, t) => onProg(k, c, t) });
   try { return await run(navigator.gpu ? 'gpu' : 'cpu'); } catch (e) { if (!navigator.gpu) throw e; return run('cpu'); }
 }
 
@@ -1748,12 +1774,18 @@ function buildCutout(base, alphaSrc) {
   x.drawImage(alphaSrc, 0, 0, c.width, c.height);
   return c;
 }
-function bgBusy(msg, pct) {                                      // immediate visual feedback: moving bar until real progress arrives
+let bgLabel = 'Removing background…', bgFrac = 0;
+function bgBusy(msg, pct) {                                      // live "Removing background… n%" + progress bar (moving bar until real progress arrives)
   const pr = $('bgProg'); pr.classList.remove('hidden');
-  if (pct == null) pr.classList.add('indet'); else { pr.classList.remove('indet'); pr.firstElementChild.style.width = Math.round(pct * 100) + '%'; }
-  if (msg) $('bgMsg').textContent = msg;
+  if (msg) bgLabel = msg;
+  if (pct == null) { pr.classList.add('indet'); $('bgMsg').textContent = bgLabel + ' ' + Math.round(bgFrac * 100) + '%'; return; }
+  bgFrac = Math.max(bgFrac, pct);
+  const p = Math.round(bgFrac * 100);
+  pr.classList.remove('indet'); pr.firstElementChild.style.width = p + '%';
+  $('bgMsg').textContent = bgLabel + ' ' + p + '%';
 }
 function bgIdle() { const pr = $('bgProg'); pr.classList.add('hidden'); pr.classList.remove('indet'); }
+function bgReset() { bgFrac = 0; bgLabel = 'Removing background…'; }
 
 function startAI() {
   if (!pp.base) return null;
@@ -1765,11 +1797,12 @@ function startAI() {
       sm.width = Math.max(1, Math.round(base.width * S)); sm.height = Math.max(1, Math.round(base.height * S));
       sm.getContext('2d').drawImage(base, 0, 0, sm.width, sm.height);
       const blob = await new Promise((res) => sm.toBlob(res, 'image/png'));
-      if (pp.base === base && pp.bg) bgBusy(null, null);
-      const out = await runBgModel(blob, (f) => { if (pp.base === base && pp.bg) bgBusy(null, f > 0 && f < 1 ? f : null); });
+      bgFrac = 0; if (pp.base === base && pp.bg) bgBusy('Removing background…', 0);
+      const out = await runBgModel(blob, (f) => { bgFrac = Math.max(bgFrac, f); if (pp.base === base && pp.bg) bgBusy('Removing background…', f); });
       if (pp.base !== base) return;
       const mask = await createImageBitmap(out);
       pp.cutout = buildCutout(base, mask); pp.cutoutKind = 'ai'; if (mask.close) mask.close();   // cached: colour / zoom changes reuse it
+      if (pp.bg) { bgBusy('Removing background…', 1); await sleep(380); }          // show 100 % for a moment
       bgIdle();
       if (pp.bg) { $('bgMsg').textContent = 'Done. Edges refined.'; redraw(); }
     } catch (err) {
@@ -1783,11 +1816,11 @@ async function ensureCutout() {
   if (pp.cutout) return true;
   pp.cutoutBusy = true;
   try {
-    bgBusy('Removing background…', null);
+    bgBusy('Removing background…', bgFrac || 0);
     await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));     // let the bar paint before the quick pass
     if (!pp.cutout) {                                                            // the AI may have finished meanwhile
       pp.cutout = buildCutout(pp.base, fastCutout(pp.base)); pp.cutoutKind = 'fast';
-      $('bgMsg').textContent = 'Quick result shown. Refining the edges…';
+      bgBusy('Removing background…', bgFrac || 0.02);      // quick preview is on screen; the % now follows the refine pass
       startAI();
     }
     return true;
@@ -1926,8 +1959,9 @@ $('ppSubmit').onclick = async () => {
   if (pp.cutoutBusy) { $('ppErr').textContent = 'Please wait, background is still being processed.'; return; }
   const btn = $('ppSubmit'); btn.disabled = true; btn.textContent = 'Preparing…';
   try {
-    const { perSheet, sheets, want } = ppPlan(); const { canvas, land } = buildSheet(perSheet);
-    const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.95));
+    const PR = window.Prog ? Prog.start('Processing…') : null; PR && PR.set(15);
+    const { perSheet, sheets, want } = ppPlan(); const { canvas, land } = buildSheet(perSheet); PR && PR.set(55);
+    const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.95)); PR && PR.done();
     const fd = new FormData();
     fd.append('meta', JSON.stringify({
       kind: 'passport', paper: pp.sheet, name: $('ppName').value.trim(), phone: $('ppPhone').value.trim(),

@@ -677,7 +677,7 @@ function buildDownloadFileName(originalFiles, ext, suffix, date, fallback) {
 const fmtSize = b => b < 1024 ? b + ' B' : b < 1048576 ? Math.round(b / 1024) + ' KB' : (b / 1048576).toFixed(2) + ' MB';
 const fail = key => { const e = new Error(key); e.u = 1; return e; };          // translated, user-facing error
 const isEnc = e => /encrypt|password/i.test(String(e && (e.name + ' ' + e.message)));
-const rd = f => f.arrayBuffer();
+const rd = f => { if (f._ab) { const b = f._ab; f._ab = null; return Promise.resolve(b); } return f.arrayBuffer(); };   // a copy pre-read with progress is used once
 const u8 = async b => new Uint8Array(await b.arrayBuffer());
 const jb = (c, q) => new Promise(r => c.toBlob(r, 'image/jpeg', q));
 const ranges = (s, n) => { const o = []; String(s || '').split(',').forEach(p => { p = p.trim(); if (!p) return; const m = p.split('-').map(Number); const a = m[0], b = m.length > 1 ? m[1] : a; for (let i = a; i <= b; i++) if (i >= 1 && i <= n && !o.includes(i - 1)) o.push(i - 1); }); return o; };
@@ -1164,7 +1164,7 @@ function setMsg(key, extra, err) {
 const setWn = key => { const w = $('wn'); w.textContent = ''; if (key) w.appendChild(T$('div', 'pt-warn', key)); };
 const setGo = () => { const dis = busy || (!files.length && !cur.nofile); $('go').disabled = dis; };
 
-function freeFile(f) { try { if (f._tu && f._tu.startsWith('blob:')) URL.revokeObjectURL(f._tu); } catch (e) {} try { if (f._pj) f._pj.destroy(); } catch (e) {} }
+function freeFile(f) { f._ab = null; try { if (f._tu && f._tu.startsWith('blob:')) URL.revokeObjectURL(f._tu); } catch (e) {} try { if (f._pj) f._pj.destroy(); } catch (e) {} }
 function freeResults() { results.forEach(r => { if (r._u) try { URL.revokeObjectURL(r._u); } catch (e) {} }); results = []; }
 function resetState() {
   files.forEach(freeFile); files = []; freeResults(); pgState = []; gBase = wmBase = null; ioReset();
@@ -1210,6 +1210,11 @@ async function addFiles(a) {
   a = a.filter(okType);
   if (!a.length) { setMsg('This file type is not supported for this tool.', null, 1); return; }
   setMsg('');
+  if (window.Prog) {                                                          // "Reading files… n%" across the whole batch
+    const RP = Prog.start('Reading files…');
+    try { for (const [i, f] of a.entries()) { if (f.size < 4 * 1048576 * 8) f._ab = await Prog.readBuffer(f, fr => RP.part(i, a.length, fr)); else RP.part(i, a.length, 1); } RP.done(); }
+    catch (e) { RP.fail(); }
+  }
   if (!cur.multi) files.forEach(freeFile);
   files = cur.multi ? files.concat(a) : a.slice(0, 1);
   if (cur.ui === 'pages' && files.length > 1) {                              // page tools: all files become one document, in order
@@ -1436,13 +1441,15 @@ function grayUpdate() { if (!gBase || !$('gc1')) return; const c = $('gc1'); c.w
 async function runTool() {
   if (busy || !cur) return; busy = true; setGo(); setMsg('Processing…'); runDate = new Date();
   const src = files.slice(); srcUsed = src;                                      // names of the ORIGINAL uploads are used for the output name
+  const PG = window.Prog ? Prog.start('Processing…') : null;
   try {
     let fs = files;
-    if (cur.combine && (files.length > 1 || files.some(f => f._rot))) { setMsg('Combining files…'); fs = [await combineFiles(files)]; setMsg('Processing…'); }
-    const out = [].concat(await cur.run(fs, {prog: (i, n) => setMsg('Processing…', i + ' / ' + n)}));
+    if (cur.combine && (files.length > 1 || files.some(f => f._rot))) { setMsg('Combining files…'); PG && PG.set(5, 'Combining files…'); fs = [await combineFiles(files)]; setMsg('Processing…'); PG && PG.set(10, 'Processing…'); }
+    const out = [].concat(await cur.run(fs, {prog: (i, n) => { setMsg('Processing…', i + ' / ' + n); PG && PG.set(10 + ((i - 1) / Math.max(1, n)) * 88, 'Processing…'); }}));
+    PG && PG.done();
     const rs = out.map(r => { const type = r.type || 'application/pdf', name = buildDownloadFileName(src, r.ext || 'pdf', r.suffix, runDate, cur.slug), blob = r.blob || new Blob([r.bytes], {type}); return {file: new File([blob], name, {type}), stat: r.stat, warn: r.warn}; });
     setMsg(''); showResult(rs);                                                  // NOTE: showing the result never downloads anything
-  } catch (e) { if (e && e.u) setMsg(e.message, null, 1); else setMsg('Error:', (e && e.message) || 'could not process this file.', 1); console.error(e); }
+  } catch (e) { PG && PG.fail(); if (e && e.u) setMsg(e.message, null, 1); else setMsg('Error:', (e && e.message) || 'could not process this file.', 1); console.error(e); }
   finally { busy = false; setGo(); }
 }
 $('go').onclick = runTool;

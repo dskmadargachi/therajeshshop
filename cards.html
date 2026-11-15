@@ -902,13 +902,21 @@ $('file').onchange=async e=>{let files=[...e.target.files];if(!files.length)retu
  e.target.value='';
  const ok=[];for(const f of files){const err=await checkFile(f);if(err){toast(f.name.slice(0,28)+': '+err);if(files.length==1)return st(err,1)}else ok.push(f)}
  if(!ok.length)return st('No usable file was selected.',1);
- freeDeck();pages=[];pp=[];bx={};batch=[];batchUI();multiN=ok.length>1?ok.length:0;multiDone=0;lastPw='';Q=ok.slice();nextFile()};
-async function nextFile(){const f=Q.shift();if(!f)return;srcFile=f;srcImg=!f._pdf;pdfBuf=f._pdf?await f.arrayBuffer():null;
- if(multiN)st('File '+(multiDone+1)+' of '+multiN+': '+f.name.slice(0,30)+'…');
+ freeDeck();pages=[];pp=[];bx={};batch=[];batchUI();multiN=ok.length>1?ok.length:0;multiDone=0;lastPw='';Q=ok.slice();rpEnd(false);nextFile()};
+/* ---- live "Reading files… n%" : bytes read (FileReader.onprogress) -> PDF/image decode -> page render -> edge detect; multi-file aware ---- */
+let rpT=null;
+const rpGet=()=>rpT||(rpT=window.Prog?Prog.start('Reading files…'):{part(){},done(){},fail(){}});
+const rpEnd=ok=>{if(rpT){ok?rpT.done():rpT.fail();rpT=null}};
+function fileProg(fr){const N=multiN||1,T=rpGet();T.part(multiDone,N,Math.max(0,Math.min(1,fr)),'Reading files…');
+ st('Reading files… '+Math.round(((multiDone+Math.max(0,Math.min(1,fr)))/N)*100)+'%')}
+const rdBuf=(f,cb)=>window.Prog?Prog.readBuffer(f,cb):f.arrayBuffer();
+async function nextFile(){const f=Q.shift();if(!f)return;srcFile=f;srcImg=!f._pdf;fileProg(0);
+ const buf=await rdBuf(f,fr=>fileProg(fr*0.25));
+ if(f._pdf)pdfBuf=buf;else{pdfBuf=null;f._blob=new Blob([buf],{type:f.type||'image/jpeg'})}
  if(Tp.pw&&!lastPw)return showPw('');
  load(lastPw)}
 function showPw(err){$('pwErr').textContent=err||'';$('pwHint').textContent=Tp.pw?'Aadhaar PDF password is the first 4 letters of your name in CAPITALS followed by your birth year (for example RAJE1990).':'This PDF is protected. Type its password to continue.';
- $('pwBtn').classList.remove('hidden');$('pwM').classList.remove('hidden');st('Waiting for the password…');setTimeout(()=>{const i=$('pw');i.focus();i.select()},120)}
+ rpEnd(false);$('pwBtn').classList.remove('hidden');$('pwM').classList.remove('hidden');st('Waiting for the password…');setTimeout(()=>{const i=$('pw');i.focus();i.select()},120)}
 const isPw=e=>!!e&&(e.name=='PasswordException'||/password/i.test((e.message||'')+' '+(e.name||'')));
 $('pwBtn').onclick=()=>srcFile?showPw(''):st('Select the PDF first.',1);
 $('pwCancel').onclick=()=>{$('pwM').classList.add('hidden');st('Press Enter password to unlock the PDF.')};
@@ -917,24 +925,24 @@ $('pwF').onsubmit=e=>{e.preventDefault();const v=$('pw').value;if(!v){$('pwErr')
  $('pwM').classList.add('hidden');lastPw=v;load(v)};
 async function open_(pass){const vs=pass?[...new Set([pass,pass.trim(),pass.trim().toUpperCase(),pass.trim().toLowerCase()])]:[undefined];let last;
  for(const v of vs){try{await render(v);return}catch(e){last=e;if(!isPw(e))throw e}}throw last}
-async function load(pass){st('Reading file…');pages=[];pp=[];bx={};
+async function load(pass){fileProg(0.25);pages=[];pp=[];bx={};
   try{await open_(pass)}catch(err){
    if(isPw(err)){lastPw='';return showPw(pass?'Wrong password. Check it and try again.':'')}
    console.error(err);
-   if(multiN){toast('Skipped '+srcFile.name.slice(0,24)+' (could not read)');pages=[];pp=[];bx={};if(Q.length)return nextFile();return finishDeck()}
-   return st('Could not read this file: '+(err&&err.message||err),1)}
-  st('Finding the card edges…');await autoCrop();
+   if(multiN){toast('Skipped '+srcFile.name.slice(0,24)+' (could not read)');pages=[];pp=[];bx={};multiDone++;if(Q.length)return nextFile();return finishDeck()}
+   rpEnd(false);return st('Could not read this file: '+(err&&err.message||err),1)}
+  fileProg(0.88);await autoCrop();fileProg(1);
   /* every file keeps its own pages + crop boxes, so ALL selected cards reach the preview and the A4 batch */
   deck.push({name:srcFile.name,pages,pp,bx,img:srcImg});multiDone++;
   pages=[];pp=[];bx={};ai=-1;
-  if(Q.length){st('File '+multiDone+' of '+multiN+' ready…');return nextFile()}
+  if(Q.length)return nextFile()
   return finishDeck()}
 function freeDeck(){deck.forEach(E=>(E.pages||[]).forEach(freeCanvas));deck=[];ai=-1;autoBatch=false;deckAdded=false;const o=$('deckOut');if(o)o.innerHTML=''}
 function commit(){const E=deck[ai];if(E){E.pages=pages;E.pp=pp;E.bx=bx}}
 function useCard(i){const E=deck[i];if(!E)return;if(ai>=0&&ai!==i)commit();ai=i;pages=E.pages;pp=E.pp;bx=E.bx;srcImg=E.img}
 async function finishDeck(){
-  if(!deck.length)return st('Could not read any of the selected files.',1);
-  useCard(0);const many=deck.length>1;
+  if(!deck.length){rpEnd(false);return st('Could not read any of the selected files.',1)}
+  rpEnd(true);useCard(0);const many=deck.length>1;
   st(many?deck.length+' cards are ready in the preview and the A4 batch.':(rMsg()||(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(redFull?'':(isFree()?(Tp.det=='red'?'Red border found on both pages. Cropped exactly inside it.':'Front and back card edges found. Cropped exactly to each card.'):'Cards found and cropped. Adjust the boxes if needed.')))),many?0:(rMsg()?!greenOK:miss));
   $('work').classList.remove('hidden');
   autoBatch=many;batch=[];
@@ -971,13 +979,13 @@ const queueRB=()=>{rbQ=rbQ.then(()=>autoBatch?rebuildBatch():0).catch(e=>console
 const dRB=()=>{clearTimeout(rbT);rbT=setTimeout(queueRB,450)};
 const curItems=async()=>{await rbQ;return batch.length?batch:[await pair()]};
 async function render(pass){pages.forEach(freeCanvas);pages=[];pp=[];
- if(!pdfBuf){const im=await new Promise((ok,no)=>{const i=new Image;i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(srcFile)});
+ if(!pdfBuf){const im=await new Promise((ok,no)=>{const i=new Image;i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(srcFile._blob||srcFile)});fileProg(0.6);
   const k=Math.min(1,4096/Math.max(im.naturalWidth,im.naturalHeight)),c=mk(Math.round(im.naturalWidth*k),Math.round(im.naturalHeight*k));
-  c.getContext('2d').drawImage(im,0,0,c.width,c.height);pages=[c];return mount()}
- const doc=await pdfjsLib.getDocument({data:pdfBuf.slice(0),password:pass,cMapUrl:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',cMapPacked:true}).promise,n=Math.min(Tp.pages||1,doc.numPages);
- for(let i=1;i<=n;i++){const p=await doc.getPage(i),v1=p.getViewport({scale:1}),v=p.getViewport({scale:Math.min(3.2,2800/Math.max(v1.width,v1.height))}),c=mk(Math.round(v.width),Math.round(v.height));
+  c.getContext('2d').drawImage(im,0,0,c.width,c.height);pages=[c];fileProg(0.85);return mount()}
+ const doc=await pdfjsLib.getDocument({data:pdfBuf.slice(0),password:pass,cMapUrl:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',cMapPacked:true}).promise,n=Math.min(Tp.pages||1,doc.numPages);fileProg(0.35);
+ for(let i=1;i<=n;i++){fileProg(0.35+0.5*((i-1)/n));const p=await doc.getPage(i),v1=p.getViewport({scale:1}),v=p.getViewport({scale:Math.min(3.2,2800/Math.max(v1.width,v1.height))}),c=mk(Math.round(v.width),Math.round(v.height));
   const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
-  await p.render({canvasContext:x,viewport:v}).promise;pages.push(c);pp.push(p)}mount()}
+  await p.render({canvasContext:x,viewport:v}).promise;pages.push(c);pp.push(p)}fileProg(0.85);mount()}
 function mount(){const s=$('stage');s.innerHTML='';pages.forEach((c,i)=>{const d=document.createElement('div');d.style.cssText='position:relative;margin-bottom:8px';d.dataset.p=i;
  const v=mk(Math.min(c.width,900),0);v.height=Math.round(v.width*c.height/c.width);v.getContext('2d').drawImage(c,0,0,v.width,v.height);d.append(v);s.append(d)})}
 
@@ -1268,14 +1276,16 @@ document.querySelectorAll('#paperSeg button').forEach(b=>b.onclick=()=>{sheetPap
    ===================================================================== */
 let cart=[],oColor=false;
 const PAGE_PT={A4:[595.28,841.89],'4x6':[288,432]};
-async function pdfFrom(list){const pdf=await PDFLib.PDFDocument.create();
- for(const it of list){const img=await pdf.embedJpg(await it.blob.arrayBuffer()),[w,h]=PAGE_PT[it.paper],p=pdf.addPage([w,h]);p.drawImage(img,{x:0,y:0,width:w,height:h})}
+async function pdfFrom(list,onp){const pdf=await PDFLib.PDFDocument.create();
+ for(const [k,it] of list.entries()){if(onp)onp(k,list.length);const img=await pdf.embedJpg(await it.blob.arrayBuffer()),[w,h]=PAGE_PT[it.paper],p=pdf.addPage([w,h]);p.drawImage(img,{x:0,y:0,width:w,height:h})}
  return pdf.save()}
 function thumbOf(c){const s=mk(120,Math.round(120*c.height/c.width));s.getContext('2d').drawImage(c,0,0,s.width,s.height);return s.toDataURL('image/jpeg',.7)}
 async function pushCart(canvases,paper,label,counts){pushCart.last=[];
  if(cart.length&&cart[0].paper!==paper){toast('Your order already has '+cart[0].paper+' pages. Send it first or clear it to add '+paper+'.');return false}
- for(const [k,c] of canvases.entries()){const b=await blob(c,c.eff||200);if(!b)throw new Error('Could not prepare the page. Try 300 DPI.');const it={paper,blob:b,thumb:thumbOf(c),label,cards:(counts&&counts[k])||1};cart.push(it);pushCart.last.push(it)}
- drawCart();return true}
+ const PT=window.Prog?Prog.start('Processing…'):null;
+ try{for(const [k,c] of canvases.entries()){PT&&PT.part(k,canvases.length,0);const b=await blob(c,c.eff||200);if(!b)throw new Error('Could not prepare the page. Try 300 DPI.');const it={paper,blob:b,thumb:thumbOf(c),label,cards:(counts&&counts[k])||1};cart.push(it);pushCart.last.push(it)}}
+ catch(e){PT&&PT.fail();throw e}
+ PT&&PT.done();drawCart();return true}
 function drawCart(){const el=$('cart');el.innerHTML='';
  cart.forEach((it,i)=>{const d=document.createElement('div');d.className='ci';
   d.innerHTML=`<img alt=""><div class="t"></div><button type="button" aria-label="Remove page"><svg><use href="#i-trash"/></svg></button>`;
@@ -1313,20 +1323,23 @@ $('addOrder').onclick=()=>busy(async()=>{if(await toSummary(true))toast('Added t
 $('sendCounter').onclick=()=>busy(()=>toSummary(false),'Preparing your order…');
 /* Save as PDF (card crop) */
 $('savePdf').onclick=()=>busy(async()=>{
- const items=await curItems(),paper=sheetPaper,cvs=paper==='A4'?[makeA4(items)]:items.map(make46),list=[];
- for(const c of cvs){const b=await blob(c,c.eff||200);if(!b)throw new Error('Image too large');list.push({blob:b,paper})}
- dl(new Blob([await pdfFrom(list)],{type:'application/pdf'}),nm()+'_'+paper.replace('x','x')+'.pdf')},'Creating PDF…');
+ const items=await curItems(),paper=sheetPaper,cvs=paper==='A4'?[makeA4(items)]:items.map(make46),list=[],PT=window.Prog?Prog.start('Processing…'):null;
+ try{for(const [k,c] of cvs.entries()){PT&&PT.part(k,cvs.length+1,0);const b=await blob(c,c.eff||200);if(!b)throw new Error('Image too large');list.push({blob:b,paper})}
+ const bytes=await pdfFrom(list,(i,n)=>PT&&PT.part(cvs.length,n+1,i/n));PT&&PT.done();
+ dl(new Blob([bytes],{type:'application/pdf'}),nm()+'_'+paper.replace('x','x')+'.pdf')}catch(e){PT&&PT.fail();throw e}},'Creating PDF…');
 
 /* Send to counter (order panel button AND the final summary button) */
 async function sendOrder(){$('oerr').textContent='';if(!cart.length){$('oerr').textContent='Your order is empty. Add a card first.';return}
   const btns=[$('oSend'),$('wzSend')];btns.forEach(b=>b.disabled=true);
   try{const paper=cart[0].paper,color=paper==='4x6'?true:oColor,copies=oCp();
-   const file=new File([await pdfFrom(cart)],'id-print-order.pdf',{type:'application/pdf'});
+   const PT=window.Prog?Prog.start('Processing…'):null;let pdfBytes;
+   try{pdfBytes=await pdfFrom(cart,(i,n)=>PT&&PT.part(i,n,0));PT&&PT.done()}catch(e){PT&&PT.fail();throw e}
+   const file=new File([pdfBytes],'id-print-order.pdf',{type:'application/pdf'});
    if(file.size>25*1048576)throw new Error('The order is larger than 25 MB. Remove a page or lower the resolution.');
    const labels=[...new Set(cart.map(c=>c.label))].slice(0,3).join(', ');
    const fd=new FormData();fd.append('meta',JSON.stringify({kind:'doc',paper,name:$('oName').value.trim(),phone:$('oPhone').value.trim(),color,copies,pages:[cart.length],orient:['portrait'],info:`${labels} · ${paper} · ${color?'Color':'B&W'}`}));
    fd.append('files',file,file.name);
-   const r=await fetch('/api/orders',{method:'POST',body:fd}),d=await r.json();if(!r.ok)throw new Error(d.error||'Upload failed');
+   const r=await (window.Prog?Prog.upload('/api/orders',fd,{label:'Uploading…'}):fetch('/api/orders',{method:'POST',body:fd})),d=await r.json();if(!r.ok)throw new Error(d.error||'Upload failed');
    cart=[];sendItems=[];drawCart();btns.forEach(b=>b.disabled=false);showDone(d)}
   catch(e){$('oerr').textContent=e.message||'Something went wrong';btns.forEach(b=>b.disabled=false)}}
 $('oSend').onclick=sendOrder;$('wzSend').onclick=sendOrder;
@@ -1413,11 +1426,11 @@ let scanRes=null;
 SmartScan.onDone=res=>{scanRes=res;const box=$('scPrev');box.innerHTML='';
  res.pages.forEach((c,i)=>{const im=document.createElement('img');im.alt='A4 page '+(i+1);
   const big=mk(360,Math.round(360*c.height/c.width));big.getContext('2d').drawImage(c,0,0,big.width,big.height);im.src=big.toDataURL('image/jpeg',.85);box.append(im)});
- $('scSub').textContent=res.pages.length+(res.pages.length==1?' page':' pages')+' · A4 · '+res.label;
+ $('scSub').textContent=res.pages.length+(res.pages.length==1?' page':' pages')+' · A4 · '+res.label+((res.count||1)>1?' · '+res.count+(res.layout==='id'?' cards':' documents'):'');
  if(window.Wiz)Wiz.open('scan',1);toast('✅ Document straightened & locked to A4')};
 $('scGo').onclick=async()=>{if(!scanRes)return;try{
  if(cart.length&&cart[0].paper!=='A4'){toast('Your order already has '+cart[0].paper+' pages. Send it first or clear it.');return}
- const ok=await pushCart(scanRes.pages,'A4','Scanned '+scanRes.label);
+ const ok=await pushCart(scanRes.pages,'A4','Scanned '+scanRes.label,scanRes.layout==='id'?[scanRes.count||1]:null);
  if(ok){if(window.Wiz)Wiz.close();openPop('orderPanel')}}catch(e){toast('Could not add to the order: '+e.message)}};
 
 /* ---- start ---- */
