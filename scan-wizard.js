@@ -1,14 +1,18 @@
-/* therajesh.shop — scan-wizard.js  (v2 · light theme)
+/* therajesh.shop — scan-wizard.js  (v3 · light theme · multi-page)
    Smart Scanner popup wizard — matches the site's light UI.
-   Steps: 1 type -> 2 source -> 3 auto 4-corner detect + perspective crop -> 4 side confirmation (filters / rotate / back side)
-          -> 5 A4 sheet composition (300 DPI) -> hand-over to the print flow.
+   Steps: 1 type -> 2 source -> 3 auto 4-corner detect + perspective crop -> 4 side confirmation (filters / rotate / back side / + Add More Page)
+          -> 5 A4 sheet composition (300 DPI, page list with Edit / Remove, + Add More Page) -> hand-over to the print flow.
+   Every one of the 4 modes (ID card, Certificate, Admit card / Marksheet, Auto detect) can add more pages: each extra photo goes
+   through the same crop / straighten / filter pipeline and is appended to the batch.
    No dependencies. OpenCV.js is used for edge detection only when the page already loaded it (window.cv / window.cvReady);
    otherwise a built-in canvas edge finder runs. The warp itself is pure JS (works everywhere).
 
    Usage:  SmartScan.open();
            SmartScan.onDone = function (res) { res.pages  -> array of A4 canvases (2480 x 3508, .eff = 300)
                                                res.label  -> 'ID card' | 'Certificate' | 'Admit card / Marksheet'
-                                               res.layout -> 'id' | 'cert' | 'admit'
+                                               res.layout -> 'id' | 'cert' | 'admit' | 'mixed'
+                                               res.counts -> cards on each A4 page (array, same length as res.pages)
+                                               res.count  -> number of scanned pages / cards
                                                res.hasBack -> boolean } */
 (function () {
   'use strict';
@@ -30,21 +34,25 @@
       back: '← Back', close: 'Close',
       'crop.t': 'Fit the 4 corners',
       'crop.s': 'Drag any corner to the document’s corner — even a tilted photo becomes straight',
-      cancel: '✕ Cancel', full: '↔ Full Image', crop: '✓ Crop & Straighten',
+      cancel: 'Cancel', full: 'Full Image', crop: 'Crop & Straighten',
       detecting: 'Finding the edges…', processing: 'Straightening…', building: 'Building your A4 sheet…', applying: 'Applying filter…',
       'ok.front': 'Front side ready', 'ok.back': 'Back side ready', 'ok.both': 'Both sides ready',
       'ok.hint': 'Looks good? Generate the print preview. If the other side is printed too, add it first.',
-      'f.orig': 'Original', 'f.clean': 'Clean Scan', 'f.bw': 'B&W',
-      rotate: '🔄 Rotate 90°', rotF: '🔄 Rotate front', rotB: '🔄 Rotate back',
-      done: '✅ Generate Print Preview', addback: '➕ Add Back Side', addmore: '+ Add More',
-      'slots.id': '{n}/5 pairs on A4', 'slots.doc': '{n}/5 documents', 'slots.full': 'Sheet full',
+      'f.orig': 'Original', 'f.clean': 'Clean Scan', 'f.bw': 'B&W High Contrast',
+      rotate: 'Rotate 90°', rotF: 'Rotate front', rotB: 'Rotate back',
+      done: 'Generate Print Preview', addback: '+ Add Back Side', addmore: '+ Add More Page',
+      'slots.id': '{n}/5 pairs on A4', 'slots.doc': '{n}/{m} pages', 'slots.full': 'Limit reached',
+      pageOf: 'Page {n} of {m}', onePage: '1 page', nPages: '{n} pages', pgN: 'Page {n}',
+      sheet: 'Sheet {n} of {m}', sheets: 'sheets', sideBoth: 'Front + Back', sideFront: 'Front only',
+      'list.t': 'Pages in this scan', del: 'Remove', edit2: 'Edit', saving: 'Saving page…',
+      'src.qadd': 'Page {n} — choose photo source', limit: 'You have reached the page limit for this mode.',
       reading: 'Reading photo…', ready: 'Almost ready…',
       side_front: 'Front', side_back: 'Back', backFor: 'Back side',
       'a4.t': 'Your A4 sheet is ready', 'a4.s': 'Check the layout — this exact page goes to print.',
       'a4.info': 'A4 · 300 DPI', page: 'Page', pages: 'pages',
-      cont: '✅ Continue to Print Options', edit: '← Edit',
+      cont: 'Continue to Print Options', edit: '← Edit',
       readErr: 'Could not read this image. Try another photo.',
-      lblid: 'ID card', lblcert: 'Certificate', lbladmit: 'Admit card / Marksheet'
+      lblid: 'ID card', lblcert: 'Certificate', lbladmit: 'Admit card / Marksheet', lblmix: 'Mixed documents', lbldoc: 'Document'
     },
     bn: {
       title: 'স্মার্ট স্ক্যানার', step: 'ধাপ',
@@ -61,26 +69,32 @@
       back: '← পেছনে', close: 'বন্ধ করুন',
       'crop.t': '৪টি কোনা ঠিক করুন',
       'crop.s': 'যেকোনো কোনা টেনে ডকুমেন্টের কোনায় বসান — ছবি বাঁকা হলেও সোজা হয়ে যাবে',
-      cancel: '✕ বাতিল', full: '↔ পুরো ছবি', crop: '✓ ক্রপ ও সোজা করুন',
+      cancel: 'বাতিল', full: 'পুরো ছবি', crop: 'ক্রপ ও সোজা করুন',
       detecting: 'কিনারা খোঁজা হচ্ছে…', processing: 'সোজা করা হচ্ছে…', building: 'A4 শিট তৈরি হচ্ছে…', applying: 'ফিল্টার বসানো হচ্ছে…',
       'ok.front': 'সামনের অংশ তৈরি', 'ok.back': 'পেছনের অংশ তৈরি', 'ok.both': 'দুই দিকই তৈরি',
       'ok.hint': 'ঠিক আছে? প্রিন্ট প্রিভিউ তৈরি করুন। উল্টো পাশেও ছাপা থাকলে আগে সেটি যোগ করুন।',
-      'f.orig': 'আসল', 'f.clean': 'ক্লিন স্ক্যান', 'f.bw': 'সাদা-কালো',
-      rotate: '🔄 ৯০° ঘোরান', rotF: '🔄 সামনে ঘোরান', rotB: '🔄 পেছন ঘোরান',
-      done: '✅ প্রিন্ট প্রিভিউ তৈরি করুন', addback: '➕ পেছনের দিক যোগ করুন', addmore: '+ আরও যোগ করুন',
-      'slots.id': '{n}/5 জোড়া A4-এ', 'slots.doc': '{n}/5 ডকুমেন্ট', 'slots.full': 'শিট পূর্ণ',
+      'f.orig': 'আসল', 'f.clean': 'ক্লিন স্ক্যান', 'f.bw': 'সাদা-কালো হাই কনট্রাস্ট',
+      rotate: '৯০° ঘোরান', rotF: 'সামনে ঘোরান', rotB: 'পেছন ঘোরান',
+      done: 'প্রিন্ট প্রিভিউ তৈরি করুন', addback: '+ পেছনের দিক যোগ করুন', addmore: '+ আরও পাতা যোগ করুন',
+      'slots.id': '{n}/5 জোড়া A4-এ', 'slots.doc': '{n}/{m} পাতা', 'slots.full': 'সীমা পূর্ণ',
+      pageOf: 'পাতা {n} / {m}', onePage: '1টি পাতা', nPages: '{n}টি পাতা', pgN: 'পাতা {n}',
+      sheet: 'শিট {n} / {m}', sheets: 'শিট', sideBoth: 'সামনে + পেছন', sideFront: 'শুধু সামনে',
+      'list.t': 'এই স্ক্যানের পাতাগুলি', del: 'মুছুন', edit2: 'এডিট', saving: 'পাতা সেভ হচ্ছে…',
+      'src.qadd': 'পাতা {n} — ছবি কোথা থেকে নেবেন?', limit: 'এই মোডে পাতার সীমা পূর্ণ হয়েছে।',
       reading: 'ছবি পড়া হচ্ছে…', ready: 'প্রায় তৈরি…',
       side_front: 'সামনে', side_back: 'পেছন', backFor: 'পেছনের দিক',
       'a4.t': 'আপনার A4 শিট তৈরি', 'a4.s': 'লেআউট দেখে নিন — ঠিক এই পাতাটিই প্রিন্ট হবে।',
       'a4.info': 'A4 · ৩০০ DPI', page: 'পাতা', pages: 'পাতা',
-      cont: '✅ প্রিন্ট অপশনে যান', edit: '← সম্পাদনা',
+      cont: 'প্রিন্ট অপশনে যান', edit: '← সম্পাদনা',
       readErr: 'এই ছবিটি পড়া গেল না। অন্য ছবি চেষ্টা করুন।',
-      lblid: 'আইডি কার্ড', lblcert: 'সার্টিফিকেট', lbladmit: 'অ্যাডমিট কার্ড / মার্কশিট'
+      lblid: 'আইডি কার্ড', lblcert: 'সার্টিফিকেট', lbladmit: 'অ্যাডমিট কার্ড / মার্কশিট', lblmix: 'মিশ্র ডকুমেন্ট', lbldoc: 'ডকুমেন্ট'
     }
   };
   function lang() { return document.documentElement.lang === 'bn' ? 'bn' : 'en'; }
   function t(k) { return (TXT[lang()] && TXT[lang()][k]) || TXT.en[k] || k; }
-  var MAXI = 5;                                         // max cards / documents on one A4 order
+  var MAXI = 5;                                         // ID mode: max card pairs on one A4 sheet
+  var MAXD = 8;                                         // other modes: max pages in one batch (keeps phone memory safe)
+  function tf(k, o) { var v = t(k); for (var p in o) v = v.split('{' + p + '}').join(o[p]); return v; }
 
   /* ------------------------------------------------------------------ geometry (pure functions) */
   function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
@@ -433,6 +447,7 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
 #sw .sw-hb span{display:block;margin-top:2px;font-size:12px;font-weight:600;color:#64748b}
 #sw .sw-x{all:unset;cursor:pointer;width:38px;height:38px;display:grid;place-items:center;border-radius:12px;font-size:17px;color:#64748b;transition:background .15s,transform .15s}
 #sw .sw-x:hover{background:#f1f5f9;color:#0f172a}
+#sw .sw-x:focus-visible{outline:3px solid rgba(37,99,235,.35);outline-offset:2px}
 #sw .sw-x:active{transform:scale(.94)}
 #sw .sw-prog{flex:none;height:4px;margin:0 22px;background:#e2e8f0;border-radius:4px;overflow:hidden}
 #sw .sw-prog i{display:block;height:100%;width:20%;border-radius:4px;background:linear-gradient(90deg,#3b82f6,#8b5cf6,#ec4899);transition:width .4s cubic-bezier(.16,1,.3,1)}
@@ -458,21 +473,66 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
 #sw .sw-opt small{display:block;margin-top:3px;color:#64748b;font-size:12.5px;line-height:1.4}
 #sw .sw-ic{flex:none;width:46px;height:54px}
 #sw .sw-ico{flex:none;width:52px;height:52px;display:grid;place-items:center;border-radius:15px;font-size:26px;background:linear-gradient(135deg,#dbeafe,#e0e7ff);box-shadow:inset 0 0 0 1px #c7d2fe}
-#sw .sw-btn{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border-radius:999px;background:#f1f5f9;color:#475569;font-weight:700;font-size:14.5px;text-align:center;border:1.5px solid transparent;transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s,background .2s,border-color .2s,filter .2s}
-#sw .sw-btn:hover{transform:translateY(-2px)}
-#sw .sw-btn:active{transform:scale(.98)}
-#sw .sw-btn:disabled{opacity:.5;pointer-events:none}
-#sw .sw-btn.soft:hover{background:#e2e8f0}
-#sw .sw-btn.line{background:#fff;color:#2563eb;border-color:#2563eb}
-#sw .sw-btn.line:hover{background:#eff6ff}
-#sw .sw-btn.ind{background:#fff;color:#4f46e5;border-color:#6366f1}
-#sw .sw-btn.ind:hover{background:#eef2ff}
-#sw .sw-btn.pri{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;box-shadow:0 8px 20px rgba(37,99,235,.25)}
-#sw .sw-btn.pri:hover{box-shadow:0 12px 26px rgba(37,99,235,.33)}
-#sw .sw-btn.ok{background:linear-gradient(135deg,#2563eb,#10b981);color:#fff;box-shadow:0 8px 20px rgba(16,185,129,.25)}
-#sw .sw-btn.ok:hover{box-shadow:0 12px 26px rgba(16,185,129,.32)}
-#sw .sw-btn:focus-visible,#sw .sw-pill:focus-visible,#sw .sw-x:focus-visible{outline:3px solid rgba(37,99,235,.35);outline-offset:2px}
 #sw .sw-row{display:flex;justify-content:center;margin-top:8px}
+/* --- tokens: identical to the main site (primary gradient, 14px radius, #e2e8f0 hairlines) --- */
+#sw{--sw-grad:linear-gradient(135deg,#2563eb 0%,#7c3aed 55%,#ec4899 100%);--sw-line:#e2e8f0;--sw-ink:#1e293b;--sw-blue:#2563eb;--sw-ring:0 0 0 3px rgba(37,99,235,.28);--sw-ease:cubic-bezier(.2,.7,.2,1)}
+
+/* --- base = SECONDARY button: white surface, 1px #e2e8f0 border, 14px radius, 46px high --- */
+#sw .sw-btn{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:46px;min-height:46px;padding:0 18px;border-radius:14px;background:#fff;color:#1e293b;border:1px solid #e2e8f0;font-family:inherit;font-size:15px;font-weight:600;line-height:1.15;text-align:center;white-space:nowrap;box-shadow:0 1px 2px rgba(15,23,42,.05);-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;transition:transform .16s var(--sw-ease),box-shadow .2s,background-color .2s,border-color .2s,color .2s,filter .2s}
+#sw .sw-btn:hover:not(:disabled){transform:translateY(-1px);background:#f8fafc;border-color:#93c5fd;color:#2563eb;box-shadow:0 8px 16px -12px rgba(37,99,235,.55)}
+#sw .sw-btn:active:not(:disabled){transform:translateY(1px) scale(.985);box-shadow:none}
+#sw .sw-btn:focus-visible{outline:0;border-color:#93c5fd;box-shadow:var(--sw-ring)}
+#sw .sw-btn:disabled{opacity:.5;cursor:not-allowed;pointer-events:none;transform:none;filter:saturate(.6)}
+#sw .sw-btn.line{color:#2563eb}
+#sw .sw-btn.del:hover:not(:disabled){background:#fef2f2;border-color:#fca5a5;color:#b91c1c}
+#sw .sw-btn.sm{height:36px;min-height:36px;padding:0 14px;border-radius:12px;font-size:13.5px}
+
+/* --- PRIMARY CTA: blue > purple > pink gradient, 14px radius, 50px high, white semi-bold --- */
+#sw .sw-btn.pri{height:50px;min-height:50px;background:var(--sw-grad);color:#fff;border-color:transparent;font-weight:600;box-shadow:0 10px 22px -12px rgba(37,99,235,.7),inset 0 1px 0 rgba(255,255,255,.25)}
+#sw .sw-btn.pri:hover:not(:disabled){background:var(--sw-grad);color:#fff;border-color:transparent;filter:brightness(1.06);transform:translateY(-1px);box-shadow:0 14px 26px -12px rgba(37,99,235,.8),inset 0 1px 0 rgba(255,255,255,.3)}
+#sw .sw-btn.pri:active:not(:disabled){filter:brightness(.97);transform:translateY(1px) scale(.985);box-shadow:0 4px 10px -6px rgba(37,99,235,.7)}
+#sw .sw-btn.pri:focus-visible{box-shadow:var(--sw-ring),0 10px 22px -12px rgba(37,99,235,.7)}
+
+/* --- button rows --- */
+#sw .sw-bar{flex:none;display:flex;align-items:center;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px))}
+#sw .sw-bar .sw-btn{flex:1 1 0;min-width:0;padding:0 8px;font-size:14px}
+#sw .sw-bar .sw-btn.pri{flex:1.6 1 0}
+#sw .sw-ft{flex:none;display:flex;flex-direction:column;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid #e2e8f0;box-shadow:0 -10px 24px -16px rgba(15,23,42,.28);position:relative;z-index:3}
+#sw .sw-ft .sw-btn{width:100%}
+#sw .sw-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#sw .sw-grid2 .sw-btn{width:100%;padding:0 10px}
+#sw .sw-acts{display:flex;flex-direction:column;gap:10px}
+#sw .sw-acts .sw-btn{width:100%;padding:0 10px}
+
+/* --- FILTER selector: one even 3-column row, same look as the site's Paper size / Print mode buttons --- */
+#sw .sw-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 12px;padding:0;background:transparent;border-radius:0}
+#sw .sw-pill{all:unset;box-sizing:border-box;cursor:pointer;min-width:0;min-height:48px;padding:6px 8px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#fff;color:#1e293b;border:1px solid #e2e8f0;font-family:inherit;font-size:13.5px;font-weight:600;line-height:1.2;text-align:center;text-wrap:balance;overflow-wrap:anywhere;box-shadow:0 1px 2px rgba(15,23,42,.04);-webkit-tap-highlight-color:transparent;transition:transform .16s var(--sw-ease),box-shadow .2s,background-color .2s,border-color .2s,color .2s}
+#sw .sw-pill:hover:not(.on){background:#f8fafc;border-color:#93c5fd;color:#2563eb}
+#sw .sw-pill:active{transform:scale(.97)}
+#sw .sw-pill.on,#sw .sw-pill.on:hover{background:#2563eb;border-color:#2563eb;color:#fff;font-weight:700;box-shadow:0 8px 16px -10px rgba(37,99,235,.9)}
+#sw .sw-pill:focus-visible{outline:0;box-shadow:var(--sw-ring)}
+
+/* --- page counter badges + page list (edit / remove each page) --- */
+#sw .sw-slots{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:0 0 10px}
+#sw .sw-badge{display:inline-block;padding:6px 12px;border-radius:10px;background:#eef2ff;color:#1d4ed8;border:1px solid #c7d2fe;font-size:13px;font-weight:700}
+#sw .sw-badge.full{background:#dcfce7;color:#166534;border-color:#86efac}
+#sw .sw-lh{margin:4px 2px 8px;font-size:12.5px;font-weight:700;color:#64748b}
+#sw .sw-list{display:flex;flex-direction:column;gap:8px;margin:0 0 6px}
+#sw .sw-li{display:flex;align-items:center;gap:10px;padding:8px;background:#fff;border:1px solid #e2e8f0;border-radius:14px}
+#sw .sw-li img{flex:none;width:48px;height:48px;object-fit:contain;border-radius:8px;background:#f1f5f9;box-shadow:0 0 0 1px #e2e8f0}
+#sw .sw-lt{flex:1;min-width:0}
+#sw .sw-lt b{display:block;font-size:14px;font-weight:700;color:#0f172a;line-height:1.25}
+#sw .sw-lt small{display:block;margin-top:1px;font-size:12px;font-weight:500;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sw .sw-li .sw-btn{flex:none;padding:0 12px}
+
+/* --- Step 4 / 5 top spacing: header always stacks above the scroller, heading starts below it, helper text wraps and is never clipped --- */
+#sw .sw-h{position:relative;z-index:5}
+#sw #sw-ok .sw-sc,#sw #sw-a4 .sw-sc{justify-content:flex-start;padding:22px 20px 16px}
+#sw #sw-ok .sw-in,#sw #sw-a4 .sw-in{margin:0 auto}
+#sw #sw-ok h2,#sw #sw-a4 h2{padding-top:2px;overflow-wrap:anywhere}
+#sw #sw-ok .sw-p,#sw #sw-a4 .sw-p{margin:0 0 16px;padding:0 2px;line-height:1.5;overflow-wrap:anywhere}
+#sw .sw-pv.a4 img{max-height:min(30vh,280px);max-width:min(56vw,230px)}
+#sw .sw-info{text-align:center;color:#64748b;font-size:12.5px;font-weight:600;margin:0 0 14px}
 #sw .sw-ct{flex:none;text-align:center;padding:4px 20px 8px}
 #sw .sw-ct b{display:block;font-size:17px;font-weight:700;color:#0f172a}
 #sw .sw-ct span{display:block;margin-top:3px;color:#64748b;font-size:12.5px;line-height:1.4}
@@ -486,9 +546,6 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
 @keyframes swLaser{from{top:0}to{top:calc(100% - 3px)}}
 #sw .sw-lp{position:absolute;width:104px;height:104px;border-radius:50%;border:3px solid #2563eb;overflow:hidden;box-shadow:0 10px 26px rgba(37,99,235,.35);pointer-events:none;display:none;background:#fff;z-index:3}
 #sw .sw-lp canvas{width:100%;height:100%;display:block}
-#sw .sw-bar{flex:none;display:flex;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px))}
-#sw .sw-bar .sw-btn{flex:1;padding:13px 6px;font-size:13px;white-space:nowrap;min-width:0}
-#sw .sw-bar .sw-btn.pri{flex:1.7}
 #sw .sw-busy{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:none;grid-template-columns:auto 1fr auto;column-gap:9px;align-items:center;min-width:min(78vw,230px);max-width:92%;padding:10px 16px 11px;border-radius:16px;background:#fff;color:#334155;font-weight:700;font-size:13.5px;box-shadow:0 10px 26px rgba(37,99,235,.2),0 0 0 1px #e0e7ff;z-index:4;white-space:nowrap}
 #sw .sw-busy.on{display:grid}
 #sw .sw-busy:before{content:"";width:14px;height:14px;border-radius:50%;border:2.5px solid #c7d2fe;border-top-color:#2563eb;animation:swSpin .7s linear infinite}
@@ -508,29 +565,6 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
 #sw .sw-pv.a4 img{max-height:min(38vh,340px);max-width:min(60vw,260px)}
 @keyframes swPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
 #sw .sw-pv figcaption{margin-top:7px;color:#64748b;font-size:12px;font-weight:700}
-#sw .sw-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;margin:0 0 10px;border-radius:14px;background:#e2e8f0}
-#sw .sw-pill{all:unset;box-sizing:border-box;cursor:pointer;min-width:0;padding:10px 4px;border-radius:10px;color:#475569;font-size:13px;font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .2s,color .2s,box-shadow .2s}
-#sw .sw-pill:hover{background:rgba(255,255,255,.7)}
-#sw .sw-pill:active{transform:scale(.98)}
-#sw .sw-pill.on{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;box-shadow:0 6px 16px rgba(37,99,235,.28)}
-#sw .sw-sec{display:flex;gap:8px;margin:0}
-#sw .sw-rots{display:contents}
-#sw .sw-sec .sw-btn{flex:1 1 0;min-width:0;min-height:44px;padding:0 8px;border-radius:12px;font-size:13px;white-space:nowrap;background:#fff;color:#475569;border:1.5px solid #cbd5e1}
-#sw .sw-sec .sw-btn:hover{border-color:#3b82f6;color:#2563eb;background:#eff6ff}
-#sw .sw-sec .sw-btn.ind{color:#4f46e5;border-color:#a5b4fc}
-#sw .sw-ft{flex:none;display:flex;flex-direction:column;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid #e2e8f0;box-shadow:0 -10px 24px -16px rgba(15,23,42,.28);position:relative;z-index:3}
-#sw .sw-ft .sw-btn{width:100%;min-height:50px;padding:0 14px;border-radius:14px;font-size:15px}
-#sw .sw-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-#sw .sw-grid2 .sw-btn{min-height:48px;font-size:14px;background:#fff;color:#334155;border:1.5px solid #cbd5e1}
-#sw .sw-grid2 .sw-btn.line{color:#2563eb;border-color:#93c5fd}
-#sw .sw-grid2 .sw-btn:hover{background:#f8fafc;border-color:#94a3b8}
-#sw .sw-grid2 .sw-btn.line:hover{background:#eff6ff;border-color:#2563eb}
-#sw .sw-grid2 .sw-btn:disabled{opacity:.45;background:#f1f5f9}
-#sw .sw-slots{display:flex;justify-content:center;margin:0 0 8px}
-#sw .sw-badge{display:inline-block;padding:6px 14px;border-radius:999px;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;font-size:13px;font-weight:800}
-#sw .sw-badge.full{background:#dcfce7;color:#166534;border-color:#86efac}
-#sw #sw-ok .sw-sc,#sw #sw-a4 .sw-sc{padding-bottom:14px}
-#sw .sw-info{text-align:center;color:#64748b;font-size:12.5px;font-weight:600;margin:-6px 0 16px}
 @media (max-width:640px){
  #sw{align-items:flex-end;padding:0}
  #sw .sw-m{width:100%;height:min(96vh,96dvh,760px);border-radius:20px 20px 0 0;transform:translateY(60px)}
@@ -551,7 +585,7 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
   var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   function reset() {
-    S = { layout: 'id', side: 'front', src: null, quad: null, raw: { front: null, back: null }, cache: {}, filter: 'clean', pages: null, view: null, tok: 0, rtok: 0, busy: false, items: [], curIdx: -1, adding: false };
+    S = { layout: 'id', side: 'front', src: null, quad: null, raw: { front: null, back: null }, cache: {}, filter: 'clean', pages: null, view: null, tok: 0, rtok: 0, busy: false, items: [], curIdx: -1, adding: false, addPrev: -1, addFrom: 'a4', counts: null, finalLayout: null };
   }
   reset();
 
@@ -576,7 +610,7 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
         '<h2 id="sw-srcq"></h2><p class="sw-p" data-i="src.s"></p>' +
         '<button class="sw-opt" type="button" data-a="cam"><span class="sw-ico">📷</span><span><b data-i="cam.t"></b><small data-i="cam.s"></small></span></button>' +
         '<button class="sw-opt" type="button" data-a="file"><span class="sw-ico">📁</span><span><b data-i="file.t"></b><small data-i="file.s"></small></span></button>' +
-        '<div class="sw-row"><button class="sw-btn soft" type="button" data-a="srcback" data-i="back"></button></div>' +
+        '<div class="sw-row"><button class="sw-btn" type="button" data-a="srcback" data-i="back"></button></div>' +
         '<input id="sw-fcam" type="file" accept="image/*" capture="environment" hidden>' +
         '<input id="sw-ffile" type="file" accept="image/*" hidden>' +
       '</div></div></div>' +
@@ -585,27 +619,28 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
         '<div class="sw-ct"><b data-i="crop.t"></b><span data-i="crop.s"></span></div>' +
         '<div class="sw-stage" id="sw-stage"><div class="sw-cw" id="sw-cw"><canvas class="sw-c" id="sw-cv"></canvas><div class="sw-laser"><i></i></div></div>' +
           '<div class="sw-lp" id="sw-lp"><canvas id="sw-lpc" width="208" height="208"></canvas></div><div class="sw-busy" id="sw-busy"></div></div>' +
-        '<div class="sw-bar"><button class="sw-btn soft" type="button" data-a="cancel" data-i="cancel"></button><button class="sw-btn line" type="button" data-a="fullphoto" data-i="full"></button><button class="sw-btn pri" type="button" data-a="docrop" id="sw-docrop" data-i="crop"></button></div>' +
+        '<div class="sw-bar"><button class="sw-btn" type="button" data-a="cancel" data-i="cancel"></button><button class="sw-btn" type="button" data-a="fullphoto" data-i="full"></button><button class="sw-btn pri" type="button" data-a="docrop" id="sw-docrop" data-i="crop"></button></div>' +
       '</div>' +
       /* 4 side confirmation */
       '<div class="sw-v" id="sw-ok"><div class="sw-sc"><div class="sw-in">' +
         '<h2 id="sw-okt"></h2><p class="sw-p" data-i="ok.hint"></p>' +
+        '<div class="sw-slots"><span class="sw-badge" id="sw-pgb"></span></div>' +
         '<div class="sw-frame"><div class="sw-pv" id="sw-pv"></div></div>' +
         '<div class="sw-seg" role="radiogroup">' +
           '<button class="sw-pill" type="button" role="radio" data-f="orig" data-i="f.orig"></button>' +
           '<button class="sw-pill" type="button" role="radio" data-f="clean" data-i="f.clean"></button>' +
           '<button class="sw-pill" type="button" role="radio" data-f="bw" data-i="f.bw"></button>' +
         '</div>' +
-        '<div class="sw-sec"><div class="sw-rots" id="sw-rots"></div>' +
-          '<button class="sw-btn ind" type="button" data-a="addback" id="sw-addback" data-i="addback"></button></div>' +
+        '<div class="sw-acts" id="sw-acts"></div>' +
       '</div></div>' +
-      '<div class="sw-ft"><button class="sw-btn ok" type="button" data-a="done" data-i="done"></button></div>' +
+      '<div class="sw-ft"><button class="sw-btn pri" type="button" data-a="done" data-i="done"></button></div>' +
       '<div class="sw-busy" id="sw-busy2"></div></div>' +
       /* 5 A4 sheet */
       '<div class="sw-v" id="sw-a4"><div class="sw-sc"><div class="sw-in">' +
         '<h2 data-i="a4.t"></h2><p class="sw-p" data-i="a4.s"></p>' +
         '<div class="sw-frame"><div class="sw-pv a4" id="sw-a4pv"></div></div>' +
-        '<div class="sw-slots"><span class="sw-badge" id="sw-badge"></span></div><div class="sw-info" id="sw-a4info"></div>' +
+        '<div class="sw-slots"><span class="sw-badge" id="sw-badge"></span><span class="sw-badge" id="sw-badge2"></span></div><div class="sw-info" id="sw-a4info"></div>' +
+        '<div class="sw-lh" data-i="list.t"></div><div class="sw-list" id="sw-list"></div>' +
       '</div></div>' +
       '<div class="sw-ft"><button class="sw-btn pri" type="button" data-a="cont" data-i="cont"></button>' +
         '<div class="sw-grid2"><button class="sw-btn line" type="button" data-a="addmore" id="sw-addmore" data-i="addmore"></button>' +
@@ -613,7 +648,7 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
       '<div class="sw-busy" id="sw-busy3"></div></div>' +
       '</div></div>';
     document.body.appendChild(root);
-    ['stage', 'cw', 'cv', 'lp', 'lpc', 'busy', 'busy2', 'busy3', 'okt', 'pv', 'rots', 'addback', 'addmore', 'badge', 'fcam', 'ffile', 'srcq', 'stp', 'pf', 'a4pv', 'a4info', 'docrop'].forEach(function (k) { els[k] = document.getElementById('sw-' + k); });
+    ['stage', 'cw', 'cv', 'lp', 'lpc', 'busy', 'busy2', 'busy3', 'okt', 'pv', 'acts', 'pgb', 'addmore', 'badge', 'badge2', 'list', 'fcam', 'ffile', 'srcq', 'stp', 'pf', 'a4pv', 'a4info', 'docrop'].forEach(function (k) { els[k] = document.getElementById('sw-' + k); });
 
     root.addEventListener('click', onClick);
     els.fcam.onchange = els.ffile.onchange = function (e) { var f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) onPhoto(f); };
@@ -634,7 +669,11 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
     if (S.view === 'ok') renderOk();
     if (S.view === 'a4') renderA4();
   }
-  function setSrcTitle() { if (els.srcq) els.srcq.textContent = S.side === 'back' ? t('backFor') + ' — ' + t('src.q') : t('src.q'); }
+  function setSrcTitle() {
+    if (!els.srcq) return;
+    els.srcq.textContent = S.side === 'back' ? t('backFor') + ' — ' + t('src.q')
+      : (S.adding ? tf('src.qadd', { n: S.items.length + 1 }) : t('src.q'));
+  }
   function setStep() {
     var n = ORDER.indexOf(S.view) + 1; if (n < 1) n = 1;
     els.stp.textContent = t('step') + ' ' + n + ' / 5';
@@ -684,7 +723,10 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
       case 'close': close(); break;
       case 'srcback':
         if (S.side === 'back') { S.side = 'front'; show('ok'); renderOk(); }
-        else if (S.adding && S.items.length) { restoreLast(); show('a4'); renderA4(); }   // changed my mind about adding another card
+        else if (S.adding && S.items.length) {                 // changed my mind about adding another page: go back where I came from
+          restoreItem(S.addPrev >= 0 && S.items[S.addPrev] ? S.addPrev : S.items.length - 1);
+          if (S.addFrom === 'ok') { show('ok'); renderOk(); } else { show('a4'); renderA4(); }
+        }
         else show('type');
         break;
       case 'cam': els.fcam.click(); break;
@@ -697,8 +739,11 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
       case 'done': toA4(); break;
       case 'addback': S.side = 'back'; show('src'); break;
       case 'cont': finish(); break;
-      case 'edit': show('ok'); renderOk(); break;
+      case 'edit': editPage(S.curIdx >= 0 && S.items[S.curIdx] ? S.curIdx : S.items.length - 1); break;
       case 'addmore': addMore(); break;
+      case 'addmoreok': addFromOk(); break;
+      case 'editp': editPage(+a.dataset.n); break;
+      case 'delp': removePage(+a.dataset.n); break;
     }
   }
 
@@ -896,16 +941,31 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
     S.raw[side] = rotateCW(S.raw[side]); delete S.cache[side + ':orig']; delete S.cache[side + ':clean']; delete S.cache[side + ':bw'];
     renderOk();
   }
+  function maxPages() { return S.layout === 'id' ? MAXI : MAXD; }
+  function actBtn(a, label, cls) {
+    var x = document.createElement('button'); x.type = 'button'; x.className = 'sw-btn' + (cls ? ' ' + cls : ''); x.dataset.a = a; x.textContent = label; return x;
+  }
+  /* secondary actions under the preview: [Rotate | + Add More Page] in a 2-column row (+ Add Back Side underneath when it applies) */
+  function buildActs(hasBack, canAdd) {
+    els.acts.innerHTML = '';
+    var add = actBtn('addmoreok', t('addmore'), 'line'); if (!canAdd) { add.disabled = true; add.setAttribute('aria-disabled', 'true'); }
+    var row = document.createElement('div'); row.className = 'sw-grid2';
+    if (hasBack) { row.appendChild(actBtn('rotF', t('rotF'))); row.appendChild(actBtn('rotB', t('rotB'))); els.acts.appendChild(row); els.acts.appendChild(add); }
+    else {
+      row.appendChild(actBtn('rotF', t('rotate'))); row.appendChild(add); els.acts.appendChild(row);
+      if (S.layout !== 'cert') els.acts.appendChild(actBtn('addback', t('addback')));
+    }
+  }
   async function renderOk() {
     var f = S.raw.front, b = S.raw.back; if (!f) return;
     var tok = ++S.rtok;
     S.busy = true; setBusy(t('applying'), els.busy2, 10);
     [].forEach.call(root.querySelectorAll('[data-f]'), function (p) { var on = p.dataset.f === S.filter; p.classList.toggle('on', on); p.setAttribute('aria-checked', on); });
     els.okt.textContent = b ? t('ok.both') : (S.side === 'back' ? t('ok.back') : t('ok.front'));
-    els.rots.innerHTML = '';
-    function rb(a, label) { var x = document.createElement('button'); x.type = 'button'; x.className = 'sw-btn'; x.dataset.a = a; x.textContent = label; els.rots.appendChild(x); }
-    if (b) { rb('rotF', t('rotF')); rb('rotB', t('rotB')); } else rb('rotF', t('rotate'));
-    els.addback.style.display = (b || S.layout === 'cert') ? 'none' : '';
+    var total = S.curIdx >= 0 ? S.items.length : S.items.length + 1, num = S.curIdx >= 0 ? S.curIdx + 1 : total, canAdd = total < maxPages();
+    els.pgb.textContent = tf('pageOf', { n: num, m: total }) + (canAdd ? '' : ' · ' + t('slots.full'));
+    els.pgb.classList.toggle('full', !canAdd);
+    buildActs(!!b, canAdd);
     await frame();
     if (tok !== S.rtok) return;
     try {
@@ -922,36 +982,107 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
   }
 
   /* ---- Step 5: A4 composition (300 DPI) ---- */
-  function resolveLayout() {
-    var l = S.layout, f = (S.items[0] && S.items[0].raw.front) || S.raw.front;
-    return l === 'auto' ? (isIdLike(f) ? 'id' : 'cert') : l;
+  function isIdItem(it) { return it.raw.front ? isIdLike(it.raw.front) : false; }
+  /* build the printable A4 pages from every scanned page.
+     id    -> one A4 sheet, one row per card (front | back), up to 5 rows
+     admit -> one A4 page per scanned page (front top half, back bottom half)
+     cert  -> one A4 page per side
+     auto  -> ID-sized pages share an ID sheet (placed where the first card was scanned), everything else gets its own full A4 page */
+  function buildSheets() {
+    var items = S.items, L = S.layout, pages = [], counts = [], fl, i;
+    if (L === 'auto') {
+      var idList = [], seq = [], seen = false;
+      items.forEach(function (it) {
+        if (isIdItem(it)) { if (!seen) { seen = true; seq.push(null); } idList.push(it.out); } else seq.push(it.out);
+      });
+      seq.forEach(function (e) {
+        if (e === null) {
+          for (i = 0; i < idList.length; i += MAXI) {
+            var ch = idList.slice(i, i + MAXI);
+            compose('id', ch).forEach(function (p) { pages.push(p); counts.push(ch.length); });
+          }
+        } else compose('cert', [e]).forEach(function (p) { pages.push(p); counts.push(1); });
+      });
+      fl = idList.length === items.length ? 'id' : idList.length ? 'mixed' : 'cert';
+    } else {
+      fl = L; pages = compose(L, items.map(function (it) { return it.out; }));
+      counts = L === 'id' ? [items.length] : pages.map(function () { return 1; });
+    }
+    S.pages = pages; S.counts = counts; S.finalLayout = fl;
+  }
+  /* save the page that is on screen (new, or an edited one) into the batch */
+  function commitCurrent() {
+    var item = { raw: S.raw, filter: S.filter, out: { front: sideImg('front'), back: S.raw.back ? sideImg('back') : null } };
+    if (S.curIdx >= 0 && S.items[S.curIdx]) S.items[S.curIdx] = item; else { S.items.push(item); S.curIdx = S.items.length - 1; }
+    S.adding = false;
+    return item;
   }
   async function toA4() {
     if (!S.raw.front || S.busy) return;
     S.busy = true; setBusy(t('building'), els.busy2, 5); await frame();
     try {
-      var item = { raw: S.raw, filter: S.filter, out: { front: sideImg('front'), back: null } };
-      setBusy(t('building'), els.busy2, 35); await frame();
-      if (S.raw.back) item.out.back = sideImg('back');
-      if (S.curIdx >= 0 && S.items[S.curIdx]) S.items[S.curIdx] = item; else { S.items.push(item); S.curIdx = S.items.length - 1; }
-      S.adding = false;
-      setBusy(t('building'), els.busy2, 65); await frame();
-      var layout = resolveLayout();
-      S.pages = compose(layout, S.items.map(function (it) { return it.out; }));
-      S.finalLayout = layout;
+      commitCurrent();
+      setBusy(t('building'), els.busy2, 45); await frame();
+      buildSheets();
       setBusy(t('building'), els.busy2, 100); await frame();
       S.busy = false; setBusy('', els.busy2);
       show('a4'); renderA4();
     } catch (e) { S.busy = false; setBusy('', els.busy2); alert(t('readErr')); }
   }
-  function restoreLast() {                                // leave "add more" without adding: back to the last finished card
-    S.curIdx = S.items.length - 1; var it = S.items[S.curIdx];
-    S.raw = it.raw; S.filter = it.filter; S.cache = {}; S.adding = false; S.side = 'front';
+  function restoreItem(i) {                               // put a saved page back on the review screen
+    var it = S.items[i]; if (!it) return;
+    S.curIdx = i; S.raw = it.raw; S.filter = it.filter; S.adding = false; S.side = 'front';
+    S.cache = {}; S.cache['front:' + it.filter] = it.out.front; if (it.out.back) S.cache['back:' + it.filter] = it.out.back;
   }
-  function addMore() {
-    if (S.items.length >= MAXI || S.busy) return;
+  function startAdd(from) {                               // fresh, empty page -> choose photo source
+    S.addPrev = S.curIdx; S.addFrom = from;
     S.curIdx = -1; S.raw = { front: null, back: null }; S.cache = {}; S.side = 'front'; S.adding = true; S.src = null;
     show('src');
+  }
+  function addMore() {                                    // "+ Add More Page" on the final preview
+    if (S.busy) return;
+    if (S.items.length >= maxPages()) { alert(t('limit')); return; }
+    startAdd('a4');
+  }
+  async function addFromOk() {                            // "+ Add More Page" on the page-review step: keep this page, then add another
+    if (S.busy || !S.raw.front) return;
+    var total = S.curIdx >= 0 ? S.items.length : S.items.length + 1;
+    if (total >= maxPages()) { alert(t('limit')); return; }
+    S.busy = true; setBusy(t('saving'), els.busy2, 30); await frame();
+    try { commitCurrent(); } catch (e) { S.busy = false; setBusy('', els.busy2); alert(t('readErr')); return; }
+    S.busy = false; setBusy('', els.busy2);
+    startAdd('ok');
+  }
+  function editPage(i) { if (S.busy || !S.items[i]) return; restoreItem(i); show('ok'); renderOk(); }
+  async function removePage(i) {
+    if (S.busy || !S.items[i]) return;
+    S.busy = true; setBusy(t('building'), els.busy3, 25); await frame();
+    S.items.splice(i, 1); S.curIdx = S.items.length - 1;
+    if (!S.items.length) {                                // last page removed: start over at the photo source
+      S.pages = null; S.counts = null; S.raw = { front: null, back: null }; S.cache = {}; S.curIdx = -1; S.side = 'front'; S.adding = false;
+      S.busy = false; setBusy('', els.busy3); show('src'); return;
+    }
+    try { buildSheets(); } catch (e) { alert(t('readErr')); }
+    S.busy = false; setBusy('', els.busy3); renderA4();
+  }
+  function kindOf(it) {
+    var l = S.layout; return t(l === 'id' ? 'lblid' : l === 'admit' ? 'lbladmit' : l === 'cert' ? 'lblcert' : (isIdItem(it) ? 'lblid' : 'lbldoc'));
+  }
+  function renderList() {
+    els.list.innerHTML = '';
+    S.items.forEach(function (it, i) {
+      var li = document.createElement('div'), im = document.createElement('img'), tx = document.createElement('div'), b = document.createElement('b'), sm = document.createElement('small');
+      li.className = 'sw-li'; tx.className = 'sw-lt';
+      if (!it.th) it.th = thumb(it.out.front, 160);
+      im.alt = ''; im.src = it.th;
+      b.textContent = tf('pgN', { n: i + 1 });
+      sm.textContent = kindOf(it) + ' · ' + t(it.out.back ? 'sideBoth' : 'sideFront');
+      tx.appendChild(b); tx.appendChild(sm); li.appendChild(im); li.appendChild(tx);
+      var ed = actBtn('editp', t('edit2'), 'sm'), del = actBtn('delp', t('del'), 'sm del');
+      ed.dataset.n = del.dataset.n = i;
+      ed.setAttribute('aria-label', t('edit2') + ' ' + tf('pgN', { n: i + 1 })); del.setAttribute('aria-label', t('del') + ' ' + tf('pgN', { n: i + 1 }));
+      li.appendChild(ed); li.appendChild(del); els.list.appendChild(li);
+    });
   }
   function renderA4() {
     if (!S.pages) return;
@@ -960,21 +1091,25 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
       var fig = document.createElement('figure'), im = document.createElement('img'), cap = document.createElement('figcaption');
       im.alt = 'A4 ' + (i + 1); im.src = thumb(p, 900); im.style.boxShadow = '0 6px 18px rgba(15,23,42,.14),0 0 0 1px #e2e8f0';
       fig.appendChild(im);
-      if (S.pages.length > 1) { cap.textContent = t('page') + ' ' + (i + 1); fig.appendChild(cap); }
+      if (S.pages.length > 1) { cap.textContent = tf('sheet', { n: i + 1, m: S.pages.length }); fig.appendChild(cap); }
       els.a4pv.appendChild(fig);
     });
-    var n = S.items.length, full = n >= MAXI;
-    els.badge.textContent = t(S.finalLayout === 'id' ? 'slots.id' : 'slots.doc').replace('{n}', n) + (full ? ' · ' + t('slots.full') : '');
-    els.badge.classList.toggle('full', full);
+    var n = S.items.length, cap = maxPages(), full = n >= cap;
+    els.badge.textContent = n === 1 ? t('onePage') : tf('nPages', { n: n });
+    els.badge2.textContent = (S.layout === 'id' ? tf('slots.id', { n: n }) : tf('slots.doc', { n: n, m: cap })) + (full ? ' · ' + t('slots.full') : '');
+    els.badge2.classList.toggle('full', full);
     els.addmore.disabled = full; els.addmore.setAttribute('aria-disabled', full ? 'true' : 'false');
-    els.a4info.textContent = t('a4.info') + ' · ' + t(S.finalLayout === 'id' ? 'lblid' : S.finalLayout === 'admit' ? 'lbladmit' : 'lblcert') + (S.pages.length > 1 ? ' · ' + S.pages.length + ' ' + t('pages') : '');
+    var fl = S.finalLayout;
+    els.a4info.textContent = t('a4.info') + ' · ' + t(fl === 'id' ? 'lblid' : fl === 'admit' ? 'lbladmit' : fl === 'mixed' ? 'lblmix' : 'lblcert') + (S.pages.length > 1 ? ' · ' + S.pages.length + ' ' + t('sheets') : '');
+    renderList();
   }
 
   /* ---- finish: hand the A4 pages to the print flow ---- */
   function finish() {
     if (!S.pages) return;
     var layout = S.finalLayout, label = t(layout === 'id' ? 'lblid' : layout === 'admit' ? 'lbladmit' : 'lblcert');
-    var res = { pages: S.pages, layout: layout, label: label, hasBack: S.items.some(function (it) { return !!it.out.back; }), count: S.items.length };
+    if (layout === 'mixed') label = t('lblmix');
+    var res = { pages: S.pages, layout: layout, label: label, counts: S.counts || S.pages.map(function () { return 1; }), hasBack: S.items.some(function (it) { return !!it.out.back; }), count: S.items.length };
     close(); reset();
     if (typeof SmartScan.onDone === 'function') SmartScan.onDone(res);
   }

@@ -421,3 +421,74 @@ body .wz .sw label.cust{min-height:36px;font-weight:700}
  body .b.pb-dl{padding:0 10px!important}
 }
 @media(prefers-reduced-motion:reduce){body :is(.btn,.go,.b,.wz-btn,.pick,.pbtn,.prev-btn,.add-more,.seg button){transition:none!important;transform:none!important}}
+
+/* =====================================================================================================
+   v14 · SMART SCANNER BUTTONS  (#sw popup, opened from cards.html)
+   Same design language as the rest of therajesh.shop:
+     primary   = blue > purple > pink gradient, 14px radius, 50px high, white 600     (.sw-btn.pri)
+     secondary = white, 1px #e2e8f0 border, 14px radius, 46px high, slate / blue text   (.sw-btn, .sw-btn.line)
+     filters   = even 3-column grid, 12px radius, solid #2563eb when active          (.sw-pill)
+   scan-wizard.js embeds the same rules so the popup is correct even before this file loads;
+   the `body #sw` prefix here makes this copy win, so the site-wide look is tuned from one place.
+   ===================================================================================================== */
+/* --- tokens: identical to the main site (primary gradient, 14px radius, #e2e8f0 hairlines) --- */
+body #sw{--sw-grad:linear-gradient(135deg,#2563eb 0%,#7c3aed 55%,#ec4899 100%);--sw-line:#e2e8f0;--sw-ink:#1e293b;--sw-blue:#2563eb;--sw-ring:0 0 0 3px rgba(37,99,235,.28);--sw-ease:cubic-bezier(.2,.7,.2,1)}
+
+/* --- base = SECONDARY button: white surface, 1px #e2e8f0 border, 14px radius, 46px high --- */
+body #sw .sw-btn{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:46px;min-height:46px;padding:0 18px;border-radius:14px;background:#fff;color:#1e293b;border:1px solid #e2e8f0;font-family:inherit;font-size:15px;font-weight:600;line-height:1.15;text-align:center;white-space:nowrap;box-shadow:0 1px 2px rgba(15,23,42,.05);-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;transition:transform .16s var(--sw-ease),box-shadow .2s,background-color .2s,border-color .2s,color .2s,filter .2s}
+body #sw .sw-btn:hover:not(:disabled){transform:translateY(-1px);background:#f8fafc;border-color:#93c5fd;color:#2563eb;box-shadow:0 8px 16px -12px rgba(37,99,235,.55)}
+body #sw .sw-btn:active:not(:disabled){transform:translateY(1px) scale(.985);box-shadow:none}
+body #sw .sw-btn:focus-visible{outline:0;border-color:#93c5fd;box-shadow:var(--sw-ring)}
+body #sw .sw-btn:disabled{opacity:.5;cursor:not-allowed;pointer-events:none;transform:none;filter:saturate(.6)}
+body #sw .sw-btn.line{color:#2563eb}
+body #sw .sw-btn.del:hover:not(:disabled){background:#fef2f2;border-color:#fca5a5;color:#b91c1c}
+body #sw .sw-btn.sm{height:36px;min-height:36px;padding:0 14px;border-radius:12px;font-size:13.5px}
+
+/* --- PRIMARY CTA: blue > purple > pink gradient, 14px radius, 50px high, white semi-bold --- */
+body #sw .sw-btn.pri{height:50px;min-height:50px;background:var(--sw-grad);color:#fff;border-color:transparent;font-weight:600;box-shadow:0 10px 22px -12px rgba(37,99,235,.7),inset 0 1px 0 rgba(255,255,255,.25)}
+body #sw .sw-btn.pri:hover:not(:disabled){background:var(--sw-grad);color:#fff;border-color:transparent;filter:brightness(1.06);transform:translateY(-1px);box-shadow:0 14px 26px -12px rgba(37,99,235,.8),inset 0 1px 0 rgba(255,255,255,.3)}
+body #sw .sw-btn.pri:active:not(:disabled){filter:brightness(.97);transform:translateY(1px) scale(.985);box-shadow:0 4px 10px -6px rgba(37,99,235,.7)}
+body #sw .sw-btn.pri:focus-visible{box-shadow:var(--sw-ring),0 10px 22px -12px rgba(37,99,235,.7)}
+
+/* --- button rows --- */
+body #sw .sw-bar{flex:none;display:flex;align-items:center;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px))}
+body #sw .sw-bar .sw-btn{flex:1 1 0;min-width:0;padding:0 8px;font-size:14px}
+body #sw .sw-bar .sw-btn.pri{flex:1.6 1 0}
+body #sw .sw-ft{flex:none;display:flex;flex-direction:column;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid #e2e8f0;box-shadow:0 -10px 24px -16px rgba(15,23,42,.28);position:relative;z-index:3}
+body #sw .sw-ft .sw-btn{width:100%}
+body #sw .sw-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+body #sw .sw-grid2 .sw-btn{width:100%;padding:0 10px}
+body #sw .sw-acts{display:flex;flex-direction:column;gap:10px}
+body #sw .sw-acts .sw-btn{width:100%;padding:0 10px}
+
+/* --- FILTER selector: one even 3-column row, same look as the site's Paper size / Print mode buttons --- */
+body #sw .sw-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 12px;padding:0;background:transparent;border-radius:0}
+body #sw .sw-pill{all:unset;box-sizing:border-box;cursor:pointer;min-width:0;min-height:48px;padding:6px 8px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#fff;color:#1e293b;border:1px solid #e2e8f0;font-family:inherit;font-size:13.5px;font-weight:600;line-height:1.2;text-align:center;text-wrap:balance;overflow-wrap:anywhere;box-shadow:0 1px 2px rgba(15,23,42,.04);-webkit-tap-highlight-color:transparent;transition:transform .16s var(--sw-ease),box-shadow .2s,background-color .2s,border-color .2s,color .2s}
+body #sw .sw-pill:hover:not(.on){background:#f8fafc;border-color:#93c5fd;color:#2563eb}
+body #sw .sw-pill:active{transform:scale(.97)}
+body #sw .sw-pill.on,body #sw .sw-pill.on:hover{background:#2563eb;border-color:#2563eb;color:#fff;font-weight:700;box-shadow:0 8px 16px -10px rgba(37,99,235,.9)}
+body #sw .sw-pill:focus-visible{outline:0;box-shadow:var(--sw-ring)}
+
+/* --- page counter badges + page list (edit / remove each page) --- */
+body #sw .sw-slots{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:0 0 10px}
+body #sw .sw-badge{display:inline-block;padding:6px 12px;border-radius:10px;background:#eef2ff;color:#1d4ed8;border:1px solid #c7d2fe;font-size:13px;font-weight:700}
+body #sw .sw-badge.full{background:#dcfce7;color:#166534;border-color:#86efac}
+body #sw .sw-lh{margin:4px 2px 8px;font-size:12.5px;font-weight:700;color:#64748b}
+body #sw .sw-list{display:flex;flex-direction:column;gap:8px;margin:0 0 6px}
+body #sw .sw-li{display:flex;align-items:center;gap:10px;padding:8px;background:#fff;border:1px solid #e2e8f0;border-radius:14px}
+body #sw .sw-li img{flex:none;width:48px;height:48px;object-fit:contain;border-radius:8px;background:#f1f5f9;box-shadow:0 0 0 1px #e2e8f0}
+body #sw .sw-lt{flex:1;min-width:0}
+body #sw .sw-lt b{display:block;font-size:14px;font-weight:700;color:#0f172a;line-height:1.25}
+body #sw .sw-lt small{display:block;margin-top:1px;font-size:12px;font-weight:500;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body #sw .sw-li .sw-btn{flex:none;padding:0 12px}
+
+/* --- Step 4 / 5 top spacing: header always stacks above the scroller, heading starts below it, helper text wraps and is never clipped --- */
+body #sw .sw-h{position:relative;z-index:5}
+body #sw #sw-ok .sw-sc,body #sw #sw-a4 .sw-sc{justify-content:flex-start;padding:22px 20px 16px}
+body #sw #sw-ok .sw-in,body #sw #sw-a4 .sw-in{margin:0 auto}
+body #sw #sw-ok h2,body #sw #sw-a4 h2{padding-top:2px;overflow-wrap:anywhere}
+body #sw #sw-ok .sw-p,body #sw #sw-a4 .sw-p{margin:0 0 16px;padding:0 2px;line-height:1.5;overflow-wrap:anywhere}
+body #sw .sw-pv.a4 img{max-height:min(30vh,280px);max-width:min(56vw,230px)}
+body #sw .sw-info{text-align:center;color:#64748b;font-size:12.5px;font-weight:600;margin:0 0 14px}
+
+@media(prefers-reduced-motion:reduce){body #sw .sw-btn,body #sw .sw-pill{transition:none!important;transform:none!important}}

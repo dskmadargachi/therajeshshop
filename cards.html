@@ -618,7 +618,7 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
 .wz-pane .s3set{margin-top:12px}
 .wz-done-slot .donebox{border:0!important;box-shadow:none!important;background:none!important;padding:0!important;margin:0}
 </style>
-<link rel="stylesheet" href="/wizard.css">
+<link rel="stylesheet" href="/wizard.css?v=6">
 <script src="/wizard.js"></script>
 </head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -818,12 +818,12 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
    <div class="wz-act" data-flow="card" data-step="1"><button class="wz-btn pri" type="button" data-wz="go:2">Apply &amp; return to preview</button></div>
    <div class="wz-act" data-flow="card" data-step="2"><button class="b hero" id="printBtn" type="button">Print · Save · Download</button></div>
    <div class="wz-act" data-flow="card" data-step="3"><button class="wz-btn" type="button" data-wz="prev" style="flex:none" aria-label="Back">←</button><button class="btn" id="wzSend" type="button">Send to counter</button></div>
-    <div class="wz-act" data-flow="scan" data-step="1"><button class="b hero" id="scGo" type="button" style="width:100%">✅ All Good — Continue</button></div>
+    <div class="wz-act" data-flow="scan" data-step="1"><button class="b hero" id="scGo" type="button" style="width:100%">All Good — Continue</button></div>
   </footer>
  </div>
 </div>
 
-<script src="/scan-wizard.js"></script>
+<script src="/scan-wizard.js?v=6"></script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const $=i=>document.getElementById(i),CW=85.6,CH=53.98,R=CW/CH,MM=25.4;
@@ -1427,10 +1427,10 @@ SmartScan.onDone=res=>{scanRes=res;const box=$('scPrev');box.innerHTML='';
  res.pages.forEach((c,i)=>{const im=document.createElement('img');im.alt='A4 page '+(i+1);
   const big=mk(360,Math.round(360*c.height/c.width));big.getContext('2d').drawImage(c,0,0,big.width,big.height);im.src=big.toDataURL('image/jpeg',.85);box.append(im)});
  $('scSub').textContent=res.pages.length+(res.pages.length==1?' page':' pages')+' · A4 · '+res.label+((res.count||1)>1?' · '+res.count+(res.layout==='id'?' cards':' documents'):'');
- if(window.Wiz)Wiz.open('scan',1);toast('✅ Document straightened & locked to A4')};
+ if(window.Wiz)Wiz.open('scan',1);toast('Document straightened & locked to A4')};
 $('scGo').onclick=async()=>{if(!scanRes)return;try{
  if(cart.length&&cart[0].paper!=='A4'){toast('Your order already has '+cart[0].paper+' pages. Send it first or clear it.');return}
- const ok=await pushCart(scanRes.pages,'A4','Scanned '+scanRes.label,scanRes.layout==='id'?[scanRes.count||1]:null);
+ const ok=await pushCart(scanRes.pages,'A4','Scanned '+scanRes.label,scanRes.counts||null);
  if(ok){if(window.Wiz)Wiz.close();openPop('orderPanel')}}catch(e){toast('Could not add to the order: '+e.message)}};
 
 /* ---- start ---- */
