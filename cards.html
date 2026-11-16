@@ -866,7 +866,7 @@ voter:{n:'Voter Card',bn:'ভোটার কার্ড',d:'e-EPIC PDF · fron
 abc:{minW:.4,maxW:1,n:'ABC / APAAR ID',bn:'অ্যাপার',d:'PDF, JPG or PNG · front only',img:1,pdf:1,one:1,fx:1,F:[.04,.03,.92,.4],det:'ink',inset:.002},
 abha:{n:'ABHA Card',bn:'আভা কার্ড',d:'PDF · front and back',pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'cards',inset:.004},
 eshram:{minW:.3,maxW:1,n:'e-Shram Card',bn:'ই-শ্রম কার্ড',d:'PDF, JPG or PNG · front and back',img:1,pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'cards',inset:.004}};
-let fitMode=(()=>{try{return localStorage.getItem('cardFit')==='keep'?'keep':'fill'}catch(e){return 'fill'}})(),K,Tp,pp=[],pages=[],bx={},dpi=300,cc=0,batch=[],pdfBuf=null,srcFile=null,selS='F',sheetPaper='A4',deck=[],ai=-1,deckAdded=false,srcImg=false,sendItems=[];
+let fitMode=(()=>{try{return localStorage.getItem('cardFit')==='keep'?'keep':'fill'}catch(e){return 'fill'}})(),K,Tp,pp=[],pages=[],bx={},dpi=300,cc=0,batch=[],pdfBuf=null,srcFile=null,selS='F',sheetPaper='A4',deck=[],ai=-1,autoBatch=false,deckAdded=false,srcImg=false,sendItems=[];
 
 const CA=(()=>{
 const ph=(x,y,w,h,c)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${c}"/><circle cx="${x+w/2}" cy="${y+h*.36}" r="${w*.2}" fill="#fff" opacity=".9"/><path d="M${x+w*.14} ${y+h}Q${x+w/2} ${y+h*.5} ${x+w*.86} ${y+h}Z" fill="#fff" opacity=".9"/>`;
@@ -951,20 +951,22 @@ async function load(pass){fileProg(0.25);pages=[];pp=[];bx={};
   pages=[];pp=[];bx={};ai=-1;
   if(Q.length)return nextFile()
   return finishDeck()}
-function freeDeck(){deck.forEach(E=>(E.pages||[]).forEach(freeCanvas));deck=[];ai=-1;deckAdded=false;const o=$('deckOut');if(o)o.innerHTML=''}
+function freeDeck(){deck.forEach(E=>(E.pages||[]).forEach(freeCanvas));deck=[];ai=-1;autoBatch=false;deckAdded=false;const o=$('deckOut');if(o)o.innerHTML=''}
 function commit(){const E=deck[ai];if(E){E.pages=pages;E.pp=pp;E.bx=bx}}
 function useCard(i){const E=deck[i];if(!E)return;if(ai>=0&&ai!==i)commit();ai=i;pages=E.pages;pp=E.pp;bx=E.bx;srcImg=E.img}
 async function finishDeck(){
   if(!deck.length){rpEnd(false);return st('Could not read any of the selected files.',1)}
   rpEnd(true);useCard(0);const many=deck.length>1;
-  st(many?deck.length+' cards are ready. Each one prints on its own page.':(rMsg()||(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(redFull?'':(isFree()?(Tp.det=='red'?'Red border found on both pages. Cropped exactly inside it.':'Front and back card edges found. Cropped exactly to each card.'):'Cards found and cropped. Adjust the boxes if needed.')))),many?0:(rMsg()?!greenOK:miss));
+  st(many?deck.length+' cards are ready in the preview and the A4 batch.':(rMsg()||(miss?'Card edge not found, so a default position is used. Drag the yellow boxes to fit.':(redFull?'':(isFree()?(Tp.det=='red'?'Red border found on both pages. Cropped exactly inside it.':'Front and back card edges found. Cropped exactly to each card.'):'Cards found and cropped. Adjust the boxes if needed.')))),many?0:(rMsg()?!greenOK:miss));
   $('work').classList.remove('hidden');
+  autoBatch=true;batch=[];
   const t1=$('dBoth').querySelector('.t1');if(t1)t1.textContent=many?'All JPGs':'Both JPGs';
   $('dBothL').textContent=many?'All cards':(Tp.one?'Front only':'Front + Back');
   buildDeckUI();
-  if(many)toast(deck.length+' cards ready · one page each');
+  try{await rebuildBatch()}catch(e){console.error(e)}
+  if(many){st(deck.length+' cards are ready in the preview and the A4 batch.');toast(deck.length+' cards added to the A4 batch')}
   if(window.Wiz){Wiz.resetDone('card');Wiz.open('card',2);Wiz.sync('card',1)}
-  deck.forEach((_,i)=>drawCard(i))}
+  deck.forEach((_,i)=>drawCard(i));batchUI()}
 /* ---- preview of every selected card ---- */
 function buildDeckUI(){const box=$('deckOut');box.innerHTML='';const many=deck.length>1;
   deck.forEach((E,i)=>{const sec=document.createElement('section');sec.className='dk'+(many?' multi':'');sec.dataset.i=i;
@@ -980,13 +982,18 @@ function drawCard(i){const E=deck[i];if(!E||!E.bx||!E.bx.F)return;
 function adjustCard(i){useCard(i);mount();selS='F';layoutBoxes();update();
   const many=deck.length>1,w=$('adjWho');w.hidden=!many;if(many){$('adjWhoT').textContent='Card '+(i+1);$('adjWhoN').textContent=deck[i].name}
   if(window.Wiz)Wiz.go(1)}
-function deckBack(){commit();deck.forEach((_,i)=>drawCard(i))}
+function deckBack(){commit();deck.forEach((_,i)=>drawCard(i));if(autoBatch)queueRB();batchUI()}
 $('deckOut').addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-adj],[data-dl]');if(!t)return;
   if(t.dataset.adj!=null)return adjustCard(+t.dataset.adj);
   const i=+t.dataset.i,sd=t.dataset.dl,E=deck[i];if(!E)return;
   busy(async()=>save(await cropHQ(sd,dpi,E),nm(i)+(sd==='F'?'_front.jpg':'_back.jpg')))});
 /* every selected card becomes its own page: one front|back pair per card, never packed onto a shared sheet */
-const curItems=async()=>{commit();if(batch.length)return batch;if(!deck.length)return[await pair()];const out=[];for(const E of deck)out.push(await pair(E));return out};
+/* the A4 batch mirrors the deck: one pair per selected card (queued so quick changes never overlap) */
+async function rebuildBatch(){commit();const out=[];for(const E of deck.slice(0,5))out.push(await pair(E));batch=out;batchUI()}
+let rbQ=Promise.resolve(),rbT=0;
+const queueRB=()=>{rbQ=rbQ.then(()=>autoBatch?rebuildBatch():0).catch(e=>console.error(e));return rbQ};
+const dRB=()=>{clearTimeout(rbT);rbT=setTimeout(queueRB,450)};
+const curItems=async()=>{await rbQ;commit();if(batch.length)return batch;if(!deck.length)return[await pair()];const out=[];for(const E of deck)out.push(await pair(E));return out};
 async function render(pass){pages.forEach(freeCanvas);pages=[];pp=[];
  if(!pdfBuf){const im=await new Promise((ok,no)=>{const i=new Image;i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(srcFile._blob||srcFile)});fileProg(0.6);
   const k=Math.min(1,4096/Math.max(im.naturalWidth,im.naturalHeight)),c=mk(Math.round(im.naturalWidth*k),Math.round(im.naturalHeight*k));
@@ -1319,12 +1326,12 @@ const jpgA4=()=>busy(async()=>{const cs=a4Sheets(await curItems());for(let i=0;i
 const jpg46=()=>busy(async()=>{const its=await curItems();for(let i=0;i<its.length;i++){const c=make46(its[i]);await save(c,'4x6_'+nm(its.length>1?i:null)+'.jpg',c.eff);if(i<its.length-1)await wait(500)}});
 /* one "Sheet JPG" button: downloads whichever sheet is selected in the A4 / 4x6 toggle */
 $('dSheet').onclick=()=>sheetPaper==='A4'?jpgA4():jpg46();
-$('add').onclick=()=>busy(async()=>{if(batch.length>=5)return st('Maximum 5 ID pairs per A4.',1);batch.push(await pair());update()});
-$('clr').onclick=()=>{batch=[];update();batchUI()};
-document.querySelectorAll('[data-dpi]').forEach(b=>b.onclick=()=>{dpi=+b.dataset.dpi;mark();batch=[];update()});
-document.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{cc=+b.dataset.cc;document.querySelectorAll('[data-cc]').forEach(x=>x.classList.toggle('on',x==b));update()});
-['fb','fc','fs'].forEach(i=>$(i).oninput=()=>{qUp()});
-document.querySelectorAll('[data-fit]').forEach(b=>b.onclick=()=>{fitMode=b.dataset.fit;try{localStorage.setItem('cardFit',fitMode)}catch(e){}mark();batch=[];update()});
+$('add').onclick=()=>busy(async()=>{if(batch.length>=5)return st('Maximum 5 ID pairs per A4.',1);autoBatch=false;batch.push(await pair());update()});
+$('clr').onclick=()=>{batch=[];autoBatch=false;update();batchUI()};
+document.querySelectorAll('[data-dpi]').forEach(b=>b.onclick=()=>{dpi=+b.dataset.dpi;mark();batch=[];update();if(autoBatch)queueRB()});
+document.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{cc=+b.dataset.cc;document.querySelectorAll('[data-cc]').forEach(x=>x.classList.toggle('on',x==b));update();if(autoBatch)dRB()});
+['fb','fc','fs'].forEach(i=>$(i).oninput=()=>{qUp();if(autoBatch)dRB()});
+document.querySelectorAll('[data-fit]').forEach(b=>b.onclick=()=>{fitMode=b.dataset.fit;try{localStorage.setItem('cardFit',fitMode)}catch(e){}mark();batch=[];update();if(autoBatch)queueRB()});
 function mark(){document.querySelectorAll('[data-fit]').forEach(b=>b.classList.toggle('on',b.dataset.fit==fitMode));document.querySelectorAll('[data-dpi]').forEach(b=>b.classList.toggle('on',+b.dataset.dpi==dpi))}mark();
 const paperUI=()=>{$('dSheetL').textContent=sheetPaper==='A4'?'A4':'4×6';document.querySelectorAll('#paperSeg button').forEach(x=>{const on=x.dataset.v===sheetPaper;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on)})};
 document.querySelectorAll('#paperSeg button').forEach(b=>b.onclick=()=>{sheetPaper=b.dataset.v;paperUI()});paperUI();
@@ -1374,7 +1381,7 @@ async function toOrder(keep){
   if(!keep&&deckAdded&&cart.length)return true;                       /* these cards are already in the order */
   const items=await curItems(),paper=sheetPaper,cvs=paper==='A4'?a4Sheets(items):items.map(make46),combined=paper==='A4'&&items===batch;
   if(!(await pushCart(cvs,paper,lblFor(items,paper),combined?[items.length]:items.map(()=>1))))return false;
-  if(keep){batch=[];sendItems=[];deckAdded=true;update()}else sendItems=pushCart.last.slice();
+  if(keep){batch=[];autoBatch=false;sendItems=[];deckAdded=true;update()}else sendItems=pushCart.last.slice();
   return true}
 async function toSummary(keep){if(!(await toOrder(keep)))return false;closePop();if(window.Wiz)Wiz.go(3);return true}
 $('addOrder').addEventListener('click',()=>setTimeout(closePop,60));
