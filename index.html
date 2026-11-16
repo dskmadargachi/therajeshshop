@@ -973,14 +973,14 @@ body .tile:active{transform:scale(.97)!important}
      <label class="l" for="zoom">Zoom</label>
      <input type="range" id="zoom" min="1" max="3" step="0.01" value="1">
      <label class="l">Background colour</label>
-     <div class="sw" id="bgSw">
-      <button class="orig on" data-c="" type="button"><i></i>Transparent</button>
-      <button data-c="#ffffff" type="button"><i style="background:#fff"></i>White</button>
-      <button data-c="#2b6fd6" type="button"><i style="background:#2b6fd6"></i>Blue</button>
-      <button data-c="#d32f2f" type="button"><i style="background:#d32f2f"></i>Red</button>
-      <button data-c="#e5e7eb" type="button"><i style="background:#e5e7eb"></i>Grey</button>
-      <button data-c="#2e9e5b" type="button"><i style="background:#2e9e5b"></i>Green</button>
-      <label class="cust"><input type="color" id="bgCustom" value="#7ec8a0" title="Custom colour">Custom</label>
+     <div class="sw" id="bgSw" role="group" aria-label="Background colour">
+      <button class="orig on" data-c="" type="button" title="Transparent" aria-label="Transparent" aria-pressed="true"><i></i></button>
+      <button data-c="#ffffff" type="button" title="White" aria-label="White" aria-pressed="false"><i style="background:#fff"></i></button>
+      <button data-c="#2b6fd6" type="button" title="Blue" aria-label="Blue" aria-pressed="false"><i style="background:#2b6fd6"></i></button>
+      <button data-c="#d32f2f" type="button" title="Red" aria-label="Red" aria-pressed="false"><i style="background:#d32f2f"></i></button>
+      <button data-c="#e5e7eb" type="button" title="Grey" aria-label="Grey" aria-pressed="false"><i style="background:#e5e7eb"></i></button>
+      <button data-c="#2e9e5b" type="button" title="Green" aria-label="Green" aria-pressed="false"><i style="background:#2e9e5b"></i></button>
+      <label class="cust" title="Custom colour"><input type="color" id="bgCustom" value="#7ec8a0" title="Custom colour" aria-label="Custom colour"></label>
      </div>
      <div class="hint" id="bgMsg">Choose a colour to replace the background automatically.</div>
      <div class="prog hidden" id="bgProg"><i></i></div>
@@ -1107,8 +1107,8 @@ function showTab(tab) {
   history.replaceState(null, '', tab === 'pp' ? '#pp' : location.pathname);
 }
 $('tabDoc').onclick = () => showTab('doc');
-$('tabPP').onclick = () => { showTab('pp'); setTimeout(() => { try { warmBg(); } catch {} }, 600); };
-if (location.hash === '#pp') showTab('pp');
+$('tabPP').onclick = () => { showTab('pp'); try { warmBg(); } catch {} };       // model loads while the customer picks a photo
+if (location.hash === '#pp') { showTab('pp'); setTimeout(() => { try { warmBg(); } catch {} }, 0); }   // after the module has finished initialising
 
 function seg(id, cb) {
   const el = $(id);
@@ -1635,12 +1635,12 @@ $('ppCam').addEventListener('change', (e) => {
 $('ppPick').addEventListener('change', async (e) => {
   const f = e.target.files[0]; if (!f) return; $('ppErr').textContent = '';
   try {
-    pp.base = await loadBase(f); pp.cutout = null; pp.cutoutKind = ''; aiBase = null; aiPromise = null; bgReset(); bgIdle(); setTimeout(startAI, 250); pp.bg = ''; pp.zoom = 1; pp.ox = 0; pp.oy = 0;
+    pp.base = await loadBase(f); pp.cutout = null; pp.cutoutKind = ''; aiBase = null; aiPromise = null; bgReset(); bgIdle(); pp.bg = ''; startAI(); pp.zoom = 1; pp.ox = 0; pp.oy = 0;
     $('zoom').value = 1;
     $('ppWork').classList.remove('hidden');
     $('ppOpts').classList.remove('hidden');
     $('ppSplit').classList.add('has-items');
-    $('bgSw').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x.dataset.c === ''));
+    swSelect(null);
     fillCountOptions(); sizeCrop(); redraw(); ppRecalc();
     if (window.Wiz) { Wiz.sync('pp', 1); Wiz.open('pp', 1); }
   } catch { $('ppErr').textContent = 'Could not open this photo. Please use a JPG or PNG.'; }
@@ -1666,119 +1666,101 @@ $('csU').addEventListener('change', () => {   // convert the typed numbers when 
 });
 seg('sheetSeg', (v) => { pp.sheet = v; pp.ox = 0; pp.oy = 0; fillCountOptions(); sizeCrop(); redraw(false); updateSheet(); ppRecalc(); });
 
-let bgLib = null, aiPromise = null, aiBase = null;
+let aiPromise = null, aiBase = null;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/* INSTANT background removal (about 0.1 s): flood-fills the plain background from the photo edges on a small copy. */
-function fastCutout(base) {
-  const S = Math.min(1, 480 / Math.max(base.width, base.height));
-  const w = Math.max(8, Math.round(base.width * S)), h = Math.max(8, Math.round(base.height * S));
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(base, 0, 0, w, h);
-  const im = x.getImageData(0, 0, w, h), d = im.data;
-  const rs = [], gs = [], bs = [], ring = Math.max(2, Math.round(Math.min(w, h) * .02));
-  for (let y = 0; y < h; y++) for (let i = 0; i < w; i++) if (y < ring || y >= h - ring || i < ring || i >= w - ring) { const o = (y * w + i) * 4; rs.push(d[o]); gs.push(d[o + 1]); bs.push(d[o + 2]); }
-  const med = (a) => (a.sort((p, q) => p - q), a[a.length >> 1]), mr = med(rs), mg = med(gs), mb = med(bs);
-  const dm = (o) => Math.hypot(d[o] - mr, d[o + 1] - mg, d[o + 2] - mb);
-  const TOL = 52, bg = new Uint8Array(w * h), stack = new Int32Array(w * h * 2); let sp = 0;
-  const seed = (p) => { if (!bg[p] && dm(p * 4) < TOL) { bg[p] = 1; stack[sp++] = p; } };
-  for (let i = 0; i < w; i++) { seed(i); seed((h - 1) * w + i); } for (let y = 0; y < h; y++) { seed(y * w); seed(y * w + w - 1); }
-  while (sp) {
-    const p = stack[--sp], px = p % w, py = (p / w) | 0, po = p * 4;
-    for (const q of [px > 0 ? p - 1 : -1, px < w - 1 ? p + 1 : -1, py > 0 ? p - w : -1, py < h - 1 ? p + w : -1]) {
-      if (q < 0 || bg[q]) continue; const qo = q * 4;
-      const toMed = dm(qo), toParent = Math.hypot(d[qo] - d[po], d[qo + 1] - d[po + 1], d[qo + 2] - d[po + 2]);
-      if (toMed < TOL || (toParent < 9 && toMed < TOL * 2)) { bg[q] = 1; stack[sp++] = q; }
-    }
-  }
-  let a = new Float32Array(w * h);                       // 1 = person, 0 = background (eroded by 1 px to avoid a halo)
-  for (let y = 0; y < h; y++) for (let i = 0; i < w; i++) { const p = y * w + i; if (bg[p]) continue;
-    const edge = (i > 0 && bg[p - 1]) || (i < w - 1 && bg[p + 1]) || (y > 0 && bg[p - w]) || (y < h - 1 && bg[p + w]); a[p] = edge ? 0 : 1; }
-  for (let pass = 0; pass < 2; pass++) { const b = new Float32Array(w * h);        // soften the edge
-    for (let y = 1; y < h - 1; y++) for (let i = 1; i < w - 1; i++) { const p = y * w + i; b[p] = (a[p] * 4 + a[p - 1] + a[p + 1] + a[p - w] + a[p + w]) / 8; } a = b; }
-  for (let p = 0; p < w * h; p++) d[p * 4 + 3] = Math.round(Math.min(1, a[p] * 1.15) * 255);
-  x.putImageData(im, 0, 0); return c;
-}
-
 /* ---------------------------------------------------------------------------------------------
-   BACKGROUND REMOVAL (fast path)
-   1. The photo is shrunk to max 800 px for the model only (the model resizes to 1024 anyway).
-   2. Only the ALPHA MASK is kept. It is cached and stretched over the full-resolution photo, so print edges stay
-      crisp and colours come from the original pixels.
-   3. Changing colour / zoom / position never runs the model again, it only repaints from the cached cutout.
-   4. The model runs in a Web Worker (UI never freezes). If a browser cannot do that, it falls back to the main
-      thread after a short idle delay.
-   5. A quick flood-fill cutout (about 0.1 s) is shown immediately; the AI result replaces it when ready.
+   BACKGROUND REMOVAL: MediaPipe Tasks Vision ImageSegmenter + selfie_segmenter (float16, ~250 KB)
+   It segments the PERSON (face, skin, hair, clothes), so skin tones can never be mistaken for the background.
+   1. The model is warmed up as soon as the #pp wizard opens (GPU / WebGL first, automatic CPU fallback).
+   2. The photo is shrunk to max 768 px for inference only; the resulting soft mask is stretched over the full-resolution
+      photo and feathered by 1.5 px, so the print stays crisp and colours come from the original pixels.
+   3. The cutout (person on transparent) is CACHED in pp.cutout. Tapping a background colour only repaints from it,
+      so colour changes are instant and the model never runs twice for the same photo.
+   4. When the cutout is ready the bar jumps to 100 % and is hidden at once.
    --------------------------------------------------------------------------------------------- */
-const BG_LIB = 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm';
-const BG_MAX = 800;
-let bgWorker = null, bgWorkerBad = false; const bgJobs = new Map();
+const MP_VER = '0.10.14';
+const MP_LIB = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@' + MP_VER + '/+esm';
+const MP_WASM = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@' + MP_VER + '/wasm';
+const MP_MODEL = 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite';
+const SEG_MAX = 768, FEATHER = 1.5, MASK_LO = 0.25, MASK_HI = 0.65;   // MASK_LO/HI: confidence range that is stretched to 0..1 (low LO = the face is never lost)
+let segP = null;
+const segOpts = (delegate) => ({ baseOptions: { modelAssetPath: MP_MODEL, delegate }, runningMode: 'IMAGE', outputCategoryMask: false, outputConfidenceMasks: true });
 
-function getBgWorker() {
-  if (bgWorkerBad) return null; if (bgWorker) return bgWorker;
+function warmSeg() {                                       // load library + model once; returns the same promise afterwards
+  if (segP) return segP;
+  segP = (async () => {
+    const mod = await import(MP_LIB);
+    const fs = await mod.FilesetResolver.forVisionTasks(MP_WASM);
+    let seg, delegate = 'GPU';
+    try { seg = await mod.ImageSegmenter.createFromOptions(fs, segOpts('GPU')); }
+    catch { delegate = 'CPU'; seg = await mod.ImageSegmenter.createFromOptions(fs, segOpts('CPU')); }
+    return { mod, fs, seg, delegate };
+  })();
+  segP.catch(() => { segP = null; });                      // a failed load can be retried on the next try
+  return segP;
+}
+function warmBg() { warmSeg().catch(() => {}); }
+
+/* run the model on a (<=768 px) canvas -> Float32 person confidence (0..1) + its size */
+async function readMask(h, src) {
+  const res = h.seg.segment(src);
   try {
-    const src = `import * as lib from '${BG_LIB}';
-      const rb = lib.removeBackground || lib.default;
-      self.onmessage = async (e) => {
-        const m = e.data;
-        try {
-          if (m.warm) { if (lib.preload) await lib.preload({ model: 'isnet_quint8', device: 'cpu' }); return; }
-          const run = (device) => rb(m.blob, { model: 'isnet_quint8', device, output: { format: 'image/png' },
-            progress: (k, cur, total) => self.postMessage({ id: m.id, k: String(k), c: cur, t: total }) });
-          let out; try { out = await run(m.gpu ? 'gpu' : 'cpu'); } catch (err) { if (!m.gpu) throw err; out = await run('cpu'); }
-          self.postMessage({ id: m.id, out });
-        } catch (err) { self.postMessage({ id: m.id, err: String(err && err.message || err) }); }
-      };`;
-    bgWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })), { type: 'module' });
-    bgWorker.onmessage = (e) => { const m = e.data, j = bgJobs.get(m.id); if (!j) return; if (m.k !== undefined) j.prog(m.k, m.c, m.t); else { bgJobs.delete(m.id); if (m.out) j.ok(m.out); else j.no(new Error(m.err || 'failed')); } };
-    bgWorker.onerror = () => { bgWorkerBad = true; try { bgWorker.terminate(); } catch {} bgWorker = null; bgJobs.forEach((j) => j.no(new Error('worker'))); bgJobs.clear(); };
-    return bgWorker;
-  } catch { bgWorkerBad = true; return null; }
+    const list = (res && res.confidenceMasks) || [];
+    if (!list.length) throw new Error('no mask');
+    const m = list.length > 1 ? list[1] : list[0];         // selfie model: [background, person] (or just [person])
+    return { w: m.width, h: m.height, arr: Float32Array.from(m.getAsFloat32Array()) };
+  } finally { try { if (res && res.close) res.close(); } catch {} }
 }
-function warmBg() { const w = getBgWorker(); if (w) try { w.postMessage({ warm: 1 }); } catch {} }    // downloads the model while the customer picks a photo
-
-/* model download + inference reports several keys (fetch:… / compute:…): fold them into ONE monotonic 0..1 value */
-function bgAgg(cb) {
-  const m = new Map(); let last = 0;
-  return (k, c, t) => {
-    if (!t) return; m.set(String(k), { c, t });
-    let fc = 0, ft = 0, inf = 0;
-    m.forEach((v, key) => { if (/^compute/i.test(key)) inf = Math.max(inf, v.c / v.t); else { fc += v.c; ft += v.t; } });
-    const f = (fc / Math.max(ft, 4e7)) * 0.82 + inf * 0.18;          // the model file is ~40 MB: don't jump ahead while only small files are known
-    if (f > last) last = f; cb(Math.min(last, 0.99));
-  };
+async function personMask(src) {
+  const h = await warmSeg();
+  try { return await readMask(h, src); }
+  catch (e) {
+    if (h.delegate === 'CPU') throw e;                     // GPU created fine but failed to run: rebuild on CPU and retry once
+    try { h.seg.close(); } catch {}
+    h.seg = await h.mod.ImageSegmenter.createFromOptions(h.fs, segOpts('CPU')); h.delegate = 'CPU';
+    return readMask(h, src);
+  }
 }
-function runBgModel(blob, rawProg) {
-  const onProg = bgAgg(rawProg), w = getBgWorker();
-  if (w) return new Promise((ok, no) => {
-    const id = Date.now() + Math.random(); const guard = setTimeout(() => { bgWorkerBad = true; no(new Error('worker timeout')); }, 45000);
-    bgJobs.set(id, { prog: onProg, ok: (o) => { clearTimeout(guard); ok(o); }, no: (e) => { clearTimeout(guard); no(e); } });
-    try { w.postMessage({ id, blob, gpu: !!navigator.gpu }); } catch (e) { clearTimeout(guard); bgJobs.delete(id); no(e); }
-  }).catch(() => runBgModelMain(blob, onProg));
-  return runBgModelMain(blob, onProg);
+/* confidence -> soft alpha canvas (smoothstep keeps hair / ears, never erodes the face) */
+function maskToCanvas(m) {
+  const { w, h, arr } = m; let b = 0, nb = 0, c = 0, nc = 0;
+  const bx = Math.max(1, Math.round(w * .06)), by = Math.max(1, Math.round(h * .06));
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const v = arr[y * w + x];
+    if (x < bx || x >= w - bx || y < by || y >= h - by) { b += v; nb++; }
+    else if (x > w * .3 && x < w * .7 && y > h * .3 && y < h * .7) { c += v; nc++; }
+  }
+  const inv = nb && nc && (b / nb) > (c / nc) + .15;       // safety: if the mask is "background = 1", flip it
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const cx = cv.getContext('2d'), im = cx.createImageData(w, h), d = im.data;
+  for (let i = 0; i < w * h; i++) {
+    let v = inv ? 1 - arr[i] : arr[i];
+    v = Math.min(1, Math.max(0, (v - MASK_LO) / (MASK_HI - MASK_LO)));
+    d[i * 4 + 3] = Math.round(v * v * (3 - 2 * v) * 255);
+  }
+  cx.putImageData(im, 0, 0); return cv;
 }
-async function runBgModelMain(blob, onProg) {                       // fallback: same model on the main thread, started when the browser is idle
-  await new Promise((r) => (window.requestIdleCallback ? requestIdleCallback(r, { timeout: 1200 }) : setTimeout(r, 400)));
-  if (!bgLib) bgLib = await import(BG_LIB);
-  const rb = bgLib.removeBackground || bgLib.default;
-  const run = (device) => rb(blob, { model: 'isnet_quint8', device, output: { format: 'image/png' }, progress: (k, c, t) => onProg(k, c, t) });
-  try { return await run(navigator.gpu ? 'gpu' : 'cpu'); } catch (e) { if (!navigator.gpu) throw e; return run('cpu'); }
-}
-
-/* full-resolution photo x cached alpha mask -> cutout canvas (this is what gets cached in pp.cutout) */
-function buildCutout(base, alphaSrc) {
-  const c = document.createElement('canvas'); c.width = base.width; c.height = base.height;
+/* full-resolution photo x soft mask (stretched + 1.5 px feather) -> cutout canvas, cached in pp.cutout */
+function buildCutout(base, maskCv) {
+  const W = base.width, H = base.height, pad = 4;
+  const m = document.createElement('canvas'); m.width = W; m.height = H;
+  const mx = m.getContext('2d'); mx.imageSmoothingEnabled = true; mx.imageSmoothingQuality = 'high';
+  if ('filter' in mx) mx.filter = 'blur(' + FEATHER + 'px)';
+  mx.drawImage(maskCv, -pad, -pad, W + 2 * pad, H + 2 * pad);      // slightly oversized so the blur never fades the photo border
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
   const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
   x.drawImage(base, 0, 0);
   x.globalCompositeOperation = 'destination-in';
-  x.drawImage(alphaSrc, 0, 0, c.width, c.height);
+  x.drawImage(m, 0, 0);
   return c;
 }
+
 let bgLabel = 'Removing background…', bgFrac = 0;
-function bgBusy(msg, pct) {                                      // live "Removing background… n%" + progress bar (moving bar until real progress arrives)
+function bgBusy(msg, pct) {                                      // live "Removing background… n%" + progress bar
   const pr = $('bgProg'); pr.classList.remove('hidden');
   if (msg) bgLabel = msg;
-  if (pct == null) { pr.classList.add('indet'); $('bgMsg').textContent = bgLabel + ' ' + Math.round(bgFrac * 100) + '%'; return; }
+  if (pct == null) { pr.classList.add('indet'); $('bgMsg').textContent = bgLabel; return; }
   bgFrac = Math.max(bgFrac, pct);
   const p = Math.round(bgFrac * 100);
   pr.classList.remove('indet'); pr.firstElementChild.style.width = p + '%';
@@ -1787,27 +1769,26 @@ function bgBusy(msg, pct) {                                      // live "Removi
 function bgIdle() { const pr = $('bgProg'); pr.classList.add('hidden'); pr.classList.remove('indet'); }
 function bgReset() { bgFrac = 0; bgLabel = 'Removing background…'; }
 
-function startAI() {
+function startAI() {                                             // segment once per photo (starts right after the photo is loaded)
   if (!pp.base) return null;
   if (aiBase === pp.base && aiPromise) return aiPromise;
   const base = pp.base; aiBase = base;
+  const show = (f) => { if (pp.base === base && pp.bg) bgBusy('Removing background…', f); };
   aiPromise = (async () => {
     try {
-      const S = Math.min(1, BG_MAX / Math.max(base.width, base.height)), sm = document.createElement('canvas');
+      show(0.05);
+      const S = Math.min(1, SEG_MAX / Math.max(base.width, base.height)), sm = document.createElement('canvas');
       sm.width = Math.max(1, Math.round(base.width * S)); sm.height = Math.max(1, Math.round(base.height * S));
       sm.getContext('2d').drawImage(base, 0, 0, sm.width, sm.height);
-      const blob = await new Promise((res) => sm.toBlob(res, 'image/png'));
-      bgFrac = 0; if (pp.base === base && pp.bg) bgBusy('Removing background…', 0);
-      const out = await runBgModel(blob, (f) => { bgFrac = Math.max(bgFrac, f); if (pp.base === base && pp.bg) bgBusy('Removing background…', f); });
+      await warmSeg(); show(0.45);
+      const m = await personMask(sm); show(0.8);
       if (pp.base !== base) return;
-      const mask = await createImageBitmap(out);
-      pp.cutout = buildCutout(base, mask); pp.cutoutKind = 'ai'; if (mask.close) mask.close();   // cached: colour / zoom changes reuse it
-      if (pp.bg) { bgBusy('Removing background…', 1); await sleep(380); }          // show 100 % for a moment
-      bgIdle();
-      if (pp.bg) { $('bgMsg').textContent = 'Done. Edges refined.'; redraw(); }
+      pp.cutout = buildCutout(base, maskToCanvas(m)); pp.cutoutKind = 'ai'; pp.cutoutFail = false;   // cached: colour / zoom changes reuse it
+      show(1);
+      if (pp.bg) { $('bgMsg').textContent = 'Background removed.'; redraw(); }
     } catch (err) {
-      if (pp.base === base) { bgIdle(); if (pp.cutoutKind === 'fast') $('bgMsg').textContent = 'Quick background removal used.'; }
-    }
+      if (pp.base === base) { pp.cutoutFail = true; aiPromise = null; aiBase = null; if (pp.bg) $('bgMsg').textContent = 'Background removal is not available right now. Your original photo is kept.'; }
+    } finally { if (pp.base === base) bgIdle(); }               // always hide the bar (no more stuck "99 %")
   })();
   return aiPromise;
 }
@@ -1816,31 +1797,35 @@ async function ensureCutout() {
   if (pp.cutout) return true;
   pp.cutoutBusy = true;
   try {
-    bgBusy('Removing background…', bgFrac || 0);
-    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));     // let the bar paint before the quick pass
-    if (!pp.cutout) {                                                            // the AI may have finished meanwhile
-      pp.cutout = buildCutout(pp.base, fastCutout(pp.base)); pp.cutoutKind = 'fast';
-      bgBusy('Removing background…', bgFrac || 0.02);      // quick preview is on screen; the % now follows the refine pass
-      startAI();
-    }
-    return true;
-  } finally { pp.cutoutBusy = false; }
+    bgBusy('Removing background…', bgFrac || 0.05);
+    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));     // let the bar paint first
+    if (!pp.cutout) { const p = startAI(); if (p) await p; }
+    if (!pp.cutout && pp.cutoutFail) { const p = startAI(); if (p) await p; }    // one automatic retry (e.g. the model was still downloading)
+    return !!pp.cutout;
+  } finally { pp.cutoutBusy = false; bgIdle(); }
 }
 
+/* swatch row: one selected circle at a time (the rainbow circle is the custom colour picker) */
+function swSelect(btn, custom) {
+  $('bgSw').querySelectorAll('button').forEach((x) => { const on = x === btn || (!btn && !custom && x.dataset.c === ''); x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  const cu = $('bgSw').querySelector('.cust');
+  cu.classList.toggle('on', !!custom); if (custom) cu.style.setProperty('--cc', custom);
+}
 async function setBg(c) {
   if (pp.cutoutBusy) return;
   pp.bg = c;
-  if (c) { const ok = await ensureCutout(); if (!ok) { pp.bg = ''; } }
-  else { $('bgMsg').textContent = 'Original background kept.'; if (pp.cutoutKind !== 'ai') bgIdle(); }
+  if (c) { const ok = await ensureCutout(); if (!ok) { pp.bg = ''; swSelect(null); $('bgMsg').textContent = 'Background removal is not available right now. Your original photo is kept.'; } }
+  else { $('bgMsg').textContent = 'Original background kept.'; }
+  if (c && pp.cutout) $('bgMsg').textContent = 'Background replaced. Tap another colour to change it.';
   redraw();
 }
 $('bgSw').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
   if (pp.cutoutBusy) return;
-  $('bgSw').querySelectorAll('button').forEach((x) => x.classList.remove('on')); b.classList.add('on'); setBg(b.dataset.c);
+  swSelect(b); setBg(b.dataset.c);
 }));
 $('bgCustom').addEventListener('input', (e) => {
   if (pp.cutoutBusy) return;
-  $('bgSw').querySelectorAll('button').forEach((x) => x.classList.remove('on')); setBg(e.target.value);
+  swSelect(null, e.target.value); setBg(e.target.value);
 });
 
 function fillCountOptions() {
