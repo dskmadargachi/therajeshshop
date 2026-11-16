@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/*.html",
+    "/*.css",
+    "/*.js",
+    "/*.png",
+    "/*.ico",
+    "/*.webmanifest",
+    "/sounds/*"
+  ]
+}
