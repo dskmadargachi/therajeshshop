@@ -612,7 +612,7 @@ html.sw-lock,html.sw-lock body{overflow:hidden!important}
         }).join('') +
       '</div></div></div>' +
       /* 2 source */
-      '<div class="sw-v" id="sw-src"><div class="sw-sc"><div class="sw-in">' +
+      '<div class="sw-v" id="sw-src" data-dropzone="sw-ffile"><div class="sw-sc"><div class="sw-in">' +
         '<h2 id="sw-srcq"></h2><p class="sw-p" data-i="src.s"></p>' +
         '<button class="sw-opt" type="button" data-a="cam"><span class="sw-ico">📷</span><span><b data-i="cam.t"></b><small data-i="cam.s"></small></span></button>' +
         '<button class="sw-opt" type="button" data-a="file"><span class="sw-ico">📁</span><span><b data-i="file.t"></b><small data-i="file.s"></small></span></button>' +

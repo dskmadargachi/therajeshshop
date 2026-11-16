@@ -73,6 +73,7 @@ const mainWorker = {
         const youpi = (youpiKey && youpiKey !== YOUPI_PUBLIC_KEY) ? { key: youpiKey, base: (clean(env.YOUPI_BASE) || 'https://pay.therajesh.shop').replace(/\/+$/, '') } : null;
         return json({ shop: env.SHOP_NAME || 'Digital Seva Kendra', waNumber: clean(env.WA_NUMBER).replace(/\D/g, '') || null, rate: { bw: p.bw, color: p.color }, a3: p.a3, photo4x6: p.photo4x6, passport: { '4x6': p.passport4x6, A4: p.passportA4 }, youpi, razorpay: rzpPublic(env), razorpayMissing: rzpMissing(env) });
       }
+      if (path === 'whatsapp-status' && method === 'GET') return whatsappStatus(env);   // public, tiny: is the WhatsApp print bot online right now?
       if (path === 'youpi/webhook' && method === 'POST') return youpiWebhook(request, env);
       if (path === 'create-order' && method === 'POST') return rzpCreateOrder(request, env);
       if (path === 'verify-payment' && method === 'POST') return rzpVerify(request, env);
@@ -663,6 +664,21 @@ async function waStatus(env) {
   const provider = waProvider(env);
   if (provider === 'cloud') return { provider, online: !!(clean(env.WA_TOKEN) && clean(env.WA_PHONE_ID)), state: 'cloud' };
   return { provider, online: age < 60000, state: age < 60000 ? s.state || 'starting' : 'offline', qr: age < 60000 && s.state === 'qr' ? s.qr || '' : '', number: s.number || '', printer: s.printer || '', age };
+}
+// Public health check used by the homepage badge (ONLINE / OFFLINE). It exposes ONLY a yes/no - never the QR, number or printer name.
+// The PC bridge (or the Cloud API config) is the source of truth: waStatus() says "online" only while the bridge keeps sending its
+// heartbeat (< 60 s old). We call it "online" for customers only when the bot is fully linked ("ready"), and answer "offline" if the
+// lookup is slow (> 2.5 s) or fails, so the page never waits on a dead bot.
+async function whatsappStatus(env) {
+  let online = false;
+  try {
+    const s = await Promise.race([
+      waStatus(env),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500)),
+    ]);
+    online = s.provider === 'cloud' ? !!s.online : !!(s.online && s.state === 'ready');
+  } catch { online = false; }
+  return json({ online, state: online ? 'online' : 'offline', checkedAt: Date.now() });
 }
 async function adminSettings(request, env) {
   if (request.method === 'POST') {

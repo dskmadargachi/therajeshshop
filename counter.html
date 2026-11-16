@@ -1508,10 +1508,7 @@ async function muAdd(list) {
 }
 $('muBtn').onclick = muOpen; $('muX').onclick = muClose; $('muCancel').onclick = muClose;
 $('muFiles').onchange = (e) => { muAdd(e.target.files); e.target.value = ''; };
-const mud = $('muDrop');
-['dragenter', 'dragover'].forEach((ev) => mud.addEventListener(ev, (e) => { e.preventDefault(); mud.classList.add('over'); }));
-['dragleave', 'drop'].forEach((ev) => mud.addEventListener(ev, (e) => { e.preventDefault(); mud.classList.remove('over'); }));
-mud.addEventListener('drop', (e) => muAdd(e.dataTransfer.files));
+/* drag & drop onto #muDrop: handled site-wide by /site-ui.js (it feeds #muFiles, whose onchange calls muAdd) */
 ['muColor', 'muPay'].forEach((id) => document.querySelectorAll('#' + id + ' button').forEach((b) => b.onclick = () => { document.querySelectorAll('#' + id + ' button').forEach((x) => x.classList.toggle('on', x === b)); muEst(); }));
 ['muCopies', 'muPaper', 'muAmt'].forEach((id) => $(id).oninput = muEst);
 $('muHold').onchange = () => { $('muGo').textContent = $('muHold').checked ? '💾 Add & Hold for editing' : '🖨️ Print Now'; };

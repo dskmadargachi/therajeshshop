@@ -588,6 +588,17 @@ body .tile:active{transform:scale(.97)!important}
 @media(max-width:600px){body .page-head{margin-bottom:10px}body .page-head h1{font-size:22px}body .page-head p{font-size:12.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}body .scan-quick{margin-bottom:10px;padding:10px 14px}}
 .trust-m{margin:2px 0 0;padding:0}
 @media (prefers-reduced-motion:reduce){body div.flow:after,body div.flow b:after{animation:none!important}}
+
+/* ===== v11: homepage printer illustration ===== */
+.pr-hero{max-width:1160px;margin:14px auto 0;padding:0 16px;display:flex;justify-content:center}
+.pr-card{width:100%;max-width:440px;border-radius:24px;background:linear-gradient(135deg,var(--brand-soft),#fff 60%,#fdf6ff);border:1px solid var(--brand-line);box-shadow:0 18px 36px -24px rgba(79,91,255,.55);padding:14px 20px 4px;overflow:hidden}
+.pr-card svg{display:block;width:100%;height:auto}
+.pr-paper{animation:prFeed 3.4s ease-in-out infinite alternate}
+.pr-led{animation:prLed 1.4s steps(1) infinite}
+@keyframes prFeed{from{transform:translateY(-26px)}to{transform:translateY(0)}}
+@keyframes prLed{50%{opacity:.25}}
+@media(max-width:600px){.pr-hero{margin-top:10px;padding:0 10px}.pr-card{max-width:340px;border-radius:20px;padding:10px 14px 2px}}
+@media (prefers-reduced-motion:reduce){.pr-paper,.pr-led{animation:none}}
 </style>
 <style id="v5">
 .hx-sec{position:relative;overflow:hidden;isolation:isolate;max-width:1160px;margin:18px auto 6px;padding:30px 20px 22px;border-radius:30px;color:#fff;text-align:center;background:linear-gradient(135deg,#14163f,#2c2a8f 62%,#5b3fd1);box-shadow:0 30px 60px -34px rgba(60,50,200,.75)}
@@ -715,6 +726,45 @@ body .tile:active{transform:scale(.97)!important}
  <a href="/cards.html#scanner"><svg><use href="#i-scan"/></svg>Smart scanner</a>
  <a href="/pdf-tools.html"><svg><use href="#i-pdf"/></svg>PDF tools</a>
 </div></nav>
+<section class="pr-hero" aria-label="Printer illustration">
+<div class="pr-card">
+<svg viewBox="0 0 400 250" role="img" aria-label="A printer printing a sheet with ID cards" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<linearGradient id="prBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--brand-md)"/><stop offset="1" style="stop-color:var(--brand-dk)"/></linearGradient>
+<linearGradient id="prTop" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:var(--brand)"/><stop offset="1" style="stop-color:var(--brand-md)"/></linearGradient>
+<linearGradient id="prShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f172a" stop-opacity=".28"/><stop offset="1" stop-color="#0f172a" stop-opacity="0"/></linearGradient>
+<clipPath id="prOut"><rect x="80" y="152" width="240" height="96"/></clipPath>
+</defs>
+<ellipse cx="200" cy="238" rx="150" ry="8" fill="#0f172a" opacity=".12"/>
+<!-- paper waiting in the input tray -->
+<g class="pr-in"><rect x="116" y="18" width="168" height="62" rx="4" fill="#fff" stroke="var(--brand-line)" stroke-width="2"/><rect x="132" y="32" width="64" height="5" rx="2.5" fill="var(--brand-line)"/><rect x="132" y="44" width="120" height="4" rx="2" fill="#e2e8f0"/><rect x="132" y="54" width="96" height="4" rx="2" fill="#e2e8f0"/></g>
+<!-- printer body -->
+<rect x="36" y="64" width="328" height="112" rx="24" fill="url(#prBody)"/>
+<path d="M36 88a24 24 0 0 1 24-24h280a24 24 0 0 1 24 24v6H36z" fill="url(#prTop)"/>
+<rect x="62" y="104" width="62" height="10" rx="5" fill="#fff" opacity=".16"/>
+<circle class="pr-led" cx="326" cy="82" r="5" fill="var(--brand-lt)"/>
+<circle cx="304" cy="82" r="5" fill="#fff" opacity=".35"/>
+<rect x="60" y="76" width="44" height="8" rx="4" fill="#fff" opacity=".35"/>
+<!-- output slot -->
+<rect x="76" y="140" width="248" height="14" rx="7" fill="#020617"/>
+<rect x="76" y="140" width="248" height="14" rx="7" fill="none" stroke="#fff" stroke-opacity=".12"/>
+<!-- sheet coming out -->
+<g clip-path="url(#prOut)"><g class="pr-paper">
+<rect x="98" y="148" width="204" height="108" rx="5" fill="#fff" stroke="var(--brand-line)" stroke-width="2"/>
+<rect x="98" y="148" width="204" height="14" fill="url(#prShade)"/>
+<rect x="112" y="162" width="56" height="5" rx="2.5" fill="var(--brand)"/>
+<rect x="176" y="162" width="112" height="5" rx="2.5" fill="#e2e8f0"/>
+<g><rect x="112" y="176" width="84" height="53" rx="6" fill="#f8fafc" stroke="var(--brand-line)" stroke-width="1.5"/>
+<rect x="112" y="176" width="84" height="7" rx="3" fill="#ff9933"/><rect x="112" y="183" width="84" height="5" fill="#fff"/><rect x="112" y="188" width="84" height="5" fill="#138808"/>
+<circle cx="130" cy="208" r="8" fill="#e2e8f0"/><rect x="144" y="202" width="42" height="4" rx="2" fill="#cbd5e1"/><rect x="144" y="211" width="32" height="4" rx="2" fill="#e2e8f0"/></g>
+<g><rect x="204" y="176" width="84" height="53" rx="6" fill="#f8fafc" stroke="var(--brand-line)" stroke-width="1.5"/>
+<rect x="212" y="184" width="40" height="4" rx="2" fill="#cbd5e1"/><rect x="212" y="193" width="30" height="4" rx="2" fill="#e2e8f0"/><rect x="212" y="202" width="36" height="4" rx="2" fill="#e2e8f0"/>
+<rect x="256" y="196" width="26" height="26" rx="3" fill="#0f172a"/><rect x="260" y="200" width="7" height="7" fill="#fff"/><rect x="271" y="200" width="7" height="7" fill="#fff"/><rect x="260" y="211" width="7" height="7" fill="#fff"/><rect x="271" y="211" width="4" height="4" fill="#fff"/></g>
+<rect x="112" y="238" width="120" height="4" rx="2" fill="#e2e8f0"/>
+</g></g>
+</svg>
+</div>
+</section>
 <div class="wrap">
 <div id="pdfPasswordOverlay" class="password-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pdfPasswordTitle">
     <form id="pdfPasswordForm" class="password-card">
@@ -773,7 +823,7 @@ body .tile:active{transform:scale(.97)!important}
   <div class="panel" id="docForm">
     <h2 class="panel-h" data-en="Print Documents &amp; Photos" data-bn="ডকুমেন্ট ও ছবি প্রিন্ট করুন">Print Documents &amp; Photos</h2>
     <p class="panel-s" data-en="Select files, choose paper &amp; print instantly" data-bn="ফাইল সিলেক্ট করে সাথে সাথে প্রিন্ট নিন">Select files, choose paper &amp; print instantly</p>
-    <div id="docSplit">
+    <div id="docSplit" data-dropzone="pick" data-dz-highlight="#docSplit .drop">
       <label class="drop" for="pick">
         <div class="drop-icon"><svg><use href="#i-up"/></svg></div>
         <strong data-en="Upload documents or photos" data-bn="ডকুমেন্ট বা ছবি আপলোড করুন">Upload documents or photos</strong>
@@ -789,7 +839,7 @@ body .tile:active{transform:scale(.97)!important}
   <div class="panel hidden" id="ppForm">
     <h2 class="panel-h" data-en="Passport photo sheet" data-bn="পাসপোর্ট ছবির শিট">Passport photo sheet</h2>
     <p class="panel-s" data-en="One portrait → full 4×6 or A4 sheet" data-bn="একটি ছবি → পুরো 4×6 বা A4 শিট">One portrait → full 4×6 or A4 sheet</p>
-    <div id="ppSplit">
+    <div id="ppSplit" data-dropzone="ppPick" data-dz-highlight="#ppDrop">
       <div class="drop pp-drop" id="ppDrop">
         <div class="drop-icon"><svg><use href="#i-user"/></svg></div>
         <strong data-en="Upload a portrait" data-bn="পাসপোর্ট ছবি আপলোড করুন">Upload a portrait</strong>
@@ -841,12 +891,24 @@ body .tile:active{transform:scale(.97)!important}
   .wa-num{margin-top:10px;font-weight:800;font-size:15px;color:#065f46}
   .wa-box .wa-open{display:inline-block;margin-top:10px;padding:11px 20px;border-radius:12px;background:linear-gradient(135deg,#065f46,#059669);color:#fff;font-weight:800;text-decoration:none}
   .wa-box button{margin:10px auto 0;font:inherit;font-weight:700;padding:10px 22px;border:0;border-radius:12px;background:#eef2f7;cursor:pointer;display:block}
-  @media(prefers-reduced-motion:reduce){.wa-live i{animation:none}}
+  .wa-card{border:1.5px solid transparent;transition:background .4s,border-color .4s,box-shadow .4s}
+  .wa-live{transition:background .3s}
+  .wa-live[data-state=online] i{background:#39ff6a;box-shadow:0 0 0 0 rgba(57,255,106,.75);animation:waPulse 1.6s ease-out infinite}
+  .wa-live[data-state=offline]{background:rgba(127,29,29,.78)}
+  .wa-live[data-state=offline] i{background:#ff4d4d;box-shadow:0 0 0 3px rgba(255,77,77,.28);animation:none}
+  .wa-live[data-state=checking] i{background:#cbd5e1}
+  @keyframes waPulse{0%{box-shadow:0 0 0 0 rgba(57,255,106,.75);transform:scale(1)}70%{box-shadow:0 0 0 8px rgba(57,255,106,0);transform:scale(1.15)}100%{box-shadow:0 0 0 0 rgba(57,255,106,0);transform:scale(1)}}
+  .wa-card.wa-off{background:linear-gradient(135deg,#3b4452 0%,#64748b 100%);border-color:#ef4444;box-shadow:0 12px 24px -16px rgba(71,85,105,.9)}
+  .wa-card.wa-off .wa-s{opacity:.78}
+  .wa-note{margin:0 0 8px;padding:6px 10px;border-radius:10px;background:rgba(239,68,68,.2);border:1px solid rgba(252,165,165,.6);font-size:12.5px;font-weight:700;line-height:1.35;color:#fff}
+  .wa-note[hidden]{display:none}
+  @media(prefers-reduced-motion:reduce){.wa-live i{animation:none!important}}
   </style>
   <div class="wa-or" id="waOr" hidden><span data-en="OR" data-bn="অথবা">OR</span></div>
   <section class="wa-card" id="waCard" hidden aria-label="Print via WhatsApp">
-    <div class="wa-r1"><span class="wa-ic" aria-hidden="true">💬</span><b class="wa-t" data-en="Print via WhatsApp" data-bn="WhatsApp-এ পাঠিয়ে প্রিন্ট নিন">Print via WhatsApp</b><span class="wa-live"><i></i>LIVE</span></div>
+    <div class="wa-r1"><span class="wa-ic" aria-hidden="true">💬</span><b class="wa-t" data-en="Print via WhatsApp" data-bn="WhatsApp-এ পাঠিয়ে প্রিন্ট নিন">Print via WhatsApp</b><span class="wa-live" id="waLive" data-state="checking" role="status" aria-live="polite"><i></i><span id="waLiveT">CHECKING</span></span></div>
     <p class="wa-s" data-en="Send PDF/photo on WhatsApp → Pay UPI/Cash → Auto Print!" data-bn="হোয়াটসঅ্যাপে ফাইল পাঠান → UPI বা ক্যাশ দিন → অটো প্রিন্ট!">Send PDF/photo on WhatsApp → Pay UPI/Cash → Auto Print!</p>
+    <p class="wa-note" id="waNote" hidden></p>
     <div class="wa-acts"><a class="wa-go" id="waLink" href="#" target="_blank" rel="noopener" data-en="💬 Open WhatsApp" data-bn="💬 WhatsApp খুলুন">💬 Open WhatsApp</a><button class="wa-qr" id="waQrBtn" type="button" data-en="📷 Scan QR" data-bn="📷 QR স্ক্যান">📷 Scan QR</button></div>
   </section>
   <div class="wa-mod" id="waMod" hidden role="dialog" aria-modal="true"><div class="wa-box">
@@ -893,7 +955,7 @@ body .tile:active{transform:scale(.97)!important}
   </script>
 
   <!-- ================= COMPACT FOOTER ================= -->
-  <footer class="cf" id="outro"><div class="cf-in"><span><strong>therajesh.shop</strong> · Digital Seva Kendra</span><button type="button" data-wz-modal="pvModal">Privacy &amp; Security Info</button><a href="https://maps.app.goo.gl/UmdKBVE93Mx9LiMfA" target="_blank" rel="noopener">Directions</a><a href="tel:+919932250689">Call</a></div><div class="trust" role="group" aria-label="Payments &amp; Security"><span class="tb tb-rz"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4l8 3v6.1c0 5-3.3 8.7-8 10.1-4.7-1.4-8-5.100-8-10.100V5.400z" fill="#2563eb"/><rect x="7" y="9.200" width="10" height="6.600" rx="1.500" fill="#fff"/><rect x="7" y="10.800" width="10" height="1.600" fill="#02042b"/><rect x="8.400" y="13.800" width="3" height="1" rx=".5" fill="#2563eb"/></svg><span class="tb-t"><span data-en="Payments Powered &amp; Secured by " data-bn="">Payments Powered &amp; Secured by </span><b>Razorpay</b><span data-en="" data-bn=" দ্বারা চালিত ও সুরক্ষিত পেমেন্ট"></span></span></span><span class="tb tb-cf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.200 18.500a4.600 4.600 0 0 1-.7-9.150A6.100 6.100 0 0 1 18.200 9a4.800 4.800 0 0 1-.4 9.500z" fill="#f59e0b"/><rect x="9.800" y="11.600" width="4.400" height="3.800" rx=".9" fill="#fff"/><path d="M10.700 11.600v-.9a1.300 1.300 0 0 1 2.600 0v.9" fill="none" stroke="#ea580c" stroke-width="1.200" stroke-linecap="round"/></svg><span class="tb-t"><span data-en="Secured by " data-bn="">Secured by </span><b>Cloudflare</b><span data-en="" data-bn=" দ্বারা সুরক্ষিত"></span></span></span></div><div class="cf-n">Developed by <strong>Rajesh Das</strong></div></footer>
+  <footer class="cf" id="outro"><div class="cf-in"><span><strong>therajesh.shop</strong> · Digital Seva Kendra</span><button type="button" data-wz-modal="pvModal">Privacy &amp; Security Info</button><a href="https://maps.app.goo.gl/UmdKBVE93Mx9LiMfA" target="_blank" rel="noopener">Directions</a></div><div class="trust" role="group" aria-label="Payments &amp; Security"><span class="tb tb-rz"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4l8 3v6.1c0 5-3.3 8.7-8 10.1-4.7-1.4-8-5.100-8-10.100V5.400z" fill="#2563eb"/><rect x="7" y="9.200" width="10" height="6.600" rx="1.500" fill="#fff"/><rect x="7" y="10.800" width="10" height="1.600" fill="#02042b"/><rect x="8.400" y="13.800" width="3" height="1" rx=".5" fill="#2563eb"/></svg><span class="tb-t"><span data-en="Payments Powered &amp; Secured by " data-bn="">Payments Powered &amp; Secured by </span><b>Razorpay</b><span data-en="" data-bn=" দ্বারা চালিত ও সুরক্ষিত পেমেন্ট"></span></span></span><span class="tb tb-cf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.200 18.500a4.600 4.600 0 0 1-.7-9.150A6.100 6.100 0 0 1 18.200 9a4.800 4.800 0 0 1-.4 9.500z" fill="#f59e0b"/><rect x="9.800" y="11.600" width="4.400" height="3.800" rx=".9" fill="#fff"/><path d="M10.700 11.600v-.9a1.300 1.300 0 0 1 2.600 0v.9" fill="none" stroke="#ea580c" stroke-width="1.200" stroke-linecap="round"/></svg><span class="tb-t"><span data-en="Secured by " data-bn="">Secured by </span><b>Cloudflare</b><span data-en="" data-bn=" দ্বারা সুরক্ষিত"></span></span></span></div><div class="cf-n">Developed by <strong>Rajesh Das</strong></div></footer>
 </div>
 
 <!-- ================= PRIVACY & SECURITY MODAL ================= -->

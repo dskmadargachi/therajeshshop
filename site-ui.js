@@ -153,7 +153,7 @@ var BN = {
 Object.assign(BN, {
 'Scan QR': 'QR স্ক্যান', 'Upload & Pay': 'আপলোড ও পেমেন্ট', 'Print Ready': 'প্রিন্ট প্রস্তুত',
 'Privacy & Security Info': 'গোপনীয়তা ও নিরাপত্তা তথ্য', 'Privacy & Security': 'গোপনীয়তা ও নিরাপত্তা',
-'Directions': 'দিকনির্দেশ', 'Call': 'কল করুন', 'Step': 'ধাপ', 'of': '/',
+'Directions': 'দিকনির্দেশ', 'Step': 'ধাপ', 'of': '/',
 'Preview & edit': 'প্রিভিউ ও এডিট',
 'Check your files. Preview, crop photos, pick pages, or remove a file.': 'আপনার ফাইল দেখে নিন। প্রিভিউ করুন, ছবি ক্রপ করুন, পৃষ্ঠা বেছে নিন বা ফাইল সরান।',
 'Add more files': 'আরও ফাইল যোগ করুন', 'Print settings': 'প্রিন্ট সেটিংস',
@@ -543,4 +543,198 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
   /* safety net: fix the link at click time too (covers anything inserted in the same tick) */
   document.addEventListener('click', function (e) { var a = e.target && e.target.closest && e.target.closest('a[href]'); if (a) fix(a); }, true);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+
+/* =====================================================================================================================
+   v12 - A) live ONLINE / OFFLINE badge on the homepage "Print via WhatsApp" card
+   Polls GET /api/whatsapp-status on load and every 30 s (paused while the tab is hidden, refreshed when it is shown again).
+   Unreachable / slow (> 4 s) / error  ==> OFFLINE, so customers are never told the bot is live when it is not.
+   ===================================================================================================================== */
+(function () {
+  'use strict';
+  var URL_ = '/api/whatsapp-status', EVERY = 30000, TIMEOUT = 4000, timer = null, last = 'checking', busy = false;
+  var TXT = {
+    en: { online: 'ONLINE', offline: 'OFFLINE', checking: 'CHECKING', note: 'Bot Offline \u2014 Please upload directly above' },
+    bn: { online: 'ONLINE', offline: 'OFFLINE', checking: 'CHECKING', note: '\u09ac\u099f \u0985\u09ab\u09b2\u09be\u0987\u09a8 \u2014 \u0985\u09a8\u09c1\u0997\u09cd\u09b0\u09b9 \u0995\u09b0\u09c7 \u0989\u09aa\u09b0\u09c7 \u09b8\u09b0\u09be\u09b8\u09b0\u09bf \u0986\u09aa\u09b2\u09cb\u09a1 \u0995\u09b0\u09c1\u09a8' }
+  };
+  function lang() {
+    if (document.documentElement.lang === 'bn') return 'bn';
+    try { return localStorage.getItem('site-lang') === 'bn' ? 'bn' : 'en'; } catch (e) { return 'en'; }
+  }
+  function apply(state) {
+    last = state;
+    var card = document.getElementById('waCard'), live = document.getElementById('waLive'), lbl = document.getElementById('waLiveT'), note = document.getElementById('waNote');
+    if (!card || !live || !lbl) return;
+    var t = TXT[lang()];
+    card.classList.toggle('wa-on', state === 'online');
+    card.classList.toggle('wa-off', state === 'offline');
+    card.setAttribute('data-wa-state', state);
+    live.setAttribute('data-state', state);
+    lbl.textContent = t[state];
+    if (note) { note.hidden = state !== 'offline'; if (state === 'offline') note.textContent = t.note; }
+  }
+  function check() {
+    if (busy || !document.getElementById('waCard')) return;
+    busy = true;
+    var ctl = window.AbortController ? new AbortController() : null;
+    var to = setTimeout(function () { if (ctl) ctl.abort(); }, TIMEOUT);
+    var done = function (state) { clearTimeout(to); busy = false; apply(state); };
+    fetch(URL_, { cache: 'no-store', credentials: 'omit', signal: ctl ? ctl.signal : undefined, headers: { accept: 'application/json' } })
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(function (j) { done(j && j.online === true ? 'online' : 'offline'); })
+      .catch(function () { done('offline'); });
+  }
+  function start() {
+    if (!document.getElementById('waCard')) return;
+    check();
+    timer = setInterval(function () { if (!document.hidden) check(); }, EVERY);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
+    window.addEventListener('online', check);
+    window.addEventListener('offline', function () { apply('offline'); });
+    try { new MutationObserver(function () { apply(last); }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] }); } catch (e) {}
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+
+/* =====================================================================================================================
+   v12 - B) site-wide drag & drop for EVERY upload box (one reusable handler, event delegation => also works for boxes that
+   are rendered later, e.g. the Smart scanner dialog and the PDF-tool modal).
+
+   How a drop target is found (first match wins, walking up from the element under the pointer):
+     1. [data-dropzone="inputId"]      explicit box -> that <input type=file>   (optional data-dz-highlight="css selector")
+     2. .drop / .dropzone / .mu-drop / [data-dz]   a box that contains (or is labelled for) a file input
+     3. <label> wrapping / pointing at a file input
+   Dropped files are filtered by the input's own `accept`, trimmed to 1 file when the input is not `multiple`
+   (or to data-max-files), then handed to the input exactly like the file picker does (input + change events), so every
+   page's existing validation / upload pipeline runs unchanged. Boxes that already call preventDefault() themselves are left alone.
+   Browser default (opening the dropped file in the tab) is blocked everywhere on the page.
+   ===================================================================================================================== */
+(function () {
+  'use strict';
+  var CLS = 'dz-over', active = null, clearT = 0, toastT = 0;
+
+  function injectCss() {
+    if (document.getElementById('dz-style')) return;
+    var st = document.createElement('style'); st.id = 'dz-style';
+    st.textContent =
+      'html .dz-over.dz-over{outline:2px dashed #4f5bff!important;outline:2px dashed var(--brand,#4f5bff)!important;outline-offset:-6px;' +
+      'background-image:linear-gradient(rgba(79,91,255,.12),rgba(79,91,255,.12))!important;' +
+      'background-image:linear-gradient(color-mix(in srgb,var(--brand,#4f5bff) 13%,transparent),color-mix(in srgb,var(--brand,#4f5bff) 13%,transparent))!important;' +
+      'box-shadow:0 0 0 4px rgba(79,91,255,.16)!important}' +
+      'html .drop.dz-over.dz-over,html .mu-drop.dz-over.dz-over,html .dropzone.dz-over.dz-over{outline:0!important;border:2px dashed #4f5bff!important;border:2px dashed var(--brand,#4f5bff)!important}' +
+      'html .dz-over.dz-over *{pointer-events:none}' +
+      '#dz-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(12px);max-width:min(92vw,420px);z-index:2147483000;padding:10px 16px;border-radius:12px;background:#0f172a;color:#fff;font:700 13px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 14px 30px -12px rgba(15,23,42,.7);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;text-align:center}' +
+      '#dz-toast.on{opacity:1;transform:translateX(-50%) translateY(0)}';
+    (document.head || document.documentElement).appendChild(st);
+  }
+  function bn() {
+    if (document.documentElement.lang === 'bn') return true;
+    try { return localStorage.getItem('site-lang') === 'bn'; } catch (e) { return false; }
+  }
+  function say(en, b) {
+    var el = document.getElementById('dz-toast');
+    if (!el) { el = document.createElement('div'); el.id = 'dz-toast'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite'); document.body.appendChild(el); }
+    el.textContent = bn() ? b : en;
+    void el.offsetWidth; el.classList.add('on');
+    clearTimeout(toastT); toastT = setTimeout(function () { el.classList.remove('on'); }, 3400);
+  }
+  function hasFiles(e) {
+    var t = e.dataTransfer && e.dataTransfer.types; if (!t) return false;
+    for (var i = 0; i < t.length; i++) if (t[i] === 'Files') return true;
+    return false;
+  }
+  function isFileInput(el) { return !!el && el.tagName === 'INPUT' && String(el.type).toLowerCase() === 'file'; }
+  function inputFor(z) {
+    var id = z.getAttribute && z.getAttribute('data-dropzone');
+    if (id) { var byId = document.getElementById(id); if (isFileInput(byId)) return byId; }
+    if (z.tagName === 'LABEL' && z.control && isFileInput(z.control)) return z.control;
+    var lab = z.querySelector && z.querySelector('label[for]');
+    if (lab && lab.control && isFileInput(lab.control)) return lab.control;
+    var all = z.querySelectorAll ? z.querySelectorAll('input[type=file]') : [];
+    for (var i = 0; i < all.length; i++) if (!all[i].hasAttribute('capture')) return all[i];   /* prefer the gallery input over the camera one */
+    return all[0] || null;
+  }
+  function findZone(t) {
+    var el = t && t.nodeType === 1 ? t : (t && t.parentElement);
+    if (!el || !el.closest) return null;
+    var z = el.closest('[data-dropzone]');
+    if (z && inputFor(z)) return z;
+    z = el.closest('.drop,.dropzone,.mu-drop,[data-dz]');
+    while (z) { if (inputFor(z)) return z; z = z.parentElement && z.parentElement.closest('.drop,.dropzone,.mu-drop,[data-dz]'); }
+    z = el.closest('label');
+    if (z && inputFor(z)) return z;
+    return null;
+  }
+  function hlTarget(z) {
+    var sel = z.getAttribute && z.getAttribute('data-dz-highlight');
+    if (sel) { try { var t = document.querySelector(sel); if (t) return t; } catch (e) {} }
+    return z;
+  }
+  function setActive(t) { clearTimeout(clearT); if (active && active !== t) active.classList.remove(CLS); active = t; if (t) t.classList.add(CLS); }
+  function clearNow() { clearTimeout(clearT); if (active) active.classList.remove(CLS); active = null; }
+  function clearSoon() { clearTimeout(clearT); clearT = setTimeout(clearNow, 90); }
+
+  function accepts(f, accept) {
+    if (!accept) return true;
+    var name = String(f.name || '').toLowerCase(), type = String(f.type || '').toLowerCase(), toks = accept.split(',');
+    for (var i = 0; i < toks.length; i++) {
+      var t = toks[i].trim().toLowerCase(); if (!t) continue;
+      if (t.charAt(0) === '.') { if (name.slice(-t.length) === t) return true; }
+      else if (t.slice(-2) === '/*') { if (type.indexOf(t.slice(0, -1)) === 0) return true; if (!type && t === 'image/*' && /\.(jpe?g|png|webp|gif|bmp|heic|heif|avif)$/.test(name)) return true; }
+      else if (type === t) return true;
+    }
+    return false;
+  }
+  function deliver(input, files) {
+    var accept = input.getAttribute('accept') || '', ok = [], skipped = 0, i;
+    for (i = 0; i < files.length; i++) { if (accepts(files[i], accept)) ok.push(files[i]); else skipped++; }
+    if (skipped) say(skipped + (skipped > 1 ? ' files skipped' : ' file skipped') + ' \u2014 this box does not accept that file type', skipped + '\u099f\u09bf \u09ab\u09be\u0987\u09b2 \u09ac\u09be\u09a6 \u2014 \u098f\u0987 \u09ac\u0995\u09cd\u09b8\u09c7 \u098f\u0987 \u09a7\u09b0\u09a8\u09c7\u09b0 \u09ab\u09be\u0987\u09b2 \u099a\u09b2\u09ac\u09c7 \u09a8\u09be');
+    if (!ok.length) return;
+    if (!input.multiple && ok.length > 1) { ok = ok.slice(0, 1); say('Only one file at a time here \u2014 using the first one', '\u098f\u0996\u09be\u09a8\u09c7 \u098f\u0995\u09ac\u09be\u09b0\u09c7 \u098f\u0995\u099f\u09bf \u09ab\u09be\u0987\u09b2 \u2014 \u09aa\u09cd\u09b0\u09a5\u09ae\u099f\u09bf \u09a8\u09c7\u0993\u09af\u09bc\u09be \u09b9\u09b2\u09cb'); }
+    var max = parseInt(input.getAttribute('data-max-files') || '', 10);
+    if (max > 0 && ok.length > max) { ok = ok.slice(0, max); say('Up to ' + max + ' files at once \u2014 extra files ignored', '\u098f\u0995\u09ac\u09be\u09b0\u09c7 \u09b8\u09b0\u09cd\u09ac\u09cb\u099a\u09cd\u099a ' + max + '\u099f\u09bf \u09ab\u09be\u0987\u09b2 \u2014 \u09ac\u09be\u0995\u09bf\u0997\u09c1\u09b2\u09cb \u09ac\u09be\u09a6'); }
+    try {
+      var dt = new DataTransfer(); ok.forEach(function (f) { dt.items.add(f); });
+      input.files = dt.files;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    } catch (err) {   /* very old browsers without DataTransfer(): call the page's onchange directly */
+      if (typeof input.onchange === 'function') input.onchange({ target: { files: ok, value: '', type: 'file' }, currentTarget: input, preventDefault: function () {}, stopPropagation: function () {} });
+    }
+  }
+
+  function onOver(e) {
+    if (!hasFiles(e)) return;
+    var own = e.defaultPrevented;           /* a page that handles this box itself keeps full control */
+    e.preventDefault();                     /* never let the browser open the file */
+    if (own) return;
+    var z = findZone(e.target), inp = z && inputFor(z), ok = !!(inp && !inp.disabled);
+    try { e.dataTransfer.dropEffect = ok ? 'copy' : 'none'; } catch (x) {}
+    if (ok) setActive(hlTarget(z)); else if (active) clearNow();
+  }
+  function onDrop(e) {
+    if (!hasFiles(e)) return;
+    var own = e.defaultPrevented;
+    e.preventDefault(); clearNow();
+    if (own) return;
+    var z = findZone(e.target), inp = z && inputFor(z);
+    if (!inp || inp.disabled) return;
+    var files = Array.prototype.slice.call(e.dataTransfer.files || []);
+    if (files.length) deliver(inp, files);
+  }
+  function init() {
+    injectCss();
+    document.addEventListener('dragenter', onOver, false);
+    document.addEventListener('dragover', onOver, false);
+    document.addEventListener('drop', onDrop, false);
+    document.addEventListener('dragend', clearNow, false);
+    document.addEventListener('dragleave', function (e) { if (hasFiles(e) && !e.relatedTarget) clearSoon(); }, false);   /* pointer left the window */
+    /* public helper for boxes created by other scripts: SiteDrop.register(el, 'inputId', '#optionalHighlightSelector') */
+    window.SiteDrop = {
+      register: function (el, inputId, highlight) { if (!el) return; if (inputId) el.setAttribute('data-dropzone', inputId); else if (!el.hasAttribute('data-dz')) el.setAttribute('data-dz', ''); if (highlight) el.setAttribute('data-dz-highlight', highlight); },
+      deliver: deliver
+    };
+  }
+  injectCss();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
