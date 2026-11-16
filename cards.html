@@ -613,6 +613,20 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
 .adjwho[hidden]{display:none}
 .adjwho b{color:#2c2a8f;font-weight:800;flex:none}
 .adjwho span{min-width:0;color:#64748b;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* A4 Batch (manual): sits above Send to counter */
+#printBox .pb-batch{padding:10px 12px 11px;border-radius:16px;background:#f7f9ff;border:1px solid #e3e8f5}
+#printBox .pb-bh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+#printBox .pb-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;background:#fff;border:1px solid #d6dbff;font-size:12px;font-weight:800;color:#334155;transition:background .25s,color .25s,border-color .25s}
+#printBox .pb-badge i{font-style:normal;opacity:.5}
+#printBox .pb-batch.has .pb-badge{background:var(--pb-blue);border-color:var(--pb-blue);color:#fff}
+#printBox .pb-dots{display:inline-flex;gap:4px}
+#printBox .pb-dots i{width:16px;height:6px;border-radius:99px;background:#dbe2f3;transition:background .25s,transform .25s}
+#printBox .pb-dots i.on{background:var(--pb-blue);transform:scaleY(1.15)}
+#printBox .pb-bb{display:grid;grid-template-columns:1.5fr 1fr;gap:8px}
+#printBox .pb-bb .b{min-height:40px;padding:0 10px!important;border-radius:12px!important;font-size:13px!important;font-weight:800;gap:5px}
+#printBox .pb-bb .b svg{width:15px;height:15px}
+#printBox .pb-bb .b:active{transform:scale(.97)}
+#printBox .pb-cap{display:block;margin:8px 2px 0;font-size:12px;line-height:1.3;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #printBox .pb-row.pb-send{grid-template-columns:1fr}
 #printBox .pb-row.pb-send .b{min-height:58px;font-size:16px!important}
 .wz-pane .s3set{margin-top:12px}
@@ -783,7 +797,7 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
      </section>
     <div class="popbody" id="printBox"><div class="pop-h"><b>Print, save or download</b><button class="pop-x" type="button" aria-label="Close">✕</button></div>
     <div class="pb">
-     <div class="pb-seg seg" id="paperSeg" role="group" aria-label="Sheet size"><button data-v="A4" class="on" type="button" aria-pressed="true">A4 (one card per page)</button><button data-v="4x6" type="button" aria-pressed="false">4×6 photo</button></div>
+     <div class="pb-seg seg" id="paperSeg" role="group" aria-label="Sheet size"><button data-v="A4" class="on" type="button" aria-pressed="true">A4</button><button data-v="4x6" type="button" aria-pressed="false">4×6 photo</button></div>
      <div class="pb-row">
       <button class="b hero" id="addOrder" type="button"><svg><use href="#i-plus"/></svg>Add to print order</button>
       <button class="b g hero" id="savePdf" type="button"><svg><use href="#i-pdf"/></svg>Save as PDF</button>
@@ -792,6 +806,14 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
      <div class="pb-row">
       <button class="b g pb-dl" id="dBoth" type="button"><svg><use href="#i-down"/></svg><span class="t"><span class="t1">Both JPGs</span><span class="t2" id="dBothL">Front + Back</span></span></button>
       <button class="b g pb-dl" id="dSheet" type="button"><svg><use href="#i-down"/></svg><span class="t"><span class="t1">Sheet JPG</span><span class="t2" id="dSheetL">A4</span></span></button>
+     </div>
+     <div class="pb-batch" id="batchBox">
+      <div class="pb-bh"><span class="pb-badge"><span>A4 Batch</span><i>·</i><b id="bBadge">0/5</b></span><span class="pb-dots" id="bDots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></div>
+      <div class="pb-bb">
+       <button class="b g" id="add" type="button"><svg><use href="#i-plus"/></svg>Add to Batch</button>
+       <button class="b g" id="clr" type="button" disabled><svg><use href="#i-trash"/></svg>Clear</button>
+      </div>
+      <span class="pb-cap" id="bn">Up to 5 pairs on one A4 sheet.</span>
      </div>
      <div class="pb-row pb-send">
       <button class="b hero" id="sendCounter" type="button"><svg><use href="#i-send"/></svg>Send to counter</button>
@@ -844,7 +866,7 @@ voter:{n:'Voter Card',bn:'ভোটার কার্ড',d:'e-EPIC PDF · fron
 abc:{minW:.4,maxW:1,n:'ABC / APAAR ID',bn:'অ্যাপার',d:'PDF, JPG or PNG · front only',img:1,pdf:1,one:1,fx:1,F:[.04,.03,.92,.4],det:'ink',inset:.002},
 abha:{n:'ABHA Card',bn:'আভা কার্ড',d:'PDF · front and back',pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'cards',inset:.004},
 eshram:{minW:.3,maxW:1,n:'e-Shram Card',bn:'ই-শ্রম কার্ড',d:'PDF, JPG or PNG · front and back',img:1,pdf:1,F:[.03,.03,.94,.45],B:[.03,.5,.94,.45],det:'cards',inset:.004}};
-let fitMode=(()=>{try{return localStorage.getItem('cardFit')==='keep'?'keep':'fill'}catch(e){return 'fill'}})(),K,Tp,pp=[],pages=[],bx={},dpi=300,cc=0,pdfBuf=null,srcFile=null,selS='F',sheetPaper='A4',deck=[],ai=-1,deckAdded=false,srcImg=false,sendItems=[];
+let fitMode=(()=>{try{return localStorage.getItem('cardFit')==='keep'?'keep':'fill'}catch(e){return 'fill'}})(),K,Tp,pp=[],pages=[],bx={},dpi=300,cc=0,batch=[],pdfBuf=null,srcFile=null,selS='F',sheetPaper='A4',deck=[],ai=-1,deckAdded=false,srcImg=false,sendItems=[];
 
 const CA=(()=>{
 const ph=(x,y,w,h,c)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${c}"/><circle cx="${x+w/2}" cy="${y+h*.36}" r="${w*.2}" fill="#fff" opacity=".9"/><path d="M${x+w*.14} ${y+h}Q${x+w/2} ${y+h*.5} ${x+w*.86} ${y+h}Z" fill="#fff" opacity=".9"/>`;
@@ -894,7 +916,7 @@ $('file').onchange=async e=>{let files=[...e.target.files];if(!files.length)retu
  e.target.value='';
  const ok=[];for(const f of files){const err=await checkFile(f);if(err){toast(f.name.slice(0,28)+': '+err);if(files.length==1)return st(err,1)}else ok.push(f)}
  if(!ok.length)return st('No usable file was selected.',1);
- freeDeck();pages=[];pp=[];bx={};multiN=ok.length>1?ok.length:0;multiDone=0;lastPw='';Q=ok.slice();rpEnd(false);nextFile()};
+ freeDeck();pages=[];pp=[];bx={};batch=[];batchUI();multiN=ok.length>1?ok.length:0;multiDone=0;lastPw='';Q=ok.slice();rpEnd(false);nextFile()};
 /* ---- live "Reading files… n%" : bytes read (FileReader.onprogress) -> PDF/image decode -> page render -> edge detect; multi-file aware ---- */
 let rpT=null;
 const rpGet=()=>rpT||(rpT=window.Prog?Prog.start('Reading files…'):{part(){},done(){},fail(){}});
@@ -964,7 +986,7 @@ $('deckOut').addEventListener('click',e=>{const t=e.target.closest&&e.target.clo
   const i=+t.dataset.i,sd=t.dataset.dl,E=deck[i];if(!E)return;
   busy(async()=>save(await cropHQ(sd,dpi,E),nm(i)+(sd==='F'?'_front.jpg':'_back.jpg')))});
 /* every selected card becomes its own page: one front|back pair per card, never packed onto a shared sheet */
-const curItems=async()=>{commit();if(!deck.length)return[await pair()];const out=[];for(const E of deck)out.push(await pair(E));return out};
+const curItems=async()=>{commit();if(batch.length)return batch;if(!deck.length)return[await pair()];const out=[];for(const E of deck)out.push(await pair(E));return out};
 async function render(pass){pages.forEach(freeCanvas);pages=[];pp=[];
  if(!pdfBuf){const im=await new Promise((ok,no)=>{const i=new Image;i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(srcFile._blob||srcFile)});fileProg(0.6);
   const k=Math.min(1,4096/Math.max(im.naturalWidth,im.naturalHeight)),c=mk(Math.round(im.naturalWidth*k),Math.round(im.naturalHeight*k));
@@ -1154,8 +1176,57 @@ function greenFromData(d,W,H){
  if(out.length<2)return null;
  const ra=out[0].w*W,rb=out[1].w*W;if(Math.abs(ra-rb)/Math.max(ra,rb)>.12)return null;
  return out}
+/* ---------------------------------------------------------------------------------------------------------------------------------
+   e-Ration card framing, identical for RKSY-I, PHH, AAY and SPHH.
+   Every variant is cropped to the same 85.6 x 54 mm (1.585 : 1) frame:
+     1. front and back are measured symmetrically: they sit on the same printed row, so both get the same top and height;
+     2. a safe buffer is added to the RIGHT (5 px at the 1600 px analysis width) and BOTTOM (4 pt): this keeps UTTAR DINAJPUR, the QR border
+        and the bottom-left "Sub Area" text from being clipped;
+     3. the frame is widened or heightened (never shrunk) around its centre until it is exactly 85.6 : 54, and on an A4 page it is then snapped to exactly 85.6 x 54 mm,
+        so every variant (colour panel or white) gets the very same frame.
+   Tune ONLY these constants if a variant still needs a nudge. */
+const RAT_AR=85.6/54,RAT_PAD_R=5/1600,RAT_PAD_B=4/841.89,RAT_MAX_FIX=.12;   /* right pad = 5px / 1600px page width, bottom pad = 4pt / A4 height (841.89pt), max auto-correction of the ratio = 12% */
+function rationStd(rs,W,H,o){o=o||{};if(!rs||rs.length<2)return rs;
+ const A=rs.map(r=>({x:r.x,y:r.y,w:r.w,h:r.h})),f=A[0],b=A[1],tol=.03*f.h;
+ if(Math.abs(f.y-b.y)<=tol&&Math.abs(f.h-b.h)<=tol){const y=(f.y+b.y)/2,y2=(f.y+f.h+b.y+b.h)/2;f.y=b.y=y;f.h=b.h=y2-y}
+ else{b.y=f.y;b.h=f.h}                                  /* rows disagree (extra top padding on one side): trust the front's row for both */
+ if(o.pad!==false)A.forEach(r=>{r.w+=RAT_PAD_R;r.h+=RAT_PAD_B});
+ A.forEach(r=>{const ar=r.w*W/(r.h*H);if(Math.abs(ar/RAT_AR-1)>RAT_MAX_FIX)return;      /* far off the card ratio = not a plain card box, leave it alone */
+  if(ar<RAT_AR){const nw=r.h*H*RAT_AR/W;r.x-=(nw-r.w)/2;r.w=nw}else{const nh=r.w*W/RAT_AR/H;r.y-=(nh-r.h)/2;r.h=nh}});
+ /* identical size on both sides and in every variant: an A4 page is snapped to the exact 85.6 x 54 mm card, centred on what was measured; any other page size keeps the measured size */
+ const a4=Math.abs(W/H-210/297)<.02,mw=a4?85.6/210:Math.max(A[0].w,A[1].w),mh=a4?54/297:mw*W/RAT_AR/H;
+ A.forEach(r=>{const cx=r.x+r.w/2,cy=r.y+r.h/2;r.x=cx-mw/2;r.w=mw;r.y=cy-mh/2;r.h=mh});
+ A.forEach(r=>{r.x=Math.max(0,Math.min(1-r.w,r.x));r.y=Math.max(0,Math.min(1-r.h,r.y))});
+ return A}
+/* PHH (and any card printed on plain white): there is no colour panel, so find the DASHED border rectangles under the horizontal dashed separator.
+   Dashes are closed into lines, only THIN lines are kept (text rows are thick), then two same-size 1.585:1 rectangles side by side are picked. */
+function dashedFromData(d,W,H){
+ const ink=new Uint8Array(W*H);for(let i=0,o=0;i<W*H;i++,o+=4)if(.299*d[o]+.587*d[o+1]+.114*d[o+2]<225)ink[i]=1;
+ const y0=Math.floor(H*.45),g=(y,x)=>y>=0&&y<H&&x>=0&&x<W&&ink[y*W+x]===1;
+ const find=(get,mLo,mHi,cLo,cHi,gap,minLen)=>{const runs=[];
+  for(let m=mLo;m<mHi;m++){let s=-1,last=-1,cnt=0;for(let c=cLo;c<=cHi;c++){const on=c<cHi&&get(m,c);
+    if(on){if(s<0){s=c;cnt=0}last=c;cnt++}else if(s>=0&&c-last>gap){const len=last-s+1;
+     if(len>=minLen&&cnt>=.35*len){let a=0,b2=0;for(let k=s;k<=last;k++){if(get(m-5,k))a++;if(get(m+5,k))b2++}if(a<.3*len&&b2<.3*len)runs.push({m,c0:s,c1:last})}s=-1}}}
+  const out=[];runs.forEach(r=>{const p=out[out.length-1];if(p&&r.m-p.m2<=3&&r.c0<=p.c1&&r.c1>=p.c0){p.m2=r.m;p.c0=Math.min(p.c0,r.c0);p.c1=Math.max(p.c1,r.c1)}else out.push({m:r.m,m2:r.m,c0:r.c0,c1:r.c1})});
+  return out.map(r=>({m:(r.m+r.m2)/2,c0:r.c0,c1:r.c1}))};
+ const Hs=find((m,c)=>g(m,c),y0,H,0,W,Math.max(3,Math.round(W*.012)),W*.2);
+ const Vs=find((m,c)=>g(c,m),0,W,y0,H,Math.max(3,Math.round(H*.008)),H*.07);
+ const cov=(l,a,b)=>Math.max(0,Math.min(l.c1,b)-Math.max(l.c0,a))/(b-a);
+ const boxes=[];
+ for(const xa of Vs)for(const xb of Vs){const w=xb.m-xa.m;if(w<W*.3||w>W*.55)continue;
+  for(const ya of Hs)for(const yb of Hs){const h=yb.m-ya.m;if(h<=0)continue;const ar=w/h;if(Math.abs(ar/RAT_AR-1)>.12)continue;
+   if(cov(ya,xa.m,xb.m)<.7||cov(yb,xa.m,xb.m)<.7||cov(xa,ya.m,yb.m)<.7||cov(xb,ya.m,yb.m)<.7)continue;
+   boxes.push({x0:xa.m,x1:xb.m,y0:ya.m,y1:yb.m,w,h})}}
+ let best=null;
+ for(const p of boxes)for(const q of boxes){if(q.x0<p.x1-W*.02)continue;if(Math.abs(p.y0-q.y0)>H*.015||Math.abs(p.w-q.w)/p.w>.05)continue;
+  const sc=p.w*p.h+q.w*q.h;if(!best||sc>best[2])best=[p,q,sc]}
+ if(!best)return null;
+ const ins=Math.max(2,Math.round(W*.002));                    /* stay just inside the dashes so no dash is part of the crop */
+ return best.slice(0,2).map(k=>({x:(k.x0+ins)/W,y:(k.y0+ins)/H,w:(k.w-2*ins)/W,h:(k.h-2*ins)/H}))}
 function greenCards(c){const W0=Math.min(1600,c.width),H0=Math.round(W0*c.height/c.width),t=mk(W0,H0),x=t.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W0,H0);x.drawImage(c,0,0,W0,H0);
- return greenFromData(x.getImageData(0,0,W0,H0).data,W0,H0)}
+ const d=x.getImageData(0,0,W0,H0).data;let r=greenFromData(d,W0,H0),dashed=0;
+ if(!r){r=dashedFromData(d,W0,H0);dashed=r?1:0}          /* white PHH card: dashed border instead of a coloured panel */
+ return r?rationStd(r,W0,H0,{pad:!dashed}):null}
 let greenOK=0;
 const rMsg=()=>Tp.det=='green'?(greenOK?'Ration card edges found from the green panels. Cropped exactly to each card.':'Exact ration edge not found, so the older method was used. Drag the yellow boxes to fit.'):'';
 const isFree=()=>Tp.det=='red'||Tp.det=='cards'||(Tp.det=='green'&&greenOK);
@@ -1223,7 +1294,13 @@ async function cropHQ(s,d,E){E=E||{bx,pages,pp};const b=E.bx[s],p=E.pp[b.p];if(!
  x.fillStyle='#fff';x.fillRect(0,0,W,H);x.save();x.beginPath();x.rect(ox,oy,rw,rh);x.clip();
  await p.render({canvasContext:x,viewport:v,transform:[1,0,0,k,-b.x*v.width+ox,-b.y*v.height*k+oy]}).promise;x.restore();return style(o)}
 function update(){if(!deck.length)return;
-  if(window.Wiz&&Wiz.isOpen()&&Wiz.step()===1&&ai>=0)drawCard(ai);else deck.forEach((_,i)=>drawCard(i))}
+  if(window.Wiz&&Wiz.isOpen()&&Wiz.step()===1&&ai>=0)drawCard(ai);else deck.forEach((_,i)=>drawCard(i));batchUI()}
+/* A4 batch card: live count, progress dots, caption, Clear enabled only when there is something to clear */
+function batchUI(){const n=batch.length,bb=$('bBadge');if(!bb)return;bb.textContent=n+'/5';$('batchBox').classList.toggle('has',n>0);
+ [...$('bDots').children].forEach((d,i)=>d.classList.toggle('on',i<n));$('clr').disabled=!n;
+ $('bn').textContent=n?'Print & Save use this batch.':'Up to 5 pairs on one A4 sheet.'}
+/* A4 sheets for a list of pairs: a manual batch is ONE combined sheet, otherwise every card keeps its own page */
+const a4Sheets=items=>items===batch&&batch.length?[makeA4(items)]:items.map(it=>makeA4([it]));
 function blob(c,d){return new Promise(r=>c.toBlob(async b=>{if(!b)return r(null);const u=new Uint8Array(await b.arrayBuffer());
  if(u[2]==0xFF&&u[3]==0xE0&&u[6]==0x4A){u[13]=1;u[14]=u[16]=(d>>8);u[15]=u[17]=d&255}r(new Blob([u],{type:'image/jpeg'}))},'image/jpeg',.95))}
 function dl(b,name){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),8000)}
@@ -1238,14 +1315,16 @@ function sheet(wIn,hIn,place){let d=dpi;if(wIn*hIn*d*d>LIM)d=Math.floor(Math.sqr
 const makeA4=items=>sheet(8.27,11.69,(x,d,mm,cw,ch)=>{let y=mm(8);items.forEach(p=>{const hf=cw*p.f.height/p.f.width,hb=p.b?cw*p.b.height/p.b.width:0;x.drawImage(p.f,mm(10),y,cw,hf);if(p.b)x.drawImage(p.b,mm(10)+cw+mm(4),y,cw,hb);y+=Math.max(hf,hb)+mm(3.5)})});
 const make46=p=>sheet(4,6,(x,d,mm,cw,ch)=>{const X=(4*d-cw)/2,gap=mm(8),hf=cw*p.f.height/p.f.width,hb=p.b?cw*p.b.height/p.b.width:0;
  if(p.b){const y=(6*d-hf-hb-gap)/2;x.drawImage(p.f,X,y,cw,hf);x.drawImage(p.b,X,y+hf+gap,cw,hb)}else x.drawImage(p.f,X,(6*d-hf)/2,cw,hf)});
-const jpgA4=()=>busy(async()=>{const its=await curItems();for(let i=0;i<its.length;i++){const c=makeA4([its[i]]);if(c.eff<dpi)st('Phone memory limit: A4 saved at '+c.eff+' DPI.');await save(c,'A4_'+nm(its.length>1?i:null)+'.jpg',c.eff);if(i<its.length-1)await wait(500)}});
+const jpgA4=()=>busy(async()=>{const cs=a4Sheets(await curItems());for(let i=0;i<cs.length;i++){const c=cs[i];if(c.eff<dpi)st('Phone memory limit: A4 saved at '+c.eff+' DPI.');await save(c,'A4_'+nm(cs.length>1?i:null)+'.jpg',c.eff);if(i<cs.length-1)await wait(500)}});
 const jpg46=()=>busy(async()=>{const its=await curItems();for(let i=0;i<its.length;i++){const c=make46(its[i]);await save(c,'4x6_'+nm(its.length>1?i:null)+'.jpg',c.eff);if(i<its.length-1)await wait(500)}});
 /* one "Sheet JPG" button: downloads whichever sheet is selected in the A4 / 4x6 toggle */
 $('dSheet').onclick=()=>sheetPaper==='A4'?jpgA4():jpg46();
-document.querySelectorAll('[data-dpi]').forEach(b=>b.onclick=()=>{dpi=+b.dataset.dpi;mark();update()});
+$('add').onclick=()=>busy(async()=>{if(batch.length>=5)return st('Maximum 5 ID pairs per A4.',1);batch.push(await pair());update()});
+$('clr').onclick=()=>{batch=[];update();batchUI()};
+document.querySelectorAll('[data-dpi]').forEach(b=>b.onclick=()=>{dpi=+b.dataset.dpi;mark();batch=[];update()});
 document.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{cc=+b.dataset.cc;document.querySelectorAll('[data-cc]').forEach(x=>x.classList.toggle('on',x==b));update()});
 ['fb','fc','fs'].forEach(i=>$(i).oninput=()=>{qUp()});
-document.querySelectorAll('[data-fit]').forEach(b=>b.onclick=()=>{fitMode=b.dataset.fit;try{localStorage.setItem('cardFit',fitMode)}catch(e){}mark();update()});
+document.querySelectorAll('[data-fit]').forEach(b=>b.onclick=()=>{fitMode=b.dataset.fit;try{localStorage.setItem('cardFit',fitMode)}catch(e){}mark();batch=[];update()});
 function mark(){document.querySelectorAll('[data-fit]').forEach(b=>b.classList.toggle('on',b.dataset.fit==fitMode));document.querySelectorAll('[data-dpi]').forEach(b=>b.classList.toggle('on',+b.dataset.dpi==dpi))}mark();
 const paperUI=()=>{$('dSheetL').textContent=sheetPaper==='A4'?'A4':'4×6';document.querySelectorAll('#paperSeg button').forEach(x=>{const on=x.dataset.v===sheetPaper;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on)})};
 document.querySelectorAll('#paperSeg button').forEach(b=>b.onclick=()=>{sheetPaper=b.dataset.v;paperUI()});paperUI();
@@ -1289,13 +1368,13 @@ $('oPdf').onclick=async()=>{if(!cart.length)return;try{dl(new Blob([await pdfFro
 
 /* Add to print order / Send to counter (card crop): put the current cards into the order, then open the final Order & payment step */
 const dropSend=()=>{if(sendItems.length){cart=cart.filter(x=>!sendItems.includes(x));sendItems=[];drawCart()}};
-const lblFor=(items,paper)=>Tp.n+(Tp.one?'':' · front and back')+(items.length>1?' · '+items.length+' cards, one page each':'');
+const lblFor=(items,paper)=>Tp.n+(Tp.one?'':' · front and back')+(items.length>1?(items===batch&&paper==='A4'?' · '+items.length+' pairs on one A4':' · '+items.length+' cards, one page each'):'');
 async function toOrder(keep){
   dropSend();
   if(!keep&&deckAdded&&cart.length)return true;                       /* these cards are already in the order */
-  const items=await curItems(),paper=sheetPaper,cvs=paper==='A4'?items.map(it=>makeA4([it])):items.map(make46);
-  if(!(await pushCart(cvs,paper,lblFor(items,paper),items.map(()=>1))))return false;
-  if(keep){sendItems=[];deckAdded=true;update()}else sendItems=pushCart.last.slice();
+  const items=await curItems(),paper=sheetPaper,cvs=paper==='A4'?a4Sheets(items):items.map(make46),combined=paper==='A4'&&items===batch;
+  if(!(await pushCart(cvs,paper,lblFor(items,paper),combined?[items.length]:items.map(()=>1))))return false;
+  if(keep){batch=[];sendItems=[];deckAdded=true;update()}else sendItems=pushCart.last.slice();
   return true}
 async function toSummary(keep){if(!(await toOrder(keep)))return false;closePop();if(window.Wiz)Wiz.go(3);return true}
 $('addOrder').addEventListener('click',()=>setTimeout(closePop,60));
@@ -1303,7 +1382,7 @@ $('addOrder').onclick=()=>busy(async()=>{if(await toSummary(true))toast('Added t
 $('sendCounter').onclick=()=>busy(()=>toSummary(false),'Preparing your order…');
 /* Save as PDF (card crop) */
 $('savePdf').onclick=()=>busy(async()=>{
- const items=await curItems(),paper=sheetPaper,cvs=paper==='A4'?items.map(it=>makeA4([it])):items.map(make46),list=[],PT=window.Prog?Prog.start('Processing…'):null;
+ const items=await curItems(),paper=sheetPaper,cvs=paper==='A4'?a4Sheets(items):items.map(make46),list=[],PT=window.Prog?Prog.start('Processing…'):null;
  try{for(const [k,c] of cvs.entries()){PT&&PT.part(k,cvs.length+1,0);const b=await blob(c,c.eff||200);if(!b)throw new Error('Image too large');list.push({blob:b,paper})}
  const bytes=await pdfFrom(list,(i,n)=>PT&&PT.part(cvs.length,n+1,i/n));PT&&PT.done();
  dl(new Blob([bytes],{type:'application/pdf'}),nm()+'_'+paper.replace('x','x')+'.pdf')}catch(e){PT&&PT.fail();throw e}},'Creating PDF…');
