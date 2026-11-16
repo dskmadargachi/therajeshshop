@@ -55,6 +55,90 @@ function newId() {
   return Array.from(bytes, (b) => chars[b % chars.length]).join('');
 }
 
+/* =====================================================================================
+   NOTIFICATIONS + SUGGESTIONS  (v12)
+   Storage: Cloudflare KV when one is bound (NOTIFY_KV, NOTIFICATIONS or the existing FILES namespace),
+   otherwise the Cache API, otherwise worker memory -> works out of the box with no extra setup.
+   GET  /api/notifications[?since=<ms>]   public   -> { items:[{id,title,body,ts}], now }
+   POST /api/notifications                counter   -> { title, body }  |  { clear:true }  |  { remove:id }
+   POST /api/suggestions                  public    -> { type, message, name?, contact?, lang? }
+   GET  /api/suggestions                  counter   -> { items:[...] }
+   DELETE /api/suggestions?id=<id>        counter
+   ===================================================================================== */
+const NOTIF_KEY = 'notif:v1', SUG_KEY = 'sug:v1';
+const NOTIF_MAX = 30, NOTIF_TTL = 7 * 24 * 3600, SUG_MAX = 300, SUG_TTL = 120 * 24 * 3600;
+const _mem = {};
+const _rate = new Map();
+const storeKv = (env) => env.NOTIFY_KV || env.NOTIFICATIONS || env.FILES || null;
+const cacheReq = (key) => new Request('https://store.therajesh.shop/__kv/' + encodeURIComponent(key));
+async function storeGet(env, key) {
+  const kv = storeKv(env);
+  if (kv) { try { const v = await kv.get(key, 'json'); return v || null; } catch (e) { /* fall through */ } }
+  try { const r = await caches.default.match(cacheReq(key)); if (r) return await r.json(); } catch (e) { /* fall through */ }
+  return _mem[key] || null;
+}
+async function storePut(env, key, value, ttl) {
+  _mem[key] = value;
+  const kv = storeKv(env);
+  if (kv) { try { await kv.put(key, JSON.stringify(value), { expirationTtl: ttl }); return; } catch (e) { /* fall through */ } }
+  try { await caches.default.put(cacheReq(key), new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=' + ttl } })); } catch (e) { /* memory copy already saved */ }
+}
+const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const cut = (v, n) => clean(v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').slice(0, n);
+
+async function notificationsApi(request, env, url) {
+  if (request.method === 'GET') {
+    const since = Number(url.searchParams.get('since')) || 0;
+    const all = (await storeGet(env, NOTIF_KEY)) || [];
+    const cutoff = Date.now() - NOTIF_TTL * 1000;
+    return json({ items: all.filter((n) => n.ts > since && n.ts > cutoff), now: Date.now() });
+  }
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+  const who = await roleOf(request, env);
+  if (!who) return json({ error: 'Please sign in with Google' }, 401);
+  let b; try { b = await request.json(); } catch (e) { return json({ error: 'Invalid request' }, 400); }
+  let all = (await storeGet(env, NOTIF_KEY)) || [];
+  if (b && b.clear) { all = []; await storePut(env, NOTIF_KEY, all, NOTIF_TTL); return json({ ok: true, items: all }); }
+  if (b && b.remove) { all = all.filter((n) => n.id !== String(b.remove)); await storePut(env, NOTIF_KEY, all, NOTIF_TTL); return json({ ok: true, items: all }); }
+  const title = cut(b && b.title, 80), body = cut(b && b.body, 300);
+  if (!title && !body) return json({ error: 'Write a title or a message' }, 400);
+  // timestamps always increase so every browser's "since" cursor sees the new item
+  const last = all.length ? all[all.length - 1].ts : 0;
+  const item = { id: rid(), title: title || 'therajesh.shop', body, ts: Math.max(Date.now(), last + 1) };
+  all.push(item); if (all.length > NOTIF_MAX) all = all.slice(-NOTIF_MAX);
+  await storePut(env, NOTIF_KEY, all, NOTIF_TTL);
+  return json({ ok: true, item, items: all });
+}
+
+async function suggestionsApi(request, env, url) {
+  if (request.method === 'POST') {
+    let b; try { b = await request.json(); } catch (e) { return json({ error: 'Invalid request' }, 400); }
+    const message = cut(b && b.message, 1000);
+    if (message.length < 5) return json({ error: 'Please write at least 5 characters' }, 400);
+    const ip = request.headers.get('cf-connecting-ip') || 'x', now = Date.now();
+    const hits = (_rate.get(ip) || []).filter((t) => now - t < 10 * 60 * 1000);
+    if (hits.length >= 5) return json({ error: 'Too many suggestions. Please try again later.' }, 429);
+    hits.push(now); _rate.set(ip, hits); if (_rate.size > 500) _rate.clear();
+    const type = ['feedback', 'feature', 'service'].includes(b.type) ? b.type : 'feedback';
+    const item = { id: rid(), ts: now, type, message, name: cut(b.name, 60), contact: cut(b.contact, 80), lang: b.lang === 'bn' ? 'bn' : 'en' };
+    let all = (await storeGet(env, SUG_KEY)) || [];
+    all.push(item); if (all.length > SUG_MAX) all = all.slice(-SUG_MAX);
+    await storePut(env, SUG_KEY, all, SUG_TTL);
+    return json({ ok: true });
+  }
+  const who = await roleOf(request, env);
+  if (!who) return json({ error: 'Please sign in with Google' }, 401);
+  if (request.method === 'GET') return json({ items: ((await storeGet(env, SUG_KEY)) || []).slice().reverse() });
+  if (request.method === 'DELETE') {
+    const id = url.searchParams.get('id') || '';
+    let all = (await storeGet(env, SUG_KEY)) || [];
+    all = id === '*' ? [] : all.filter((s) => s.id !== id);
+    await storePut(env, SUG_KEY, all, SUG_TTL);
+    return json({ ok: true });
+  }
+  return json({ error: 'Method not allowed' }, 405);
+}
+
 const mainWorker = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -64,6 +148,9 @@ const mainWorker = {
     const method = request.method;
     let m;
     try {
+      // v12: notifications + suggestions work even before D1 / KV bindings exist
+      if (path === 'notifications') return await notificationsApi(request, env, url);
+      if (path === 'suggestions') return await suggestionsApi(request, env, url);
       if (!env.DB || !env.FILES) {
         return json({ error: 'Setup incomplete: add bindings DB (D1) and FILES (KV), then redeploy.' }, 500);
       }

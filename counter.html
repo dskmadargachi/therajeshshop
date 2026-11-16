@@ -396,6 +396,27 @@ button{transition:transform .4s var(--spring),box-shadow .4s var(--spring),backg
 .mu-hold{display:flex;gap:8px;align-items:center;font-weight:700;font-size:13.5px;justify-content:flex-start;text-align:left}.mu-hold input{width:auto!important;flex:none;margin:0}
 .mu-est{font-weight:800;font-size:15px;color:#0a5c4b}
 </style>
+<style id="push-css">
+.pn{margin:16px 0;padding:18px}
+.pn-h{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.pn-t{font-size:20px;font-weight:800}.pn-s{margin:0 0 12px;font-size:13px;color:#64748b}
+.pn-pre{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.pn-pre button{border-radius:999px;padding:9px 14px;font-weight:700;font-size:13px;background:#eef2ff;color:#3730a3;border:1.5px solid #c7d2fe;text-align:left}
+.pn-pre button:hover{background:#e0e7ff}
+.pn-f input,.pn-f textarea{width:100%;box-sizing:border-box;padding:11px 13px;border:1.5px solid #dbe1f3;border-radius:12px;font:inherit;background:#fff;margin-bottom:8px}
+.pn-f textarea{min-height:76px;resize:vertical}
+.pn-act{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pn-go{border-radius:12px;padding:12px 20px;font-weight:800;background:linear-gradient(135deg,#4f46e5,#9333ea);color:#fff}
+.pn-go:disabled{opacity:.55}
+.pn-note{font-size:12.5px;font-weight:700;color:#64748b}.pn-note.ok{color:#15803d}.pn-note.bad{color:#b91c1c}
+.pn-hist{margin-top:14px;border-top:1px solid #eef0f7;padding-top:10px}
+.pn-row{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f1f3f9;font-size:13.5px}
+.pn-row div{flex:1;min-width:0;overflow-wrap:anywhere}.pn-row small{color:#64748b;display:block}
+.pn-row button{background:#fee2e2;color:#b91c1c;padding:4px 10px;font-size:12px;border-radius:8px}
+.sg-ty{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:800;background:#ede9fe;color:#5b21b6;margin-right:6px}
+.sg-ty.feature{background:#dbeafe;color:#1d4ed8}.sg-ty.service{background:#fef3c7;color:#92400e}
+.pn-cnt{font-size:12px;font-weight:800;color:#6d28d9;background:#ede9fe;border-radius:99px;padding:3px 10px;margin-left:8px}
+</style>
 </head>
 <style id="wa-css">
   .t-wa_wait{background:#fef9c3;color:#854d0e}
@@ -526,6 +547,21 @@ button{transition:transform .4s var(--spring),box-shadow .4s var(--spring),backg
       </div>
     </div>
     <div id="orders"></div>
+    <div class="card pn" id="pnCard">
+      <div class="pn-h"><div class="pn-t">📣 Send Notification / পুশ নোটিফিকেশন</div><button id="pnClear" class="vbtn" type="button">Clear all</button></div>
+      <p class="pn-s">Customers with the website open get it in their 🔔 inbox and as a phone/browser banner (if they allowed notifications).</p>
+      <div class="pn-pre" id="pnPre"></div>
+      <div class="pn-f">
+        <input id="pnTitle" type="text" maxlength="80" placeholder="Title / শিরোনাম">
+        <textarea id="pnBody" maxlength="300" placeholder="Message / বার্তা"></textarea>
+      </div>
+      <div class="pn-act"><button id="pnSend" class="pn-go" type="button">📣 Send to all customers</button><span id="pnNote" class="pn-note" role="status"></span></div>
+      <div class="pn-hist" id="pnHist"></div>
+    </div>
+    <div class="card pn" id="sgCard">
+      <div class="pn-h"><div class="pn-t">💡 Customer suggestions <span id="sgCnt" class="pn-cnt">0</span></div><button id="sgRef" class="vbtn" type="button">Refresh</button></div>
+      <div id="sgList"></div>
+    </div>
     <div class="card vis" id="vis">
       <div class="vis-h"><div class="vis-t">👥 Visitors <span id="vLive" class="vlive"></span></div><button id="vRef" class="vbtn" type="button">Refresh</button></div>
       <div class="vtiles">
@@ -803,7 +839,7 @@ function stopPolling() { clearInterval(timer); clearInterval(vtimer); clearInter
 document.addEventListener('visibilitychange', () => {
   if (!appLive) return;
   if (document.hidden) { stopPolling(); if (BG_POLL_MS > 0) bgTimer = setInterval(load, BG_POLL_MS); }
-  else { load(); loadVisitors(); startPolling(); }
+  else { load(); loadVisitors(); if (window.loadPushPanel) loadPushPanel(); startPolling(); }
 });
 async function initGoogle() {
   if (gInit) return; gInit = true;
@@ -833,7 +869,7 @@ async function enter() {
     const r = await api('ping');
     if (!r.ok) throw new Error('auth');
     $('login').classList.add('hidden'); $('app').classList.remove('hidden');
-    appLive = true; load(); loadVisitors(); startPolling();
+    appLive = true; load(); loadVisitors(); if (window.loadPushPanel) loadPushPanel(); startPolling();
   } catch (e) {
     ls.del('gsess'); sess = '';
     $('login').classList.remove('hidden'); $('app').classList.add('hidden');
@@ -1530,6 +1566,60 @@ $('muGo').onclick = async () => {
   } catch (e) { $('muMsg').textContent = '⚠ ' + (e.message || 'Failed'); btn.textContent = old; }
   btn.disabled = false;
 };
+</script>
+<script>
+/* ===== v12: push notifications + customer suggestions ===== */
+(function () {
+  const PRE = [
+    { l: '✅ আপনার প্রিন্ট রেডি', t: 'প্রিন্ট রেডি ✅', b: 'আপনার প্রিন্ট রেডি, কাউন্টার থেকে নিয়ে যান' },
+    { l: '🟢 শপ এখন খোলা আছে', t: 'শপ খোলা আছে 🟢', b: 'শপ এখন খোলা আছে' },
+    { l: '⏳ কিছুক্ষণের মধ্যে ফিরছি', t: 'একটু অপেক্ষা করুন ⏳', b: 'আমরা কিছুক্ষণের মধ্যে ফিরছি' },
+    { l: '🔴 আজকের মতো শপ বন্ধ', t: 'শপ বন্ধ 🔴', b: 'আজকের মতো শপ বন্ধ, কাল আবার দেখা হবে' },
+  ];
+  const q = (id) => document.getElementById(id);
+  const hdr = () => ({ ...H(), 'content-type': 'application/json' });
+  const when = (ts) => new Date(ts).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  let busy = false;
+  function note(t, c) { const n = q('pnNote'); n.textContent = t || ''; n.className = 'pn-note' + (c ? ' ' + c : ''); }
+  async function post(body) {
+    const r = await fetch('/api/notifications', { method: 'POST', headers: hdr(), body: JSON.stringify(body) });
+    if (r.status === 401) throw new Error('Session expired. Please sign in again.');
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Could not send');
+    return d;
+  }
+  function renderHist(items) {
+    const list = (items || []).slice().sort((a, b) => b.ts - a.ts);
+    q('pnHist').innerHTML = list.length ? list.map((n) => '<div class="pn-row"><div><b>' + esc(n.title) + '</b> ' + esc(n.body || '') + '<small>' + esc(when(n.ts)) + '</small></div><button type="button" data-rm="' + esc(n.id) + '">Remove</button></div>').join('') : '<small style="color:#94a3b8">No notifications sent yet.</small>';
+  }
+  async function loadHist() { try { const r = await fetch('/api/notifications', { cache: 'no-store' }); if (r.ok) renderHist((await r.json()).items); } catch {} }
+  async function send(title, body) {
+    if (busy) return; if (!String(title).trim() && !String(body).trim()) { note('Write a title or a message', 'bad'); return; }
+    busy = true; q('pnSend').disabled = true; note('Sending…');
+    try { const d = await post({ title, body }); renderHist(d.items); note('Sent ✓ — customers will see it within ~20 seconds', 'ok'); q('pnTitle').value = ''; q('pnBody').value = ''; toast('📣 Notification sent', body || title); }
+    catch (e) { note(e.message, 'bad'); }
+    busy = false; q('pnSend').disabled = false;
+  }
+  q('pnPre').innerHTML = PRE.map((p, i) => '<button type="button" data-p="' + i + '">' + esc(p.l) + '</button>').join('');
+  q('pnPre').onclick = (e) => { const b = e.target.closest('[data-p]'); if (!b) return; const p = PRE[+b.dataset.p]; q('pnTitle').value = p.t; q('pnBody').value = p.b; send(p.t, p.b); };
+  q('pnSend').onclick = () => send(q('pnTitle').value, q('pnBody').value);
+  q('pnHist').onclick = async (e) => { const b = e.target.closest('[data-rm]'); if (!b) return; try { renderHist((await post({ remove: b.dataset.rm })).items); } catch (er) { note(er.message, 'bad'); } };
+  q('pnClear').onclick = async () => { if (!confirm('Remove all notifications from customers’ inbox?')) return; try { renderHist((await post({ clear: true })).items); } catch (er) { note(er.message, 'bad'); } };
+
+  const TY = { feedback: 'Feedback', feature: 'New feature', service: 'Service' };
+  async function loadSug() {
+    try {
+      const r = await fetch('/api/suggestions', { headers: H(), cache: 'no-store' }); if (!r.ok) return;
+      const items = (await r.json()).items || []; q('sgCnt').textContent = items.length;
+      q('sgList').innerHTML = items.length ? items.map((s) => '<div class="pn-row"><div><span class="sg-ty ' + esc(s.type) + '">' + esc(TY[s.type] || s.type) + '</span>' + esc(s.message) + '<small>' + esc(when(s.ts)) + (s.name ? ' · ' + esc(s.name) : '') + (s.contact ? ' · ' + esc(s.contact) : '') + '</small></div><button type="button" data-del="' + esc(s.id) + '">Delete</button></div>').join('') : '<small style="color:#94a3b8">No suggestions yet.</small>';
+    } catch {}
+  }
+  q('sgList').onclick = async (e) => { const b = e.target.closest('[data-del]'); if (!b) return; try { await fetch('/api/suggestions?id=' + encodeURIComponent(b.dataset.del), { method: 'DELETE', headers: H() }); loadSug(); } catch {} };
+  q('sgRef').onclick = loadSug;
+  window.loadPushPanel = () => { loadHist(); loadSug(); };
+  setTimeout(() => { if (!q('app').classList.contains('hidden')) window.loadPushPanel(); }, 1200);
+  setInterval(() => { if (!document.hidden && !q('app').classList.contains('hidden')) loadSug(); }, 60000);
+})();
 </script>
 </body>
 </html>
