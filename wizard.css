@@ -385,20 +385,24 @@ body :is(.seg2,#printBox .pb-seg){gap:4px;padding:4px;border-radius:14px}
 body :is(.seg2 button,#printBox .pb-seg button){min-height:42px;border-radius:11px!important;font-size:14px;font-weight:700;white-space:nowrap;transition:background-color .2s,color .2s,transform .16s var(--bt-ease),box-shadow .2s}
 body :is(.seg2 button.on,#printBox .pb-seg button.on){background:var(--bt-sel)!important;color:#fff!important;-webkit-text-fill-color:#fff;font-weight:800;box-shadow:0 6px 12px -8px rgba(51,70,240,.9)!important}
 
-/* background colour: ONE row of 7 circular swatches (36px), no text labels. Selected = 2px white gap + 2.5px #2563eb ring. */
-body #bgSw{display:flex!important;flex-wrap:nowrap!important;justify-content:space-between;align-items:center;gap:8px;padding:6px 5px;margin:2px 0 4px;overflow:visible}
-body #bgSw button,body #bgSw label.cust{all:unset;box-sizing:border-box;position:relative;display:block;flex:0 0 36px;width:36px!important;height:36px!important;min-width:0;min-height:0!important;padding:0!important;margin:0;border-radius:50%!important;cursor:pointer;overflow:visible;-webkit-tap-highlight-color:transparent;transition:transform .16s cubic-bezier(.2,.7,.2,1),box-shadow .18s}
-body #bgSw button i{display:block;width:100%;height:100%;border-radius:50%;border:1px solid rgba(15,23,42,.2);box-sizing:border-box}
-body #bgSw button.orig i{background:repeating-conic-gradient(#cbd5e1 0 25%,#fff 0 50%) 50%/10px 10px}
+/* background colour: ONE row of 7 true 1:1 circles (38px). Grid, no leftover pill padding / min-width. Selected = 2px white gap + 2.5px #2563eb ring. */
+body #bgSw{display:grid!important;grid-template-columns:repeat(7,1fr);gap:8px;align-items:center;justify-items:center;width:100%;box-sizing:border-box;padding:6px 4px;margin:2px 0 4px;overflow:visible}
+body #bgSw button,body #bgSw label.cust{all:unset;box-sizing:border-box;position:relative;display:block;flex:none;width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important;padding:0!important;margin:0!important;border-radius:50%!important;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .16s cubic-bezier(.2,.7,.2,1),box-shadow .18s}
+body #bgSw button i{display:block;width:100%;height:100%;border-radius:50%;border:1px solid rgba(15,23,42,.22);box-sizing:border-box}
+body #bgSw button.orig i{background:repeating-conic-gradient(#cbd5e1 0 25%,#fff 0 50%) 0 0/19px 19px}
 body #bgSw label.cust{background:conic-gradient(#ef4444,#f59e0b,#eab308,#22c55e,#06b6d4,#3b82f6,#8b5cf6,#ec4899,#ef4444);box-shadow:inset 0 0 0 1px rgba(15,23,42,.2)}
-body #bgSw label.cust.on{background:var(--cc,#7ec8a0)}
 body #bgSw label.cust input[type=color]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0;margin:0;border-radius:50%}
 body #bgSw button:hover:not(.on),body #bgSw label.cust:hover:not(.on){transform:scale(1.08)}
 body #bgSw button:active,body #bgSw label.cust:active{transform:scale(.94)}
-body #bgSw button.on,body #bgSw label.cust.on{background:transparent;box-shadow:0 0 0 2px #fff,0 0 0 4.5px #2563eb!important}
+body #bgSw button.on,body #bgSw label.cust.on{box-shadow:0 0 0 2px #fff,0 0 0 4.5px #2563eb!important}
 body #bgSw label.cust.on{background:var(--cc,#7ec8a0)}
 body #bgSw button:focus-visible,body #bgSw label.cust:focus-within{outline:0;box-shadow:0 0 0 2px #fff,0 0 0 4.5px #2563eb}
-@media(max-width:340px){body #bgSw{gap:4px}body #bgSw button,body #bgSw label.cust{flex-basis:30px;width:30px!important;height:30px!important}}
+@media(max-width:350px){body #bgSw{gap:4px}body #bgSw button,body #bgSw label.cust{width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important}}
+/* Step 1 (Crop & background): room for the status text + secondary buttons above the sticky Continue footer */
+.wz-pane[data-flow="pp"][data-step="1"].on{padding-bottom:96px}
+.wz-pane[data-flow="pp"][data-step="1"] #bgMsg{min-height:20px}
+.wz-pane[data-flow="pp"][data-step="1"] #ppPngBtn{display:flex;width:100%;margin-top:10px}
+.wz-pane[data-flow="pp"][data-step="1"] #ppPngBtn.hidden{display:none}
 /* ---- phones ---- */
 @media(max-width:420px){
  body :is(.btn,.go,.b,.wz-btn,.pick,.pbtn,.prev-btn,.add-more){font-size:14.5px;padding:0 14px!important}
