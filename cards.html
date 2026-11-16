@@ -100,7 +100,7 @@ input[type=range]{width:100%;accent-color:var(--brand)}
 .shopcard-n{font-size:19px;font-weight:800;color:var(--ink);margin-top:4px}
 .shopcard-s{font-size:13.5px;color:var(--mute);margin:4px 0 14px}
 .shopcard-b{display:inline-flex;padding:10px 16px;border-radius:var(--r-sm);background:var(--brand);color:#fff;font-weight:600;font-size:14px;text-decoration:none;margin:3px}
-.shopcard-call{background:#fff;color:var(--ink);border:1px solid var(--line)}
+
 
 /* ---------- modals + preview ---------- */
 .password-overlay,.preview-overlay{position:fixed;inset:0;z-index:9999;background:rgba(15,27,45,.7);display:flex;align-items:center;justify-content:center;padding:14px}
@@ -163,7 +163,7 @@ input[type=range]{width:100%;accent-color:var(--brand)}
 .nudge button:hover{background:var(--bg)}
 .out{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:6px}
 .out .oc{border:1px solid var(--line);border-radius:var(--r);padding:12px;background:#fff}
-.out canvas{width:100%;aspect-ratio:85.6/53.98;object-fit:fill;border-radius:10px;border:1px solid var(--line);background:#fff;display:block;margin:8px 0;overflow:hidden}
+.out canvas{width:100%;border-radius:6px;border:1px solid var(--line);background:#fff;display:block;margin:8px 0}
 .out b{font-size:14px}
 .sl{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
 .sl input[type=range]{width:140px}
@@ -274,12 +274,16 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb26
 .tool-link:nth-child(1) svg{color:var(--orange)}.tool-link:nth-child(2) svg{color:var(--pink)}
 .tool-link:nth-child(1){border-left:4px solid var(--orange)}.tool-link:nth-child(2){border-left:4px solid var(--pink)}
 .shopcard{border-top:4px solid var(--amber)}
-.shopcard-b{background:var(--grad)}.shopcard-call{background:#fff;color:var(--ink)}
+.shopcard-b{background:var(--grad)}
 .s-pending{background:linear-gradient(90deg,#fef3c7,#ffedd5)}
 .scanwrap{position:relative;min-height:190px}
 .scanph{all:unset;box-sizing:border-box;position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;cursor:pointer;border:2px dashed #a5b4fc;border-radius:14px;background:linear-gradient(135deg,#eff6ff,#f5f3ff 55%,#fdf2f8);color:#4338ca}
 .scanph svg{width:30px;height:30px;margin-bottom:4px}.scanph b{font-size:15px}.scanph small{color:#6b7280;font-size:12px}
 .scanph.dz{border-color:#7c3aed;background:#ede9fe}.scanph.hidden{display:none}
+
+/* Aadhaar / ID card previews: exact 85.6x54 mm frame (1.586:1), clean 10px corners, nothing bleeding past the edge */
+.oc canvas,#deckOut canvas,.wz .out canvas{border-radius:10px;overflow:hidden;aspect-ratio:85.6/53.98;display:block;background:#fff}
+.bx{border-radius:10px}
 </style><style id="v4">
 /* ---- v4: tracker, privacy section, rotate / page-select ---- */
 .trk{display:grid;grid-template-columns:repeat(5,1fr);margin:20px 0 4px}
@@ -632,7 +636,7 @@ html.pop-lock,html.pop-lock body{overflow:hidden}
 .wz-pane .s3set{margin-top:12px}
 .wz-done-slot .donebox{border:0!important;box-shadow:none!important;background:none!important;padding:0!important;margin:0}
 </style>
-<link rel="stylesheet" href="/wizard.css?v=11">
+<link rel="stylesheet" href="/wizard.css?v=7">
 <script src="/wizard.js"></script>
 </head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -859,7 +863,7 @@ if(location.hash==='#scanner')setTimeout(()=>mode('scanner'),0);
 /* ---------------- card presets (fractions of the page: [x,y,w,h]) ---------------- */
 const T={
 ration:{n:'Ration Card',bn:'রেশন কার্ড',d:'PDF · front and back',pdf:1,F:[.04,.5,.45,.46],B:[.51,.5,.45,.46],det:'green',inset:.004},
-aadhaar:{n:'Aadhaar Card',bn:'আধার কার্ড',d:'Password PDF · front and back',pdf:1,pw:1,cc:1,F:[.03,.55,.46,.4],B:[.51,.55,.46,.4],det:'ink',inset:.003},
+aadhaar:{n:'Aadhaar Card',bn:'আধার কার্ড',d:'Password PDF · front and back',pdf:1,pw:1,cc:1,F:[.03,.55,.46,.4],B:[.51,.55,.46,.4],det:'ink',inset:.003,tight:1},
 pan:{minW:.25,maxW:1,n:'PAN / Others',bn:'প্যান',d:'PDF, JPG or PNG',img:1,pdf:1,F:[0,0,1,.5],B:[0,.5,1,.5],det:'blue',inset:0},
 ayushman:{minW:.3,maxW:1,n:'Ayushman Card',bn:'আয়ুষ্মান',d:'2-page PDF · page 1 front, page 2 back',pdf:1,pages:2,F:[0,0,1,1],B:[0,0,1,1],det:'red',inset:0},
 voter:{n:'Voter Card',bn:'ভোটার কার্ড',d:'e-EPIC PDF · front and back',pdf:1,F:[.03,.03,.47,.3],B:[.5,.03,.47,.3],det:'ink',inset:.004},
@@ -1110,7 +1114,8 @@ function detect(pi,r,mode){const c=pages[pi],sw=Math.min(600,Math.round(c.width*
  return[r[0]+r[2]*x0/sw,r[1]+r[3]*y0/sh,r[2]*(x1-x0+1)/sw,r[3]*(y1-y0+1)/sh]}
 function fit(pi,b,wOverride){const c=pages[pi],W=c.width,H=c.height;let w=b[2]*W,h=b[3]*H,cx=(b[0]+b[2]/2)*W,cy=(b[1]+b[3]/2)*H;
  if(wOverride){w=wOverride*W;h=w/R}else{const ins=Tp.inset*W;w-=2*ins;h-=2*ins}
- if(w/h>R)h=w/R;else w=h*R;w=Math.min(w,W);h=w/R;if(h>H){h=H;w=h*R}
+ if(Tp.tight){if(w/h>R)w=h*R;else h=w/R}   /* Aadhaar: trim INSIDE the detected edges to exactly 1.586:1, never grow into the background */
+ else if(w/h>R)h=w/R;else w=h*R;w=Math.min(w,W);h=w/R;if(h>H){h=H;w=h*R}
  const x=Math.max(0,Math.min(W-w,cx-w/2)),y=Math.max(0,Math.min(H-h,cy-h/2));return{p:pi,x:x/W,y:y/H,w:w/W}}
 let miss=0,redFull=0;
 /* Ayushman PDFs: each page has a red border. Crop exactly to the INSIDE edge of that border (any shape, not forced to card ratio). */
@@ -1254,8 +1259,6 @@ async function autoCrop(){miss=0;redFull=0;greenOK=0;const last=Math.min(1,pages
   if(Math.abs(wa-wb)/Math.max(wa,wb)<.12){const m=(wa+wb)/2;['F','B'].forEach(s=>{const b=bx[s],c=pages[b.p],h=m/R,cx=b.x*c.width+b.w*c.width/2,cy=b.y*c.height+(b.w*c.width/R)/2;
     b.w=m/c.width;b.x=Math.max(0,Math.min(1-b.w,(cx-m/2)/c.width));b.y=Math.max(0,Math.min(1-hOf(b),(cy-h/2)/c.height))})}}
  else if(found.F&&!found.B&&!Tp.one&&!isFree()&&bx.F&&bx.B&&bx.B.p==bx.F.p){bx.B=fit(bx.B.p,[bx.B.x,bx.B.y,bx.B.w,hOf(bx.B)],bx.F.w)}
-  /* Aadhaar: front and back sit on the same printed row, so give both the same vertical centre (same top, same 85.6:54 frame) */
-  if(Tp.cc&&found.F&&found.B&&bx.F&&bx.B&&bx.F.p==bx.B.p){const hF=hOf(bx.F),hB=hOf(bx.B),cy=(bx.F.y+hF/2+bx.B.y+hB/2)/2;[bx.F,bx.B].forEach(b=>{const h=hOf(b);b.y=Math.max(0,Math.min(1-h,cy-h/2))})}
  if(pages.length==1&&srcImg&&!Tp.one)bx.B=bx.F}
 $('auto').onclick=async()=>{st('Finding the card edges…');await autoCrop();commit();layoutBoxes();update();st(rMsg()||(miss?'Card edge not found, so a default position is used.':'Auto crop done.'),rMsg()?!greenOK:miss)};
 $('reset').onclick=async()=>{bx={};st('Finding the card edges…');await autoCrop();commit();layoutBoxes();update();st(rMsg()||(miss?'Card edge not found, so a default position is used.':'Boxes reset.'),rMsg()?!greenOK:miss)};
@@ -1289,16 +1292,16 @@ function style(o){const x=o.getContext('2d');
  if(Tp.fx&&($('fb').value!=100||$('fc').value!=100||$('fs').value!=100)){const im=x.getImageData(0,0,o.width,o.height),d=im.data,br=$('fb').value/100,ct=$('fc').value/100,sa=$('fs').value/100,cl=v=>v<0?0:v>255?255:v;
   for(let i=0;i<d.length;i+=4){let r=(d[i]*br-128)*ct+128,g=(d[i+1]*br-128)*ct+128,b=(d[i+2]*br-128)*ct+128,y=.299*r+.587*g+.114*b;
    d[i]=cl(y+(r-y)*sa);d[i+1]=cl(y+(g-y)*sa);d[i+2]=cl(y+(b-y)*sa)}x.putImageData(im,0,0)}
- if(Tp.cc&&cc){const W=o.width,H=o.height,a=Math.round(H/3),b=Math.round(H*2/3);x.save();x.beginPath();x.rect(0,0,W,H);x.clip();x.globalCompositeOperation='multiply';[['#ffd9a8',0,a],['#ffffff',a,b-a],['#c9f0d0',b,H-b]].forEach(([col,y,h])=>{x.fillStyle=col;x.fillRect(0,y,W,h)});x.restore()}
+ if(Tp.cc&&cc){x.save();x.beginPath();x.rect(0,0,o.width,o.height);x.clip();x.globalCompositeOperation='multiply';[['#ffd9a8',0],['#ffffff',1/3],['#c9f0d0',2/3]].forEach(([col,p])=>{x.fillStyle=col;x.fillRect(0,Math.round(p*o.height),o.width,Math.ceil(o.height/3))});x.restore()}
  return o}
 /* EVERY card is delivered at exactly 85.60 x 53.98 mm. Fill = card art stretched to that size, Keep = shape kept with white bars. */
 function crop(s,d,E){E=E||{bx,pages};const b=E.bx[s],c=E.pages[b.p],W=Math.round(CW/MM*d),H=Math.round(CH/MM*d),o=mk(W,H),x=o.getContext('2d');x.imageSmoothingQuality='high';
  const sx=b.x*c.width,sy=b.y*c.height,sw=b.w*c.width,sh=hOf(b,E.pages)*c.height;
- if(fitMode=='keep'&&!Tp.cc){x.fillStyle='#fff';x.fillRect(0,0,W,H);const k=Math.min(W/sw,H/sh),w=sw*k,h=sh*k;x.drawImage(c,sx,sy,sw,sh,(W-w)/2,(H-h)/2,w,h)}
+ if(fitMode=='keep'){x.fillStyle='#fff';x.fillRect(0,0,W,H);const k=Math.min(W/sw,H/sh),w=sw*k,h=sh*k;x.drawImage(c,sx,sy,sw,sh,(W-w)/2,(H-h)/2,w,h)}
  else x.drawImage(c,sx,sy,sw,sh,0,0,W,H);
  return style(o)}
 async function cropHQ(s,d,E){E=E||{bx,pages,pp};const b=E.bx[s],p=E.pp[b.p];if(!p)return crop(s,d,E);
- const W=Math.round(CW/MM*d),H=Math.round(CH/MM*d),v1=p.getViewport({scale:1}),bw=b.w*v1.width,bh=hOf(b,E.pages)*v1.height,keep=fitMode=='keep'&&!Tp.cc,
+ const W=Math.round(CW/MM*d),H=Math.round(CH/MM*d),v1=p.getViewport({scale:1}),bw=b.w*v1.width,bh=hOf(b,E.pages)*v1.height,keep=fitMode=='keep',
   sX=keep?Math.min(W/bw,H/bh):W/bw,sY=keep?sX:H/bh,v=p.getViewport({scale:sX}),k=sY/sX,rw=bw*sX,rh=bh*sY,ox=(W-rw)/2,oy=(H-rh)/2,o=mk(W,H),x=o.getContext('2d');
  x.fillStyle='#fff';x.fillRect(0,0,W,H);x.save();x.beginPath();x.rect(ox,oy,rw,rh);x.clip();
  await p.render({canvasContext:x,viewport:v,transform:[1,0,0,k,-b.x*v.width+ox,-b.y*v.height*k+oy]}).promise;x.restore();return style(o)}

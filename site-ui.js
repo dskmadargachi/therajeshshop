@@ -153,7 +153,7 @@ var BN = {
 Object.assign(BN, {
 'Scan QR': 'QR স্ক্যান', 'Upload & Pay': 'আপলোড ও পেমেন্ট', 'Print Ready': 'প্রিন্ট প্রস্তুত',
 'Privacy & Security Info': 'গোপনীয়তা ও নিরাপত্তা তথ্য', 'Privacy & Security': 'গোপনীয়তা ও নিরাপত্তা',
-'Directions': 'দিকনির্দেশ', 'Step': 'ধাপ', 'of': '/',
+'Directions': 'দিকনির্দেশ', 'Call': 'কল করুন', 'Step': 'ধাপ', 'of': '/',
 'Preview & edit': 'প্রিভিউ ও এডিট',
 'Check your files. Preview, crop photos, pick pages, or remove a file.': 'আপনার ফাইল দেখে নিন। প্রিভিউ করুন, ছবি ক্রপ করুন, পৃষ্ঠা বেছে নিন বা ফাইল সরান।',
 'Add more files': 'আরও ফাইল যোগ করুন', 'Print settings': 'প্রিন্ট সেটিংস',
@@ -545,196 +545,155 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
 
-/* =====================================================================================================================
-   v12 - A) live ONLINE / OFFLINE badge on the homepage "Print via WhatsApp" card
-   Polls GET /api/whatsapp-status on load and every 30 s (paused while the tab is hidden, refreshed when it is shown again).
-   Unreachable / slow (> 4 s) / error  ==> OFFLINE, so customers are never told the bot is live when it is not.
-   ===================================================================================================================== */
+
+/* ---------- WhatsApp bot online/offline badge (homepage "Print via WhatsApp" card) ----------
+   Polls /api/whatsapp-status on load and every 30 s (and when the tab becomes visible again). */
 (function () {
-  'use strict';
-  var URL_ = '/api/whatsapp-status', EVERY = 30000, TIMEOUT = 4000, timer = null, last = 'checking', busy = false;
-  var TXT = {
-    en: { online: 'ONLINE', offline: 'OFFLINE', checking: 'CHECKING', note: 'Bot Offline \u2014 Please upload directly above' },
-    bn: { online: 'ONLINE', offline: 'OFFLINE', checking: 'CHECKING', note: '\u09ac\u099f \u0985\u09ab\u09b2\u09be\u0987\u09a8 \u2014 \u0985\u09a8\u09c1\u0997\u09cd\u09b0\u09b9 \u0995\u09b0\u09c7 \u0989\u09aa\u09b0\u09c7 \u09b8\u09b0\u09be\u09b8\u09b0\u09bf \u0986\u09aa\u09b2\u09cb\u09a1 \u0995\u09b0\u09c1\u09a8' }
+  var T = {
+    online:   { en: 'ONLINE',   bn: 'অনলাইন' },
+    offline:  { en: 'OFFLINE',  bn: 'অফলাইন' },
+    checking: { en: 'CHECKING', bn: 'দেখা হচ্ছে' }
   };
-  function lang() {
-    if (document.documentElement.lang === 'bn') return 'bn';
-    try { return localStorage.getItem('site-lang') === 'bn' ? 'bn' : 'en'; } catch (e) { return 'en'; }
-  }
-  function apply(state) {
-    last = state;
-    var card = document.getElementById('waCard'), live = document.getElementById('waLive'), lbl = document.getElementById('waLiveT'), note = document.getElementById('waNote');
-    if (!card || !live || !lbl) return;
-    var t = TXT[lang()];
-    card.classList.toggle('wa-on', state === 'online');
-    card.classList.toggle('wa-off', state === 'offline');
-    card.setAttribute('data-wa-state', state);
-    live.setAttribute('data-state', state);
-    lbl.textContent = t[state];
-    if (note) { note.hidden = state !== 'offline'; if (state === 'offline') note.textContent = t.note; }
+  function lang() { return document.documentElement.lang === 'bn' ? 'bn' : 'en'; }
+  function paint(state) {
+    var card = document.getElementById('waCard'), t = document.getElementById('waLiveT'), note = document.getElementById('waNote');
+    if (!card || !t) return;
+    card.setAttribute('data-bot', state);
+    t.setAttribute('data-en', T[state].en); t.setAttribute('data-bn', T[state].bn);
+    t.textContent = T[state][lang()];
+    if (note) note.hidden = state !== 'offline';
   }
   function check() {
-    if (busy || !document.getElementById('waCard')) return;
-    busy = true;
+    if (!document.getElementById('waCard')) return;
     var ctl = window.AbortController ? new AbortController() : null;
-    var to = setTimeout(function () { if (ctl) ctl.abort(); }, TIMEOUT);
-    var done = function (state) { clearTimeout(to); busy = false; apply(state); };
-    fetch(URL_, { cache: 'no-store', credentials: 'omit', signal: ctl ? ctl.signal : undefined, headers: { accept: 'application/json' } })
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 4000);
+    fetch('/api/whatsapp-status?_=' + Date.now(), { cache: 'no-store', signal: ctl ? ctl.signal : undefined })
       .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
-      .then(function (j) { done(j && j.online === true ? 'online' : 'offline'); })
-      .catch(function () { done('offline'); });
+      .then(function (d) { paint(d && d.online ? 'online' : 'offline'); })
+      .catch(function () { paint('offline'); })
+      .then(function () { clearTimeout(timer); });
   }
   function start() {
-    if (!document.getElementById('waCard')) return;
+    if (!document.getElementById('waCard')) return;   // only the homepage has the card
     check();
-    timer = setInterval(function () { if (!document.hidden) check(); }, EVERY);
+    setInterval(function () { if (!document.hidden) check(); }, 30000);
     document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
-    window.addEventListener('online', check);
-    window.addEventListener('offline', function () { apply('offline'); });
-    try { new MutationObserver(function () { apply(last); }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] }); } catch (e) {}
+    window.addEventListener('online', check); window.addEventListener('offline', function () { paint('offline'); });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
 
-/* =====================================================================================================================
-   v12 - B) site-wide drag & drop for EVERY upload box (one reusable handler, event delegation => also works for boxes that
-   are rendered later, e.g. the Smart scanner dialog and the PDF-tool modal).
 
-   How a drop target is found (first match wins, walking up from the element under the pointer):
-     1. [data-dropzone="inputId"]      explicit box -> that <input type=file>   (optional data-dz-highlight="css selector")
-     2. .drop / .dropzone / .mu-drop / [data-dz]   a box that contains (or is labelled for) a file input
-     3. <label> wrapping / pointing at a file input
-   Dropped files are filtered by the input's own `accept`, trimmed to 1 file when the input is not `multiple`
-   (or to data-max-files), then handed to the input exactly like the file picker does (input + change events), so every
-   page's existing validation / upload pipeline runs unchanged. Boxes that already call preventDefault() themselves are left alone.
-   Browser default (opening the dropped file in the tab) is blocked everywhere on the page.
-   ===================================================================================================================== */
+/* ---------- Global drag-and-drop for every file upload area ----------
+   A drop zone is any of:
+     • an element with data-dropzone="#fileInputSelector"  (explicit; also used by dynamically rendered tool UIs)
+     • a <label for="..."> pointing at an <input type=file> (e.g. the big "Choose Files" boxes)
+   Listeners are delegated on `document`, so zones created later (modals, tool panels, wizards) work with no extra binding.
+   Dropped files are filtered by the input's `accept`, trimmed to 1 file when the input is not `multiple` (and to data-max
+   when set), then handed to the SAME <input type=file> via input.files + a bubbling 'change' event, so each page's existing
+   pipeline (limits, password prompts, progress, etc.) runs exactly as if the person had used the file picker.
+   Add data-dz-off to a zone to switch it off temporarily. Browser default (opening the file in the tab) is blocked page-wide. */
 (function () {
-  'use strict';
-  var CLS = 'dz-over', active = null, clearT = 0, toastT = 0;
+  if (window.__siteDropInit) return; window.__siteDropInit = true;
 
-  function injectCss() {
-    if (document.getElementById('dz-style')) return;
-    var st = document.createElement('style'); st.id = 'dz-style';
-    st.textContent =
-      'html .dz-over.dz-over{outline:2px dashed #4f5bff!important;outline:2px dashed var(--brand,#4f5bff)!important;outline-offset:-6px;' +
-      'background-image:linear-gradient(rgba(79,91,255,.12),rgba(79,91,255,.12))!important;' +
-      'background-image:linear-gradient(color-mix(in srgb,var(--brand,#4f5bff) 13%,transparent),color-mix(in srgb,var(--brand,#4f5bff) 13%,transparent))!important;' +
-      'box-shadow:0 0 0 4px rgba(79,91,255,.16)!important}' +
-      'html .drop.dz-over.dz-over,html .mu-drop.dz-over.dz-over,html .dropzone.dz-over.dz-over{outline:0!important;border:2px dashed #4f5bff!important;border:2px dashed var(--brand,#4f5bff)!important}' +
-      'html .dz-over.dz-over *{pointer-events:none}' +
-      '#dz-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(12px);max-width:min(92vw,420px);z-index:2147483000;padding:10px 16px;border-radius:12px;background:#0f172a;color:#fff;font:700 13px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 14px 30px -12px rgba(15,23,42,.7);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;text-align:center}' +
-      '#dz-toast.on{opacity:1;transform:translateX(-50%) translateY(0)}';
-    (document.head || document.documentElement).appendChild(st);
-  }
-  function bn() {
-    if (document.documentElement.lang === 'bn') return true;
-    try { return localStorage.getItem('site-lang') === 'bn'; } catch (e) { return false; }
-  }
-  function say(en, b) {
-    var el = document.getElementById('dz-toast');
-    if (!el) { el = document.createElement('div'); el.id = 'dz-toast'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite'); document.body.appendChild(el); }
-    el.textContent = bn() ? b : en;
-    void el.offsetWidth; el.classList.add('on');
-    clearTimeout(toastT); toastT = setTimeout(function () { el.classList.remove('on'); }, 3400);
+  var st = document.createElement('style');
+  st.textContent =
+    '.dz-over:not(#_):not(#__){border:2px dashed var(--brand,#4f46e5)!important;background:rgba(79,70,229,.09)!important;' +
+    'box-shadow:0 0 0 4px rgba(79,70,229,.16)!important;outline:0!important}' +
+    '.dz-over:not(#_):not(#__) *{pointer-events:none}' +
+    '.pt-dz.dz-over:not(#_):not(#__){transform:scale(1.015)}' +
+    '#siteDzToast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:100000;max-width:min(92vw,420px);padding:10px 16px;border-radius:12px;' +
+    'background:#0f172a;color:#fff;font:600 13.5px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Bengali",sans-serif;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);text-align:center}';
+  (document.head || document.documentElement).appendChild(st);
+
+  var over = null, toastT = null;
+  function bn() { return document.documentElement.lang === 'bn'; }
+  function toast(en, bnText) {
+    var t = document.getElementById('siteDzToast');
+    if (!t) { t = document.createElement('div'); t.id = 'siteDzToast'; t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite'); document.body.appendChild(t); }
+    t.textContent = bn() ? bnText : en; t.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, 3200);
   }
   function hasFiles(e) {
-    var t = e.dataTransfer && e.dataTransfer.types; if (!t) return false;
-    for (var i = 0; i < t.length; i++) if (t[i] === 'Files') return true;
+    var ty = e.dataTransfer && e.dataTransfer.types; if (!ty) return false;
+    for (var i = 0; i < ty.length; i++) if (ty[i] === 'Files') return true;
     return false;
   }
-  function isFileInput(el) { return !!el && el.tagName === 'INPUT' && String(el.type).toLowerCase() === 'file'; }
-  function inputFor(z) {
-    var id = z.getAttribute && z.getAttribute('data-dropzone');
-    if (id) { var byId = document.getElementById(id); if (isFileInput(byId)) return byId; }
-    if (z.tagName === 'LABEL' && z.control && isFileInput(z.control)) return z.control;
-    var lab = z.querySelector && z.querySelector('label[for]');
-    if (lab && lab.control && isFileInput(lab.control)) return lab.control;
-    var all = z.querySelectorAll ? z.querySelectorAll('input[type=file]') : [];
-    for (var i = 0; i < all.length; i++) if (!all[i].hasAttribute('capture')) return all[i];   /* prefer the gallery input over the camera one */
-    return all[0] || null;
-  }
-  function findZone(t) {
-    var el = t && t.nodeType === 1 ? t : (t && t.parentElement);
+  function usable(inp) { return inp && inp.tagName === 'INPUT' && inp.type === 'file' && !inp.disabled; }
+  function resolve(target) {
+    var el = target && target.nodeType === 1 ? target : (target && target.parentElement);
     if (!el || !el.closest) return null;
-    var z = el.closest('[data-dropzone]');
-    if (z && inputFor(z)) return z;
-    z = el.closest('.drop,.dropzone,.mu-drop,[data-dz]');
-    while (z) { if (inputFor(z)) return z; z = z.parentElement && z.parentElement.closest('.drop,.dropzone,.mu-drop,[data-dz]'); }
-    z = el.closest('label');
-    if (z && inputFor(z)) return z;
+    var z = el.closest('[data-dropzone]'), inp;
+    while (z) {
+      if (!z.hasAttribute('data-dz-off')) {
+        try { inp = document.querySelector(z.getAttribute('data-dropzone')); } catch (x) { inp = null; }
+        if (usable(inp)) return { zone: z, input: inp };
+      }
+      z = z.parentElement ? z.parentElement.closest('[data-dropzone]') : null;
+    }
+    var lb = el.closest('label[for]');
+    if (lb && !lb.hasAttribute('data-dz-off')) {
+      inp = document.getElementById(lb.getAttribute('for'));
+      if (usable(inp) && !inp.hasAttribute('capture')) return { zone: lb, input: inp };   // camera-only inputs are not drop targets
+    }
     return null;
   }
-  function hlTarget(z) {
-    var sel = z.getAttribute && z.getAttribute('data-dz-highlight');
-    if (sel) { try { var t = document.querySelector(sel); if (t) return t; } catch (e) {} }
-    return z;
-  }
-  function setActive(t) { clearTimeout(clearT); if (active && active !== t) active.classList.remove(CLS); active = t; if (t) t.classList.add(CLS); }
-  function clearNow() { clearTimeout(clearT); if (active) active.classList.remove(CLS); active = null; }
-  function clearSoon() { clearTimeout(clearT); clearT = setTimeout(clearNow, 90); }
-
-  function accepts(f, accept) {
-    if (!accept) return true;
-    var name = String(f.name || '').toLowerCase(), type = String(f.type || '').toLowerCase(), toks = accept.split(',');
-    for (var i = 0; i < toks.length; i++) {
-      var t = toks[i].trim().toLowerCase(); if (!t) continue;
-      if (t.charAt(0) === '.') { if (name.slice(-t.length) === t) return true; }
-      else if (t.slice(-2) === '/*') { if (type.indexOf(t.slice(0, -1)) === 0) return true; if (!type && t === 'image/*' && /\.(jpe?g|png|webp|gif|bmp|heic|heif|avif)$/.test(name)) return true; }
-      else if (type === t) return true;
+  function accepts(f, list) {
+    if (!list.length) return true;
+    var n = (f.name || '').toLowerCase(), t = (f.type || '').toLowerCase();
+    for (var i = 0; i < list.length; i++) {
+      var a = list[i];
+      if (a.charAt(0) === '.') { if (n.slice(-a.length) === a) return true; }
+      else if (a.slice(-2) === '/*') { if (t.indexOf(a.slice(0, -1)) === 0) return true; }
+      else if (t === a) return true;
     }
     return false;
   }
-  function deliver(input, files) {
-    var accept = input.getAttribute('accept') || '', ok = [], skipped = 0, i;
-    for (i = 0; i < files.length; i++) { if (accepts(files[i], accept)) ok.push(files[i]); else skipped++; }
-    if (skipped) say(skipped + (skipped > 1 ? ' files skipped' : ' file skipped') + ' \u2014 this box does not accept that file type', skipped + '\u099f\u09bf \u09ab\u09be\u0987\u09b2 \u09ac\u09be\u09a6 \u2014 \u098f\u0987 \u09ac\u0995\u09cd\u09b8\u09c7 \u098f\u0987 \u09a7\u09b0\u09a8\u09c7\u09b0 \u09ab\u09be\u0987\u09b2 \u099a\u09b2\u09ac\u09c7 \u09a8\u09be');
-    if (!ok.length) return;
-    if (!input.multiple && ok.length > 1) { ok = ok.slice(0, 1); say('Only one file at a time here \u2014 using the first one', '\u098f\u0996\u09be\u09a8\u09c7 \u098f\u0995\u09ac\u09be\u09b0\u09c7 \u098f\u0995\u099f\u09bf \u09ab\u09be\u0987\u09b2 \u2014 \u09aa\u09cd\u09b0\u09a5\u09ae\u099f\u09bf \u09a8\u09c7\u0993\u09af\u09bc\u09be \u09b9\u09b2\u09cb'); }
-    var max = parseInt(input.getAttribute('data-max-files') || '', 10);
-    if (max > 0 && ok.length > max) { ok = ok.slice(0, max); say('Up to ' + max + ' files at once \u2014 extra files ignored', '\u098f\u0995\u09ac\u09be\u09b0\u09c7 \u09b8\u09b0\u09cd\u09ac\u09cb\u099a\u09cd\u099a ' + max + '\u099f\u09bf \u09ab\u09be\u0987\u09b2 \u2014 \u09ac\u09be\u0995\u09bf\u0997\u09c1\u09b2\u09cb \u09ac\u09be\u09a6'); }
+  function setOver(z) {
+    if (over === z) return;
+    if (over) over.classList.remove('dz-over');
+    over = z; if (z) z.classList.add('dz-over');
+  }
+  function deliver(r, files) {
+    var inp = r.input;
+    var acc = (inp.getAttribute('accept') || '').split(',').map(function (s) { return s.trim().toLowerCase(); }).filter(Boolean);
+    var good = files.filter(function (f) { return accepts(f, acc); });
+    if (!good.length) { toast('This file type is not supported here.', 'এখানে এই ধরনের ফাইল চলবে না।'); return; }
+    var skipped = files.length - good.length;
+    if (!inp.multiple && good.length > 1) { good = good.slice(0, 1); toast('Only one file is allowed here — took the first.', 'এখানে একটি ফাইলই চলবে — প্রথমটি নেওয়া হয়েছে।'); }
+    var max = parseInt(inp.getAttribute('data-max') || r.zone.getAttribute('data-max') || '0', 10);
+    if (max > 0 && good.length > max) { good = good.slice(0, max); toast('You can add up to ' + max + ' files at a time.', 'একসাথে সর্বোচ্চ ' + max + 'টি ফাইল দেওয়া যাবে।'); }
+    else if (skipped > 0) toast(skipped + ' unsupported file(s) skipped.', skipped + 'টি অসমর্থিত ফাইল বাদ দেওয়া হয়েছে।');
     try {
-      var dt = new DataTransfer(); ok.forEach(function (f) { dt.items.add(f); });
-      input.files = dt.files;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    } catch (err) {   /* very old browsers without DataTransfer(): call the page's onchange directly */
-      if (typeof input.onchange === 'function') input.onchange({ target: { files: ok, value: '', type: 'file' }, currentTarget: input, preventDefault: function () {}, stopPropagation: function () {} });
-    }
+      var dt = new DataTransfer(); good.forEach(function (f) { dt.items.add(f); });
+      inp.files = dt.files;
+    } catch (x) { toast('Your browser could not accept dropped files — please use the button.', 'আপনার ব্রাউজারে ড্র্যাগ-ড্রপ চলছে না — বাটন ব্যবহার করুন।'); return; }
+    inp.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   function onOver(e) {
     if (!hasFiles(e)) return;
-    var own = e.defaultPrevented;           /* a page that handles this box itself keeps full control */
-    e.preventDefault();                     /* never let the browser open the file */
-    if (own) return;
-    var z = findZone(e.target), inp = z && inputFor(z), ok = !!(inp && !inp.disabled);
-    try { e.dataTransfer.dropEffect = ok ? 'copy' : 'none'; } catch (x) {}
-    if (ok) setActive(hlTarget(z)); else if (active) clearNow();
+    e.preventDefault();                                   // always: stops the browser from opening the file
+    var r = resolve(e.target);
+    if (e.dataTransfer) e.dataTransfer.dropEffect = r ? 'copy' : 'none';
+    setOver(r ? r.zone : null);
   }
-  function onDrop(e) {
+  document.addEventListener('dragenter', onOver, true);
+  document.addEventListener('dragover', onOver, true);
+  document.addEventListener('dragleave', function (e) {
+    if (!over) return;
+    var to = e.relatedTarget;
+    if (!to || !over.contains(to)) setOver(null);
+  }, true);
+  document.addEventListener('drop', function (e) {
     if (!hasFiles(e)) return;
-    var own = e.defaultPrevented;
-    e.preventDefault(); clearNow();
-    if (own) return;
-    var z = findZone(e.target), inp = z && inputFor(z);
-    if (!inp || inp.disabled) return;
-    var files = Array.prototype.slice.call(e.dataTransfer.files || []);
-    if (files.length) deliver(inp, files);
-  }
-  function init() {
-    injectCss();
-    document.addEventListener('dragenter', onOver, false);
-    document.addEventListener('dragover', onOver, false);
-    document.addEventListener('drop', onDrop, false);
-    document.addEventListener('dragend', clearNow, false);
-    document.addEventListener('dragleave', function (e) { if (hasFiles(e) && !e.relatedTarget) clearSoon(); }, false);   /* pointer left the window */
-    /* public helper for boxes created by other scripts: SiteDrop.register(el, 'inputId', '#optionalHighlightSelector') */
-    window.SiteDrop = {
-      register: function (el, inputId, highlight) { if (!el) return; if (inputId) el.setAttribute('data-dropzone', inputId); else if (!el.hasAttribute('data-dz')) el.setAttribute('data-dz', ''); if (highlight) el.setAttribute('data-dz-highlight', highlight); },
-      deliver: deliver
-    };
-  }
-  injectCss();
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+    e.preventDefault();
+    var r = resolve(e.target); setOver(null);
+    if (!r) return;
+    var files = [].slice.call(e.dataTransfer.files || []).filter(function (f) { return f && (f.size > 0 || f.type); });   // drops folders have no type/size
+    if (!files.length) return;
+    deliver(r, files);
+  }, true);
+  window.addEventListener('dragend', function () { setOver(null); });
+  window.addEventListener('blur', function () { setOver(null); });
 })();

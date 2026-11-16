@@ -488,6 +488,4 @@ body #sw .sw-info{text-align:center;color:#64748b;font-size:12.5px;font-weight:6
 
 @media(prefers-reduced-motion:reduce){body #sw .sw-btn,body #sw .sw-pill{transition:none!important;transform:none!important}}
 
-/* ===== v11: Aadhaar / card previews - exact 85.6 x 53.98 mm frame (1.586:1), clean 10px corners, same for Front, Back, Normal and Tricolour ===== */
-.out canvas,.wz .out canvas{aspect-ratio:85.6/53.98;object-fit:fill;border-radius:10px;overflow:hidden;background:#fff}
-.wz .out .oc>canvas{height:auto}
+.wz .out .oc>canvas{border-radius:10px;aspect-ratio:85.6/53.98;object-fit:fill}
