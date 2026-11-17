@@ -327,6 +327,7 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb26
 </style>
 <script src="/site-ui.js"></script>
 <script src="/voice-alerts.js"></script>
+<script src="/p2p.js"></script>
 <style id="site-theme">
 /* therajesh.shop — modern aurora theme v2 */
 :root{--brand:#4f5bff;--brand-ink:#3338d6;--brand-soft:#f0f2ff;--brand-line:#d6dbff;--brand-dk:#14163f;--brand-md:#2c2a8f;--brand-lt:#a5b4ff;--brand-lt2:#d4c7ff;--brand-pale:#e6e9ff;--ac:#4f5bff;
@@ -1408,9 +1409,12 @@ async function sendOrder(){$('oerr').textContent='';if(!cart.length){$('oerr').t
    const file=new File([pdfBytes],'id-print-order.pdf',{type:'application/pdf'});
    if(file.size>25*1048576)throw new Error('The order is larger than 25 MB. Remove a page or lower the resolution.');
    const labels=[...new Set(cart.map(c=>c.label))].slice(0,3).join(', ');
-   const fd=new FormData();fd.append('meta',JSON.stringify({kind:'doc',paper,name:$('oName').value.trim(),phone:$('oPhone').value.trim(),color,copies,pages:[cart.length],orient:['portrait'],info:`${labels} · ${paper} · ${color?'Color':'B&W'}`}));
+   const meta={kind:'doc',paper,name:$('oName').value.trim(),phone:$('oPhone').value.trim(),color,copies,pages:[cart.length],orient:['portrait'],info:`${labels} · ${paper} · ${color?'Color':'B&W'}`};
+   const fd=new FormData();fd.append('meta',JSON.stringify(meta));
    fd.append('files',file,file.name);
-   const r=await (window.Prog?Prog.upload('/api/orders',fd,{label:'Uploading…'}):fetch('/api/orders',{method:'POST',body:fd})),d=await r.json();if(!r.ok)throw new Error(d.error||'Upload failed');
+   /* Direct P2P to the counter first; on offline counter / blocked WebRTC (4 s) the SAME file goes through the server upload */
+   const viaServer=async()=>{const r=await (window.Prog?Prog.upload('/api/orders',fd,{label:'Uploading…'}):fetch('/api/orders',{method:'POST',body:fd})),j=await r.json();if(!r.ok)throw new Error(j.error||'Upload failed');return j};
+   const d=window.P2P?await P2P.submit({files:[file],meta,cfg,btn:$('wzSend').offsetParent?$('wzSend'):$('oSend'),fallback:viaServer}):await viaServer();
    cart=[];sendItems=[];drawCart();btns.forEach(b=>b.disabled=false);showDone(d)}
   catch(e){$('oerr').textContent=e.message||'Something went wrong';btns.forEach(b=>b.disabled=false)}}
 $('oSend').onclick=sendOrder;$('wzSend').onclick=sendOrder;
@@ -1454,6 +1458,7 @@ function showDone(d){closePop();$('dock').classList.remove('show');
   else{$('layout').classList.add('hidden');document.querySelector('.tabs').classList.add('hidden');$('done').classList.remove('hidden')}
   $('oid').textContent=d.id;window.scrollTo(0,0);
  const amount=Number(d.amount);$('odone').textContent='Exact amount to pay: ₹'+amount.toFixed(2);
+ if(d.p2p){$('ost').className='status s-pending';$('ost').textContent='Delivered directly to the counter ✓';$('payMsg').textContent='Please pay ₹'+amount.toFixed(2)+' at the counter and show this token.';$('makePayment').classList.add('hidden');try{$('payHint2').classList.add('hidden')}catch(e){}try{updateTracker({status:'pending',pay_status:''})}catch(e){}return}
  // Online payment: Razorpay Standard Checkout when configured, otherwise YOUPI PG (same as the main order page)
  const useRzp=!!(cfg.razorpay&&cfg.razorpay.keyId),useYoupi=!!(cfg.youpi&&cfg.youpi.key),usePay=useRzp||useYoupi;
  const msg=t=>{$('payMsg').textContent=t};
@@ -1483,7 +1488,8 @@ function showDone(d){closePop();$('dock').classList.remove('show');
  else if(!usePay){msg('Online payment is not available right now. Please pay at the counter and show this token.');$('payHint2').classList.add('hidden');try{console.warn('Online payment off. Missing server variables:',(cfg.razorpayMissing||[]).join(', ')||'none reported')}catch(e){}}
  else startPayment();
  let polls=0,printedSeen=0;
- const poll=async()=>{let delay=3000;try{const o=await(await fetch('/api/orders/'+d.id)).json();
+ const poll=async()=>{if(document.hidden){const f=()=>{if(!document.hidden){document.removeEventListener('visibilitychange',f);poll()}};document.addEventListener('visibilitychange',f);return}
+  let delay=3000;try{const o=await(await fetch('/api/orders/'+d.id)).json();
    $('ost').className='status s-'+o.status;$('ost').textContent=(o.status==='pending'&&(o.paying||usePay))?'Waiting for your payment…':(LABEL[o.status]||o.status);
    if(o.pay_status==='paid'){$('paymentBox').innerHTML='<div style="font-weight:800;color:var(--brand-ink);font-size:18px">Payment received. Thank you!</div>';if(o.status==='approved')$('ost').textContent='Payment received. Sending to printer…'}
    updateTracker(o);try{window.ShopVoice&&ShopVoice.trackOrder(d.id,o)}catch(e){}

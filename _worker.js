@@ -20,6 +20,27 @@ const json = (data, status = 200) =>
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
   });
 
+// Public, read-only, non-personal JSON: browsers AND shared caches may keep it for 15 s.
+const PUBLIC_CACHE = 'public, max-age=15, s-maxage=15';
+const jsonPublic = (data, status = 200) =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': PUBLIC_CACHE },
+  });
+// Cloudflare edge cache (Cache API, per data centre) in front of a public GET: within the 15 s window the D1/KV work is skipped.
+// Key = origin + path (the query string is ignored so cache-busting params cannot defeat it). Only 200s marked public/s-maxage are stored.
+async function edgeCached(request, ctx, build) {
+  let cache = null, key = null;
+  try {
+    cache = caches.default; const u = new URL(request.url);
+    key = new Request(u.origin + u.pathname, { method: 'GET' });
+    const hit = await cache.match(key); if (hit) return hit;
+  } catch (e) { cache = null; }
+  const res = await build();
+  try { if (cache && res.status === 200 && /s-maxage/.test(res.headers.get('cache-control') || '')) ctx.waitUntil(cache.put(key, res.clone())); } catch (e) {}
+  return res;
+}
+
 
 // ---------- price control ----------
 const PRICE_KEYS = { bw: 'B&W per page', color: 'Color per page', a3: 'A3 multiplier', photo4x6: '4x6 photo print', passport4x6: 'Passport sheet 4x6', passportA4: 'Passport sheet A4' };
@@ -65,7 +86,7 @@ const mainWorker = {
     let m;
     try {
       // Public, fast bot health check for the homepage badge (no secrets: only online/offline + coarse state).
-      if (path === 'whatsapp-status' && (method === 'GET' || method === 'HEAD')) {
+      if (path === 'whatsapp-status' && (method === 'GET' || method === 'HEAD')) return edgeCached(request, ctx, async () => {
         let online = false, state = 'offline';
         try {
           if (env.DB) {
@@ -74,17 +95,18 @@ const mainWorker = {
             online = !!st.online && (st.provider === 'cloud' || state === 'ready');   // bridge must report "ready" (WhatsApp logged in), not just "starting"/"qr"
           }
         } catch (e) { online = false; state = 'unreachable'; }
-        return new Response(JSON.stringify({ online, state, ts: Date.now() }), { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
-      }
+        const body = { online, state, ts: Date.now() };
+        return state === 'unreachable' ? json(body) : jsonPublic(body);   // a failed health probe is never cached
+      });
       if (!env.DB || !env.FILES) {
         return json({ error: 'Setup incomplete: add bindings DB (D1) and FILES (KV), then redeploy.' }, 500);
       }
-      if (path === 'config' && method === 'GET') {
+      if (path === 'config' && method === 'GET') return edgeCached(request, ctx, async () => {
         const p = await getPrices(env);
         const youpiKey = clean(env.YOUPI_KEY) || YOUPI_PUBLIC_KEY;
         const youpi = (youpiKey && youpiKey !== YOUPI_PUBLIC_KEY) ? { key: youpiKey, base: (clean(env.YOUPI_BASE) || 'https://pay.therajesh.shop').replace(/\/+$/, '') } : null;
-        return json({ shop: env.SHOP_NAME || 'Digital Seva Kendra', waNumber: clean(env.WA_NUMBER).replace(/\D/g, '') || null, rate: { bw: p.bw, color: p.color }, a3: p.a3, photo4x6: p.photo4x6, passport: { '4x6': p.passport4x6, A4: p.passportA4 }, youpi, razorpay: rzpPublic(env), razorpayMissing: rzpMissing(env) });
-      }
+        return jsonPublic({ shop: env.SHOP_NAME || 'Digital Seva Kendra', waNumber: clean(env.WA_NUMBER).replace(/\D/g, '') || null, rate: { bw: p.bw, color: p.color }, a3: p.a3, photo4x6: p.photo4x6, passport: { '4x6': p.passport4x6, A4: p.passportA4 }, youpi, razorpay: rzpPublic(env), razorpayMissing: rzpMissing(env) });
+      });
       if (path === 'youpi/webhook' && method === 'POST') return youpiWebhook(request, env);
       if (path === 'create-order' && method === 'POST') return rzpCreateOrder(request, env);
       if (path === 'verify-payment' && method === 'POST') return rzpVerify(request, env);
@@ -92,7 +114,7 @@ const mainWorker = {
       m = path.match(/^orders\/([A-Z0-9]+)$/);
       if (m && method === 'GET') return orderStatus(env, m[1]);
 
-      if (path === 'admin-config' && method === 'GET') return json({ googleClientId: clean(env.GOOGLE_CLIENT_ID) || null, pinLogin: !!(clean(env.ADMIN_PIN) && sessionSecret(env)) });
+      if (path === 'admin-config' && method === 'GET') return edgeCached(request, ctx, async () => jsonPublic({ googleClientId: clean(env.GOOGLE_CLIENT_ID) || null, pinLogin: !!(clean(env.ADMIN_PIN) && sessionSecret(env)) }));
       if (path === 'admin-pin-login' && method === 'POST') return adminPinLogin(request, env);
       if (path === 'wa/webhook') return waWebhook(request, env, ctx);
       if (path === 'razorpay/webhook' && method === 'POST') return razorpayWebhook(request, env);

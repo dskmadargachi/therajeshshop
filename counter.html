@@ -285,6 +285,8 @@ button{border-radius:12px;transition:transform .15s,box-shadow .2s}button:active
 </style>
 <script src="/site-ui.js"></script>
 <script src="/voice-alerts.js"></script>
+<script src="/p2p.js"></script>
+<script src="/p2p-counter.js"></script>
 <style id="site-theme">
 /* therajesh.shop — modern aurora theme v2 */
 :root{--brand:#4f5bff;--brand-ink:#3338d6;--brand-soft:#f0f2ff;--brand-line:#d6dbff;--brand-dk:#14163f;--brand-md:#2c2a8f;--brand-lt:#a5b4ff;--brand-lt2:#d4c7ff;--brand-pale:#e6e9ff;--ac:#4f5bff;
@@ -482,6 +484,7 @@ button{transition:transform .4s var(--spring),box-shadow .4s var(--spring),backg
         </div>
       </a>
       <div class="top-actions">
+        <span id="p2pBadge" role="status" style="background:#e0e7ff;color:#3730a3;padding:7px 14px;border-radius:999px;font-size:13px;font-weight:700;white-space:nowrap">⏳ P2P Receiver: Connecting…</span>
         <span id="count" style="background:rgba(255,255,255,.16);padding:7px 14px;border-radius:999px;font-size:13px;font-weight:700"></span>
         <button id="muBtn" class="mu-btn" type="button">➕ Manual Upload &amp; Print</button>
         <button id="sndBtn" type="button" data-voice-toggle title="Voice alerts on / off">🔊</button>
@@ -747,7 +750,10 @@ const thumbCache = new Map();
 const ext = (n) => (n.split('.').pop() || '').toLowerCase();
 const isImg = (n) => ['jpg', 'jpeg', 'png', 'webp'].includes(ext(n));
 
+const P2P_RX = /^(file|start|done|reject|approve|cash-approve|reprint)\/(P2P-[A-Z0-9]+(?:-\d+)?)$/;
 async function api(path, opt = {}) {
+  const pm = P2P_RX.exec(path);
+  if (pm && window.P2PCounter) return P2PCounter.handle(pm[1], pm[2]);   // direct (WebRTC) orders live in this browser, not on the server
   const r = await fetch('/api/admin/' + path, { ...opt, headers: { ...H(), ...(opt.headers || {}) } });
   if (r.status === 401) throw new Error('auth');
   if (r.status >= 500 && path === 'ping') { let m = ''; try { m = (await r.json()).error; } catch {} throw new Error(m || 'Server error'); }
@@ -798,7 +804,7 @@ async function getThumbUrl(f) {
 let gInit = false, vtimer, appLive = false;
 const BG_POLL_MS = 0;   // 0 = fully pause while the tab is hidden. Set e.g. 20000 to keep checking (and beeping) every 20 s in a background tab.
 let bgTimer;
-function startPolling() { stopPolling(); timer = setInterval(load, 4000); vtimer = setInterval(loadVisitors, 30000); }
+function startPolling() { stopPolling(); if (document.hidden) return; timer = setInterval(load, 4000); vtimer = setInterval(loadVisitors, 30000); }
 function stopPolling() { clearInterval(timer); clearInterval(vtimer); clearInterval(bgTimer); }
 document.addEventListener('visibilitychange', () => {
   if (!appLive) return;
@@ -808,7 +814,12 @@ document.addEventListener('visibilitychange', () => {
 async function initGoogle() {
   if (gInit) return; gInit = true;
   let cid = '', pin = false;
-  try { const c = await (await fetch('/api/admin-config')).json(); cid = c.googleClientId || ''; pin = !!c.pinLogin; } catch {}
+  try {
+    let c = null;
+    try { const k = JSON.parse(sessionStorage.getItem('admCfg:v1') || 'null'); if (k && Date.now() - k.t < 30000) c = k.c; } catch {}
+    if (!c) { c = await (await fetch('/api/admin-config')).json(); try { sessionStorage.setItem('admCfg:v1', JSON.stringify({ t: Date.now(), c })); } catch {} }
+    cid = c.googleClientId || ''; pin = !!c.pinLogin;
+  } catch {}
   $('pinBox').classList.toggle('hidden', !pin); $('orG').classList.toggle('hidden', !cid);
   if (!cid) { if (!pin) $('lerr').textContent = 'Login is not set up yet. Add ADMIN_PIN (or GOOGLE_CLIENT_ID) in Cloudflare.'; return; }
   await new Promise((res) => { const t = setInterval(() => { if (window.google && google.accounts) { clearInterval(t); res(); } }, 100); setTimeout(() => { clearInterval(t); res(); }, 8000); });
@@ -846,7 +857,7 @@ if (agentKey || sess) enter(); else initGoogle();
 /* ---------- Visitors ---------- */
 const fmtT = (ts) => new Date(ts).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
 const place = (r) => [r.city, r.region, r.country].filter(Boolean).join(', ') || 'Unknown';
-async function loadVisitors() { try { const r = await api('visitors'); if (r.ok) renderVisitors(await r.json()); } catch {} }
+async function loadVisitors() { if (document.visibilityState === 'hidden') return; try { const r = await api('visitors'); if (r.ok) renderVisitors(await r.json()); } catch {} }
 function renderVisitors(d) {
   const n = (x) => Number(x || 0).toLocaleString('en-IN');
   $('vOnline').textContent = n(d.online.u); $('vLive').textContent = d.online.u ? '● live' : '';
@@ -901,15 +912,18 @@ $('vFlt').addEventListener('click', (e) => { const b = e.target.closest('button'
 $('clr').onclick = async () => {
   if (!confirm('Remove ALL orders and delete all uploaded files?\n\nOrders waiting or printing right now will be lost.')) return;
   await api('clear', { method: 'POST' });
+  if (window.P2PCounter) P2PCounter.clear();
   blobCache.clear(); thumbCache.clear();
   load();
 };
 $('out').onclick = () => { ls.del('gsess'); store.del('agentkey'); try { google.accounts.id.disableAutoSelect(); } catch {} location.reload(); };
 
 async function load() {
+  if (document.visibilityState === 'hidden') return;                       // no Worker calls from a hidden tab (also covers late setTimeout(load) calls)
   if (!$('previewModal').classList.contains('hidden')) return;
   try {
     const data = await (await api('orders')).json(); const orders = data.orders; applyFlags(data.flags, data.wa);
+    if (window.P2PCounter) P2PCounter.orders().forEach((x) => orders.push(x));   // WebRTC orders join the exact same queue
     orders.sort((x, y) => (y.status === 'cash_wait') - (x.status === 'cash_wait'));
     const cashO = orders.filter((o) => o.status === 'cash_wait'), cashAmt = cashO.reduce((t, o) => t + (Number(o.amount) || 0), 0);
     const pend = orders.filter((o) => ['pending', 'wa_wait', 'cash_wait'].includes(o.status)).length;
@@ -930,8 +944,12 @@ async function load() {
     lastPending = pend;
     allOrders = orders;
     draw(orders.filter((o) => srcFilter === 'all' || (o.source || 'web') === srcFilter));
-  } catch (e) { if (e.message === 'auth') { clearInterval(timer); location.reload(); } }
+  } catch (e) {
+    if (e.message === 'auth') { clearInterval(timer); location.reload(); }
+    else if (window.P2PCounter && P2PCounter.count()) { try { allOrders = P2PCounter.orders(); draw(allOrders.filter((o) => srcFilter === 'all' || (o.source || 'web') === srcFilter)); } catch {} }   // server down: P2P orders must still be printable
+  }
 }
+if (window.P2PCounter) P2PCounter.onChange = () => { if (appLive && !document.hidden) load(); };
 
 let drawSig = '', cardSeen = new Set();
 function draw(orders) {
@@ -949,7 +967,7 @@ function draw(orders) {
     const pages = o.files.reduce((s, f) => s + f.pages, 0);
     div.innerHTML = `
       <div>
-        <div class="row">${o.source === 'whatsapp' ? '<span class="src src-wa">💬 WhatsApp</span>' : o.source === 'counter' ? '<span class="src src-web" style="background:#ede9fe;color:#6d28d9">🖥 Counter</span>' : '<span class="src src-web">🌐 Web</span>'}<span class="id">${o.token ? '#' + esc(o.token) : o.id}</span><span class="tag t-${o.status}">${STATUS_LABEL[o.status] || o.status.toUpperCase()}</span>${payBadge(o)}
+        <div class="row">${o.p2p ? '<span class="src src-web" style="background:#dcfce7;color:#166534">⚡ P2P Direct</span>' : o.source === 'whatsapp' ? '<span class="src src-wa">💬 WhatsApp</span>' : o.source === 'counter' ? '<span class="src src-web" style="background:#ede9fe;color:#6d28d9">🖥 Counter</span>' : '<span class="src src-web">🌐 Web</span>'}<span class="id">${o.token ? '#' + esc(o.token) : o.id}</span><span class="tag t-${o.status}">${STATUS_LABEL[o.status] || o.status.toUpperCase()}</span>${payBadge(o)}
         <span class="amt">₹${o.amount}</span></div>
         <div class="mute" style="margin-top:4px">${esc(o.name || 'Walk-in Customer')} ${o.source === 'whatsapp' && o.wa_number ? '· <a href="https://wa.me/' + esc(o.wa_number) + '" target="_blank" rel="noopener" style="color:#166534;font-weight:800;text-decoration:none">💬 +' + esc(o.wa_number) + '</a>' : (o.phone ? '· 📞 ' + esc(o.phone) : '')} · 🕒 ${new Date(o.created_at).toLocaleTimeString()}</div>
         <div style="margin-top:10px;padding:8px 12px;background:#f8fafc;border-radius:10px;font-size:13.5px;font-weight:700">
@@ -1362,7 +1380,29 @@ async function cashApprove(id) {
 function mkBtn(label, cls, fn, title) {
   const b = document.createElement('button'); b.type = 'button'; b.className = cls + ' sm2'; b.textContent = label; if (title) b.title = title; b.onclick = fn; return b;
 }
+function downloadLocal(f) {
+  const b = P2PCounter.blob(f.id); if (!b) { alert('File is no longer available.'); return; }
+  const a = document.createElement('a'), u = URL.createObjectURL(b); a.href = u; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 8000);
+}
+function buildP2PActions(act, o) {
+  const files = o.files || [];
+  const note = (t) => { const w = document.createElement('div'); w.className = 'mute'; w.style.cssText = 'width:100%;font-weight:700'; w.textContent = t; act.appendChild(w); };
+  if (o.status === 'cash_wait') {
+    note('⚡ Received directly from the customer (P2P) — collect ₹' + o.amount + ', then press the green button.');
+    const b = mkBtn('✅ Cash Received & Print Now', 'ok cashbtn', async () => { b.disabled = true; await api('cash-approve/' + o.id, { method: 'POST' }); load(); printOrderManually(o, files, true); }); act.appendChild(b);
+  } else if (o.status === 'printed') {
+    act.appendChild(mkBtn('🔄 Reprint', 'b-re', () => printOrderManually(o, files, false), 'Prints the same job again'));
+  } else {
+    note(o.status === 'printing' ? '🖨️ Printing from this browser…' : '⚡ Received directly from the customer (P2P)');
+    act.appendChild(mkBtn('🖨️ Print Now', 'ok', () => printOrderManually(o, files, true)));
+    act.appendChild(mkBtn('✅ Mark Printed', 'b-re', async () => { await api('done/' + o.id, { method: 'POST' }); load(); }));
+  }
+  if (files.length) act.appendChild(mkBtn('👁️ Preview', 'b-prev', () => previewModal(files[0], o)));
+  files.forEach((f, i) => act.appendChild(mkBtn('⬇️ Download' + (files.length > 1 ? ' ' + (i + 1) : ''), 'b-prev', () => downloadLocal(f), f.name)));
+  act.appendChild(mkBtn('🗑️ Delete', 'no', () => { if (confirm('Delete this order and its files from the counter?')) { P2PCounter.remove(o.id); blobCache.clear(); load(); } }));
+}
 function buildActions(act, o) {
+  if (o.p2p) return buildP2PActions(act, o);
   const live = ['wa_wait', 'pay_choose', 'pay_wait', 'cash_wait', 'pending', 'approved', 'printing', 'error'].includes(o.status);
   const files = o.files || [], img = files.find((f) => isImg(f.name));
   const note = (t) => { const w = document.createElement('div'); w.className = 'mute'; w.style.cssText = 'width:100%;font-weight:700'; w.textContent = t; act.appendChild(w); };

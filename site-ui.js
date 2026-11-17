@@ -72,6 +72,8 @@ var BN = {
 'Paper size': 'কাগজের মাপ', '4×6 Photo': '৪×৬ ছবি', 'Print mode': 'প্রিন্টের ধরন', 'Color': 'রঙিন', 'Copies': 'কপি',
 'Your name': 'আপনার নাম', 'Enter your name': 'আপনার নাম লিখুন', 'Mobile number (optional)': 'মোবাইল নম্বর (ঐচ্ছিক)', '10-digit mobile': '১০ অঙ্কের মোবাইল',
 'pages ×': 'পৃষ্ঠা ×', 'copy': 'কপি', 'Send to counter': 'কাউন্টারে পাঠান',
+'Sending…': 'পাঠানো হচ্ছে…', 'Connecting to counter…': 'কাউন্টারের সাথে সংযোগ হচ্ছে…', 'Sending directly to counter…': 'সরাসরি কাউন্টারে পাঠানো হচ্ছে…', 'Waiting for counter…': 'কাউন্টারের নিশ্চিতকরণের অপেক্ষা…', 'Delivered to counter ✓': 'কাউন্টারে পৌঁছেছে ✓',
+'⚡ Direct P2P': '⚡ সরাসরি P2P', '☁️ Server Fallback': '☁️ সার্ভারের মাধ্যমে', '🔌 Connecting to counter…': '🔌 কাউন্টারের সাথে সংযোগ হচ্ছে…', 'Delivered directly to the counter ✓': 'সরাসরি কাউন্টারে পৌঁছেছে ✓',
 'Passport photo sheet': 'পাসপোর্ট ছবির শিট',
 'Upload one portrait. We fit as many photos as possible on a 4×6 or A4 sheet.': 'একটি ছবি আপলোড করুন। ৪×৬ বা A4 শিটে যত বেশি সম্ভব ছবি বসানো হবে।',
 'Upload a portrait for the passport sheet': 'পাসপোর্ট শিটের জন্য ছবি আপলোড করুন',
@@ -563,22 +565,37 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
     t.textContent = T[state][lang()];
     if (note) note.hidden = state !== 'offline';
   }
-  function check() {
+  /* The result is kept in sessionStorage for 30 s, so reloads / page changes inside that window cost NO request at all. */
+  var SK = 'waStatus:v1', TTL = 30000, tick = 0;
+  function cached() {
+    try { var c = JSON.parse(sessionStorage.getItem(SK) || 'null'); if (c && Date.now() - c.t < TTL && (c.s === 'online' || c.s === 'offline')) return c.s; } catch (e) {}
+    return null;
+  }
+  function remember(s) { try { sessionStorage.setItem(SK, JSON.stringify({ t: Date.now(), s: s })); } catch (e) {} }
+  function check(force) {
     if (!document.getElementById('waCard')) return;
+    if (document.visibilityState === 'hidden') return;                       // never spend a request while the tab is hidden
+    if (!force) { var hit = cached(); if (hit) { paint(hit); return; } }
     var ctl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 4000);
-    fetch('/api/whatsapp-status?_=' + Date.now(), { cache: 'no-store', signal: ctl ? ctl.signal : undefined })
+    fetch('/api/whatsapp-status', { signal: ctl ? ctl.signal : undefined })  // no cache-buster: the server marks it cacheable for 15 s
       .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
-      .then(function (d) { paint(d && d.online ? 'online' : 'offline'); })
-      .catch(function () { paint('offline'); })
+      .then(function (d) { var s = d && d.online ? 'online' : 'offline'; remember(s); paint(s); })
+      .catch(function () { paint('offline'); })                              // a failed probe is shown but not remembered
       .then(function () { clearTimeout(timer); });
   }
+  function startTimer() { stopTimer(); tick = setInterval(function () { check(); }, 30000); }
+  function stopTimer() { if (tick) { clearInterval(tick); tick = 0; } }
   function start() {
     if (!document.getElementById('waCard')) return;   // only the homepage has the card
-    check();
-    setInterval(function () { if (!document.hidden) check(); }, 30000);
-    document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
-    window.addEventListener('online', check); window.addEventListener('offline', function () { paint('offline'); });
+    var first = cached(); if (first) paint(first);     // instant badge from the previous page view
+    if (!document.hidden) { check(); startTimer(); }
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') stopTimer();                // pause immediately
+      else { check(); startTimer(); }
+    });
+    window.addEventListener('online', function () { check(true); });
+    window.addEventListener('offline', function () { paint('offline'); });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
@@ -696,4 +713,12 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
   }, true);
   window.addEventListener('dragend', function () { setOver(null); });
   window.addEventListener('blur', function () { setOver(null); });
+})();
+
+
+/* ---------- Service Worker: cache-first static assets (see /sw.js). Never touches /api or HTML. ---------- */
+(function () {
+  if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+  function reg() { try { navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(function () {}); } catch (e) {} }
+  if (document.readyState === 'complete') reg(); else window.addEventListener('load', reg);
 })();

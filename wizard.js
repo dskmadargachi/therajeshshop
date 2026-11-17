@@ -208,6 +208,7 @@
     'border-radius:16px;background:#fff;color:#0f172a;box-shadow:0 18px 44px -10px rgba(15,23,42,.38),0 0 0 1px rgba(99,102,241,.2);opacity:0;transform:translate(-50%,22px);' +
     'pointer-events:none;transition:opacity .2s ease,transform .28s cubic-bezier(.16,1,.3,1);font-family:inherit}' +
     '#pg.on{opacity:1;transform:translate(-50%,0)}' +
+    '#pg.ok .pg-b i{background:#16a34a}#pg.ok .pg-p{color:#16a34a}' +
     '#pg .pg-t{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:13.5px;font-weight:700;line-height:1.3}' +
     '#pg .pg-l{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
     '#pg .pg-p{flex:none;font-variant-numeric:tabular-nums;color:#4f46e5;font-size:14px}' +
@@ -224,7 +225,7 @@
     document.body.appendChild(el);
   }
   function paint(task) {
-    build(); clearTimeout(hideT);
+    build(); clearTimeout(hideT); el.classList.remove('ok');
     var p = Math.round(task.pct);
     var l = el.querySelector('.pg-l'); if (l._k !== task.label) { l._k = task.label; l.textContent = task.label; }      // (compare the source text: site-ui may have translated the node)
     el.querySelector('.pg-p').textContent = p + '%';
@@ -250,6 +251,11 @@
       label: function (lab) { return api.set(task.pct, lab); },
       reset: function (lab) { if (!task.live) return api; task.pct = 0; if (lab) task.label = lab; if (cur === task) paint(task); return api; },     // new phase: starts again at 0 %
       done: function () { if (!task.live) return; task.pct = 100; if (cur === task) { paint(task); hide(450); } task.live = false; if (cur === task) cur = null; },
+      ok: function (lab) {                                                 // confirmation state (e.g. counter ACK): full green bar + label, stays a little longer
+        if (!task.live) return; task.pct = 100; if (lab) task.label = lab;
+        if (cur === task) { paint(task); el.classList.add('ok'); hide(1800); }
+        task.live = false; if (cur === task) cur = null;
+      },
       fail: function () { task.live = false; if (cur === task) { cur = null; hide(0); } }
     };
     return api;

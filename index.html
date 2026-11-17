@@ -357,6 +357,7 @@ input:focus,select:focus,textarea:focus{outline:3px solid color-mix(in srgb,var(
 </style>
 <script src="/site-ui.js"></script>
 <script src="/voice-alerts.js"></script>
+<script src="/p2p.js"></script>
 <style id="site-theme">
 /* therajesh.shop — modern aurora theme v2 */
 :root{--brand:#4f5bff;--brand-ink:#3338d6;--brand-soft:#f0f2ff;--brand-line:#d6dbff;--brand-dk:#14163f;--brand-md:#2c2a8f;--brand-lt:#a5b4ff;--brand-lt2:#d4c7ff;--brand-pale:#e6e9ff;--ac:#4f5bff;
@@ -1526,19 +1527,24 @@ $('submit').onclick = async () => {
     const PR = window.Prog ? Prog.start('Processing…') : null;
     try { for (const [k, it] of items.entries()) { PR && PR.part(k, items.length, 0); prepared.push(await applyEdits(it)); } } catch (pe) { PR && PR.fail(); throw pe; }
     PR && PR.done();
-    btn.textContent = 'Uploading…';
+    btn.textContent = 'Sending…';
     const fd = new FormData();
-    fd.append('meta', JSON.stringify({
+    const meta = {
       kind: 'doc', paper, name: $('name').value.trim(), phone: $('phone').value.trim(),
       color: paper === '4x6' ? true : color, copies: parseInt($('copies').value) || 1,
       pages: items.map((i) => i.pages), orient: prepared.map((p) => p.orient),
       info: `${paper} · ${(paper === '4x6' || color) ? 'Color' : 'B&W'}`,
-    }));
+    };
+    fd.append('meta', JSON.stringify(meta));
     prepared.forEach((p) => fd.append('files', p.file, p.file.name));
-    showDone(await post(fd));
+    showDone(await deliver(prepared.map((p) => p.file), meta, fd, btn));
   } catch (e) { $('err').textContent = e.message || 'Could not prepare your files.'; btn.disabled = false; btn.textContent = 'Send to counter'; }
 };
 
+/* Direct P2P to the counter first; if the counter is offline / NAT blocks WebRTC (4 s) the SAME files go through the server upload below */
+function deliver(files, meta, fd, btn) {
+  return window.P2P ? P2P.submit({ files, meta, cfg, btn, fallback: () => post(fd) }) : post(fd);
+}
 async function post(fd) {
   const r = await (window.Prog ? Prog.upload('/api/orders', fd, { label: 'Uploading…' }) : fetch('/api/orders', { method: 'POST', body: fd }));
   const d = await r.json();
@@ -1984,14 +1990,15 @@ $('ppSubmit').onclick = async () => {
     const { perSheet, sheets, want } = ppPlan(); const { canvas, land } = buildSheet(perSheet); PR && PR.set(55);
     const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.95)); PR && PR.done();
     const fd = new FormData();
-    fd.append('meta', JSON.stringify({
+    const meta = {
       kind: 'passport', paper: pp.sheet, name: $('ppName').value.trim(), phone: $('ppPhone').value.trim(),
       color: true, copies: sheets, pages: [1], orient: [land ? 'landscape' : 'portrait'],
       info: `Passport ${SIZES[pp.size].label} · ${want} photos · bg ${pp.bg === 'transparent' ? 'white (transparent cut-out on white)' : (pp.bg || 'original')}`,
-    }));
+    };
+    fd.append('meta', JSON.stringify(meta));
     fd.append('files', blob, 'passport_sheet.jpg');
-    btn.textContent = 'Uploading…';
-    showDone(await post(fd));
+    btn.textContent = 'Sending…';
+    showDone(await deliver([new File([blob], 'passport_sheet.jpg', { type: 'image/jpeg' })], meta, fd, btn));
   } catch (e) { $('ppErr').textContent = e.message || 'Something went wrong'; btn.disabled = false; btn.textContent = 'Send to counter'; }
 };
 
@@ -2024,6 +2031,13 @@ function showDone(d) {
   $('done').classList.remove('hidden'); $('oid').textContent = d.id;
   const amount = Number(d.amount);
   $('oamt').textContent = `Exact amount to pay: ₹${amount.toFixed(2)}`;
+  if (d.p2p) {   // sent straight to the counter over WebRTC: no server order exists, so no online payment / status polling -> pay at the counter
+    $('ost').className = 'status s-pending'; $('ost').textContent = 'Delivered directly to the counter ✓';
+    $('payMsg').textContent = `Please pay ₹${amount.toFixed(2)} at the counter and show this token.`;
+    $('makePayment').classList.add('hidden'); try { $('payHint2').classList.add('hidden'); } catch (e) {}
+    try { updateTracker({ status: 'pending', pay_status: '' }); } catch (e) {}
+    return;
+  }
   // Online payment: Razorpay Standard Checkout when configured, otherwise YOUPI PG
   const useRzp = !!(cfg.razorpay && cfg.razorpay.keyId);
   const useYoupi = !!(cfg.youpi && cfg.youpi.key);
@@ -2086,6 +2100,7 @@ function showDone(d) {
   else startPayment();
   let polls = 0, printedSeen = 0;
   const poll = async () => {
+    if (document.hidden) { const f = () => { if (!document.hidden) { document.removeEventListener('visibilitychange', f); poll(); } }; document.addEventListener('visibilitychange', f); return; }   // no polling in a hidden tab
     let delay = 3000;
     try {
       const o = await (await fetch('/api/orders/' + d.id)).json();
