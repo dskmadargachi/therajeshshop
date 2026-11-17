@@ -2,6 +2,7 @@
    Bangla female voice alerts with a soft chime in front.
 
      ShopVoice.paymentSuccess()  "পেমেন্ট সাকসেসফুল"
+     ShopVoice.payAtCounter()    "নতুন অর্ডার, কাউন্টারে পেমেন্ট বাকি"   (v18, optional /sounds/pay-at-counter.mp3)
      ShopVoice.printing()        "প্রিন্ট হচ্ছে"
      ShopVoice.printComplete()   "আপনার প্রিন্ট কমপ্লিট হয়েছে, কাউন্টার থেকে নিয়ে যান"
 
@@ -19,6 +20,7 @@
 
   var MSG = {
     paymentSuccess: { text: 'পেমেন্ট সাকসেসফুল', file: '/sounds/payment-success.mp3' },
+    payAtCounter:   { text: 'নতুন অর্ডার, কাউন্টারে পেমেন্ট বাকি', file: '/sounds/pay-at-counter.mp3' },   /* CHANGED (v18): P2P order tagged "Pay at Counter" */
     printing:       { text: 'প্রিন্ট হচ্ছে', file: '/sounds/printing.mp3' },
     printComplete:  { text: 'আপনার প্রিন্ট কমপ্লিট হয়েছে, কাউন্টার থেকে নিয়ে যান', file: '/sounds/print-complete.mp3' }
   };
@@ -267,6 +269,7 @@
 
   window.ShopVoice = {
     paymentSuccess: function (o) { return enqueue('paymentSuccess', o); },
+    payAtCounter: function (o) { return enqueue('payAtCounter', o); },   // CHANGED (v18)
     printing: function (o) { return enqueue('printing', o); },
     printComplete: function (o) { return enqueue('printComplete', o); },
     trackOrder: trackOrder,

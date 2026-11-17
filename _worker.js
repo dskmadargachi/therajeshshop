@@ -105,7 +105,9 @@ const mainWorker = {
         const p = await getPrices(env);
         const youpiKey = clean(env.YOUPI_KEY) || YOUPI_PUBLIC_KEY;
         const youpi = (youpiKey && youpiKey !== YOUPI_PUBLIC_KEY) ? { key: youpiKey, base: (clean(env.YOUPI_BASE) || 'https://pay.therajesh.shop').replace(/\/+$/, '') } : null;
-        return jsonPublic({ shop: env.SHOP_NAME || 'Digital Seva Kendra', waNumber: clean(env.WA_NUMBER).replace(/\D/g, '') || null, rate: { bw: p.bw, color: p.color }, a3: p.a3, photo4x6: p.photo4x6, passport: { '4x6': p.passport4x6, A4: p.passportA4 }, youpi, razorpay: rzpPublic(env), razorpayMissing: rzpMissing(env) });
+        return jsonPublic({ shop: env.SHOP_NAME || 'Digital Seva Kendra', waNumber: clean(env.WA_NUMBER).replace(/\D/g, '') || null, rate: { bw: p.bw, color: p.color }, a3: p.a3, photo4x6: p.photo4x6, passport: { '4x6': p.passport4x6, A4: p.passportA4 }, youpi, razorpay: rzpPublic(env), razorpayMissing: rzpMissing(env),
+          // CHANGED (v18): UPI id for the P2P "Pay Now" QR (set UPI_ID in Cloudflare, e.g. shop@okhdfcbank). Public by nature: it is what a QR code carries.
+          upi: /^[\w.\-]{2,64}@[A-Za-z0-9.\-]{2,32}$/.test(clean(env.UPI_ID)) ? clean(env.UPI_ID) : null, upiName: clean(env.UPI_NAME) || env.SHOP_NAME || null });
       });
       if (path === 'youpi/webhook' && method === 'POST') return youpiWebhook(request, env);
       if (path === 'create-order' && method === 'POST') return rzpCreateOrder(request, env);

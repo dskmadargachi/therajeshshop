@@ -8,11 +8,6 @@
     "/og-image.png",
     "/site.webmanifest",
     "/sw.js",
-    "/cards",
-    "/counter",
-    "/pdf-tools",
-    "/poster",
-    "/sounds/*",
     "/*.html",
     "/*.css",
     "/*.js",
@@ -23,10 +18,7 @@
     "/*.xml",
     "/*.svg",
     "/*.jpg",
-    "/*.jpeg",
     "/*.webp",
-    "/*.gif",
-    "/*.mp3",
-    "/*.woff2"
+    "/sounds/*"
   ]
 }

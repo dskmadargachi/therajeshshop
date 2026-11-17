@@ -2,6 +2,8 @@
    p2p-counter.js — counter.html side of the direct WebRTC file transfer (needs /p2p.js and PeerJS).
 
    * Owns the fixed peer id  P2P.COUNTER_ID  and keeps it alive: auto-reconnect with back-off, wake-from-sleep / network-back checks.
+   * CHANGED (v18): every order now carries paymentMethod / paymentStatus / amount / upiRef. finalize() turns that into the same
+     pay_status / status fields the server orders use, so counter.html shows 'Paid' vs 'Pay at Counter' and fires the right alert.
    * Every customer connection has its OWN transfer table keyed by transferId, so many customers can send at the same moment
      without their chunks ever mixing. A file is only accepted when chunk count + byte count + file signature check out.
    * Finished orders are stored locally (memory + IndexedDB so a reload loses nothing) and handed to counter.html through
@@ -153,7 +155,7 @@
     function onMeta(m) {
       var tid = clean(m.transferId, 40), oid = clean(m.orderId, 24);
       if (!/^P2P-[A-Z0-9]{4,12}$/.test(oid) || tid.indexOf(oid + '-') !== 0) return refuse(tid, 'Bad transfer id');
-      if (store.has(oid)) { var o = store.get(oid).order; return conn.send({ t: 'order', orderId: oid, amount: o.amount, status: o.status }); }   // duplicate -> just re-ACK
+      if (store.has(oid)) { var o = store.get(oid).order; return conn.send({ t: 'order', orderId: oid, amount: o.amount, status: o.status, paymentStatus: o.pay_status === 'paid' ? 'paid' : 'pending' }); }   // duplicate -> just re-ACK
       var name = safeName(m.fileName), ext = extOf(name), size = Number(m.fileSize), tc = Number(m.totalChunks), cnt = Number(m.fileCount), idx = Number(m.idx);
       if (!ALLOWED[ext]) return refuse(tid, 'File type not allowed: ' + name);
       if (!(size > 0) || size > MAX_FILE) return refuse(tid, name + ' is larger than 25 MB');
@@ -205,16 +207,37 @@
     var cfg = await getCfg();
     var amount = cfg ? P2P.estimate({ kind: kind, paper: paper, color: color, copies: copies, pages: files.map(function (x) { return x.pages; }) }, cfg)
                      : (Number(po.estAmount) > 0 && Number(po.estAmount) < 100000 ? Number(po.estAmount) : 0);
+
+    /* ---- CHANGED (v18): payment details sent by the customer page (top-level meta first, printOptions as backup) ---- */
+    var pm = (m.paymentMethod || po.paymentMethod) === 'pay_now' ? 'pay_now' : 'pay_at_counter';
+    var claimedPaid = pm === 'pay_now' && (m.paymentStatus || po.paymentStatus) === 'paid';
+    var upiRef = clean(m.upiRef || po.upiRef, 24).replace(/[^A-Za-z0-9]/g, '');
+    var paidAmt = Number(m.amount != null ? m.amount : po.amount) || 0;
+    var paidAt = Number(m.paidAt || po.paidAt) || 0;
+    /* the customer's "paid" is only accepted when a UPI reference came with it AND the amount covers our own price calculation;
+       otherwise the order is kept as a cash/pay-at-counter order with a note, so nothing is ever marked paid by mistake */
+    var paid = claimedPaid && upiRef.length >= 8 && (amount <= 0 || paidAmt + 0.5 >= amount);
+    var note = '';
+    if (claimedPaid && !paid) note = 'Customer says paid ₹' + paidAmt + (upiRef ? ' (ref ' + upiRef + ')' : ' (no valid UPI ref)') + ', but the counter price is ₹' + amount + ' — treated as UNPAID, please verify.';
+    else if (paid) note = 'Paid via UPI · ref ' + upiRef + ' (entered by customer — confirm in your UPI app).';
     var order = {
       id: oid, token: '', name: clean(m.customerName || po.name, 60), phone: clean(po.phone, 15).replace(/[^\d+]/g, ''),
-      color: color, copies: copies, amount: amount, status: 'cash_wait', pay_status: '', created_at: Date.now(), paper: paper,
-      opts: JSON.stringify({ kind: kind, orient: orient, info: clean(po.info, 160) }), source: 'web', p2p: true, note: '', wa_number: '', files: files
+      color: color, copies: copies, amount: amount,
+      status: paid ? 'pending' : 'cash_wait',                 // paid -> straight to the print queue; unpaid -> "Cash Pending" card (existing behaviour)
+      pay_status: paid ? 'paid' : '',
+      pay_method: pm, pay_ref: paid ? upiRef : '', paid_at: paid ? (paidAt || Date.now()) : 0,   // NEW fields read by counter.js
+      created_at: Date.now(), paper: paper,
+      opts: JSON.stringify({ kind: kind, orient: orient, info: clean(po.info, 160) }), source: 'web', p2p: true, note: note, wa_number: '', files: files
     };
     var rec = { id: oid, order: order, blobs: blobs };
     store.set(oid, rec); persist(rec);
-    try { conn.send({ t: 'order', orderId: oid, amount: amount, status: order.status }); } catch (e) {}   // ACK -> sender shows "Delivered"
+    try { conn.send({ t: 'order', orderId: oid, amount: amount, status: order.status, paymentStatus: paid ? 'paid' : 'pending' }); } catch (e) {}   // ACK -> sender shows "Delivered" (CHANGED v18: + paymentStatus)
     notify();
-    try { window.ShopVoice && ShopVoice.paymentSuccess({ id: oid }); } catch (e) {}                        // existing Bengali voice alert
+    /* CHANGED (v18): paid -> the existing "payment successful" voice; pay-at-counter -> a different "payment due at counter" voice
+       (previously every P2P order said "payment successful", even unpaid ones) */
+    try {
+      if (window.ShopVoice) { if (paid) ShopVoice.paymentSuccess({ id: oid }); else (ShopVoice.payAtCounter || ShopVoice.paymentSuccess)({ id: oid }); }
+    } catch (e) {}
   }
 
   /* ---------------------------------------------------------------- what counter.html uses */
