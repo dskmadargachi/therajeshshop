@@ -471,7 +471,9 @@ function reveal(root) {
   var list = []; if (root.matches && root.matches(RV_SEL)) list.push(root);
   if (root.querySelectorAll) [].push.apply(list, root.querySelectorAll(RV_SEL));
   list.forEach(function (el, i) {
-    if (el.dataset.rv) return; if (el.closest && el.closest('#tilesBox')) return; el.dataset.rv = '1';
+    if (el.dataset.rv) return; if (el.closest && el.closest('#tilesBox')) return;
+    if (el.getBoundingClientRect().top < (window.innerHeight || 800)) return;   /* already on screen at load: never start it hidden (keeps LCP/first paint clean) */
+    el.dataset.rv = '1';
     el.style.setProperty('--d', ((i % 6) * 0.06) + 's'); el.classList.add('rv'); rvIO.observe(el);
   });
 }
