@@ -1,5 +1,24 @@
 {
   "version": 1,
   "include": ["/api/*", "/"],
-  "exclude": []
+  "exclude": [
+    "/robots.txt",
+    "/sitemap.xml",
+    "/llms.txt",
+    "/og-image.png",
+    "/site.webmanifest",
+    "/sw.js",
+    "/*.html",
+    "/*.css",
+    "/*.js",
+    "/*.png",
+    "/*.ico",
+    "/*.webmanifest",
+    "/*.txt",
+    "/*.xml",
+    "/*.svg",
+    "/*.jpg",
+    "/*.webp",
+    "/sounds/*"
+  ]
 }

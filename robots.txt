@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /counter.html
+
+Sitemap: https://therajesh.shop/sitemap.xml

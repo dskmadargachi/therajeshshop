@@ -1,0 +1,15 @@
+# therajesh.shop
+
+> therajesh.shop is the online front desk of Digital Seva Kendra (Rajesh), a print and document shop. Customers upload PDFs, photos, Word or Excel files from their phone, pay by UPI or cash, and collect the print at the counter, or send a file on WhatsApp for automatic printing. The site is available in English and Bengali (বাংলা), and PDF and card tools run on the user's device without uploading files.
+
+## Main pages
+
+- [Print documents & photos](https://therajesh.shop/): Upload PDF, JPG, PNG, Word, Excel or PowerPoint files, choose B&W or colour and copies, pay by UPI or cash, and collect the print. Also makes passport photo sheets and offers WhatsApp auto-print.
+- [Card crop & smart scanner](https://therajesh.shop/cards.html): Crop Aadhaar, PAN and ration card images and place them on an A4 sheet, or scan documents with automatic edge detection and perspective correction.
+- [PDF tools](https://therajesh.shop/pdf-tools.html): Merge, split, organize, compress, N-up, black & white, unlock and convert PDFs privately in the browser, then send them to the print counter.
+- [Poster](https://therajesh.shop/poster.html): Printable Bengali poster with a QR code that opens the upload page.
+
+## Optional
+
+- [Sitemap](https://therajesh.shop/sitemap.xml): Machine-readable list of public pages.
+- [Directions](https://maps.app.goo.gl/UmdKBVE93Mx9LiMfA): Shop location on Google Maps.
