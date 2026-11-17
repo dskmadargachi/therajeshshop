@@ -2,15 +2,17 @@
    p2p-counter.js — counter.html side of the direct WebRTC file transfer (needs /p2p.js and PeerJS).
 
    * Owns the fixed peer id  P2P.COUNTER_ID  and keeps it alive: auto-reconnect with back-off, wake-from-sleep / network-back checks.
-   * CHANGED (v19): MAX_FILE is 100 MB; finalize() accepts Razorpay-verified payments (paymentMethod 'pay_now' + paymentStatus 'paid' + razorpayPaymentId).
-   * CHANGED (v18): every order now carries paymentMethod / paymentStatus / amount / upiRef. finalize() turns that into the same
-     pay_status / status fields the server orders use, so counter.html shows 'Paid' vs 'Pay at Counter' and fires the right alert.
    * Every customer connection has its OWN transfer table keyed by transferId, so many customers can send at the same moment
      without their chunks ever mixing. A file is only accepted when chunk count + byte count + file signature check out.
    * Finished orders are stored locally (memory + IndexedDB so a reload loses nothing) and handed to counter.html through
        P2PCounter.orders()            -> order objects shaped exactly like /api/admin/orders rows (+ p2p:true)
        P2PCounter.handle(action,id)   -> Response-like answers for file/start/approve/cash-approve/done/reject/reprint
        P2PCounter.blob(fileId)        -> the reassembled File
+   * PAYMENT + LIVE STATUS: a new order arrives as status 'pending' ("customer is choosing Pay Now / Pay at Counter"). The customer's page then sends
+       { t:'pay', method:'counter' }  -> status 'cash_wait'  (the counter dashboard shows the green "Cash Received" button)
+       { t:'paying' } / { t:'paid' }  -> this counter asks the Worker  GET /api/p2p/pay-status/:id  and ONLY marks the order paid when the Worker
+                                         confirms a verified Razorpay signature for the same amount (never trusts the browser)
+     Every change is pushed back to the customer as { t:'status', ... }, so the customer sees the same tracker as for a server order.
    ===================================================================================================================== */
 (function () {
   if (window.P2PCounter) return;
@@ -19,12 +21,22 @@
     docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xls: 'application/vnd.ms-excel',
     xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', ppt: 'application/vnd.ms-powerpoint',
     pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' };
-  var MAX_FILES = 10, MAX_FILE = 100 * 1024 * 1024, MAX_ORDER = 100 * 1024 * 1024, MAX_CONNS = 25, MAX_ACTIVE_BYTES = 400 * 1024 * 1024;
+  var MAX_FILES = 10, MAX_FILE = 25 * 1024 * 1024, MAX_ORDER = 100 * 1024 * 1024, MAX_CONNS = 25, MAX_ACTIVE_BYTES = 400 * 1024 * 1024;
   var IDLE_MS = 60000, KEEP_MS = 24 * 3600 * 1000;
+  var PURGE_AFTER_PRINT_MS = 60000;              // after "Printed" the file is wiped from this PC (same privacy promise as for server orders); reprint is possible until then
+  var PAY_POLL_MS = 8000;
 
   var api = { onChange: null };
   var store = new Map();                         // orderId -> { id, order, blobs:[File] }
   var conns = new Set(), activeBytes = 0;
+  var subs = new Map();                          // orderId -> Set(connection)  (customers watching that order)
+  function sub(oid, conn) { var s = subs.get(oid); if (!s) subs.set(oid, s = new Set()); s.add(conn); }
+  function unsub(conn) { subs.forEach(function (s, k) { s.delete(conn); if (!s.size) subs.delete(k); }); }
+  function statusMsg(o) {
+    return { t: 'status', orderId: o.id, status: o.status, pay_status: o.pay_status || '', pay_method: o.pay_method || '', amount: o.amount,
+      pc_deleted: o.pc_deleted ? 1 : 0, srv_deleted: o.srv_deleted ? 1 : 0, note: o.note || '', pages: (o.files || []).reduce(function (a, f) { return a + (f.pages || 0); }, 0) };
+  }
+  function push(o) { var s = subs.get(o.id); if (!s) return; var m = statusMsg(o); s.forEach(function (c) { try { c.send(m); } catch (e) {} }); }
 
   /* ---------------------------------------------------------------- status badge */
   var status = 'connecting';
@@ -137,7 +149,7 @@
 
     function drop(tid) { var t = T.get(tid); if (t) { activeBytes -= t.size; T.delete(tid); } }
     function refuse(tid, err) { try { conn.send({ t: 'nack', transferId: tid, error: err }); } catch (e) {} drop(tid); }
-    function cleanup() { T.forEach(function (t, k) { drop(k); }); G.clear(); conns.delete(conn); clearInterval(sweep); }
+    function cleanup() { T.forEach(function (t, k) { drop(k); }); G.clear(); conns.delete(conn); unsub(conn); clearInterval(sweep); }
     var sweep = setInterval(function () { var now = Date.now(); T.forEach(function (t, k) { if (now - t.last > IDLE_MS) refuse(k, 'Transfer timed out'); }); }, 15000);
 
     conn.on('data', function (m) {
@@ -151,15 +163,27 @@
       if (m.t === 'meta') return onMeta(m);
       if (m.t === 'chunk') return onChunk(m);
       if (m.t === 'end') return onEnd(m);
+      if (m.t === 'get' || m.t === 'pay' || m.t === 'paying' || m.t === 'paid') return onOrderMsg(m);
+    }
+
+    /* the customer's page talks about an order it already delivered: status question, payment choice, Razorpay progress */
+    function onOrderMsg(m) {
+      var oid = clean(m.orderId, 24), rec = store.get(oid);
+      if (!rec) { try { conn.send({ t: 'gone', orderId: oid }); } catch (e) {} return; }
+      var o = rec.order; sub(oid, conn);
+      if (m.t === 'pay' && m.method === 'counter') api.choose(o.id, 'counter');
+      else if (m.t === 'paying') { if (!o.payTried) { o.payTried = true; persist(rec); } checkPaid(rec); }
+      else if (m.t === 'paid') { o.payTried = true; checkPaid(rec); }
+      try { conn.send(statusMsg(o)); } catch (e) {}
     }
 
     function onMeta(m) {
       var tid = clean(m.transferId, 40), oid = clean(m.orderId, 24);
       if (!/^P2P-[A-Z0-9]{4,12}$/.test(oid) || tid.indexOf(oid + '-') !== 0) return refuse(tid, 'Bad transfer id');
-      if (store.has(oid)) { var o = store.get(oid).order; return conn.send({ t: 'order', orderId: oid, amount: o.amount, status: o.status, paymentStatus: o.pay_status === 'paid' ? 'paid' : 'pending' }); }   // duplicate -> just re-ACK
+      if (store.has(oid)) { var o = store.get(oid).order; return conn.send({ t: 'order', orderId: oid, amount: o.amount, status: o.status }); }   // duplicate -> just re-ACK
       var name = safeName(m.fileName), ext = extOf(name), size = Number(m.fileSize), tc = Number(m.totalChunks), cnt = Number(m.fileCount), idx = Number(m.idx);
       if (!ALLOWED[ext]) return refuse(tid, 'File type not allowed: ' + name);
-      if (!(size > 0) || size > MAX_FILE) return refuse(tid, name + ' is larger than 100 MB');
+      if (!(size > 0) || size > MAX_FILE) return refuse(tid, name + ' is larger than 25 MB');
       if (tc !== Math.max(1, Math.ceil(size / CHUNK))) return refuse(tid, 'Bad chunk count');
       if (!(cnt >= 1 && cnt <= MAX_FILES) || !(idx >= 0 && idx < cnt)) return refuse(tid, 'Bad file count');
       if (T.has(tid) || T.size >= 12) return refuse(tid, 'Too many transfers');
@@ -208,48 +232,57 @@
     var cfg = await getCfg();
     var amount = cfg ? P2P.estimate({ kind: kind, paper: paper, color: color, copies: copies, pages: files.map(function (x) { return x.pages; }) }, cfg)
                      : (Number(po.estAmount) > 0 && Number(po.estAmount) < 100000 ? Number(po.estAmount) : 0);
-
-    /* ---- CHANGED (v19): payment details sent by the customer page (top-level meta first, printOptions as backup) ---- */
-    var pm = (m.paymentMethod || po.paymentMethod) === 'pay_now' ? 'pay_now' : 'pay_at_counter';
-    var claimedPaid = pm === 'pay_now' && (m.paymentStatus || po.paymentStatus) === 'paid';
-    var rzpPay = clean(m.razorpayPaymentId || po.razorpayPaymentId, 40).replace(/[^A-Za-z0-9_]/g, '');
-    var rzpOrd = clean(m.razorpayOrderId || po.razorpayOrderId, 40).replace(/[^A-Za-z0-9_]/g, '');
-    var upiRef = clean(m.upiRef || po.upiRef, 24).replace(/[^A-Za-z0-9]/g, '');           // legacy UPI/UTR path (older customer pages)
-    var paidAmt = Number(m.amount != null ? m.amount : po.amount) || 0;
-    var paidAt = Number(m.paidAt || po.paidAt) || 0;
-    var covers = amount <= 0 || paidAmt + 0.5 >= amount;                                  // paid amount must cover OUR own price calculation
-    var isRzp = claimedPaid && /^pay_[A-Za-z0-9]{6,}$/.test(rzpPay);                       // customer page already verified the Razorpay signature via /api/verify-payment
-    var paid = claimedPaid && covers && (isRzp || upiRef.length >= 8);
-    var ref = isRzp ? rzpPay : upiRef;
-    var note = '';
-    if (claimedPaid && !paid) note = 'Customer says paid ₹' + paidAmt + (ref ? ' (ref ' + ref + ')' : ' (no valid payment ID)') + ', but the counter price is ₹' + amount + ' — treated as UNPAID, please verify.';
-    else if (paid && isRzp) note = 'Paid online via Razorpay · payment ID ' + rzpPay + (rzpOrd ? ' · order ' + rzpOrd : '') + ' (signature verified by the server at checkout).';
-    else if (paid) note = 'Paid via UPI · ref ' + upiRef + ' (entered by customer — confirm in your UPI app).';
     var order = {
       id: oid, token: '', name: clean(m.customerName || po.name, 60), phone: clean(po.phone, 15).replace(/[^\d+]/g, ''),
-      color: color, copies: copies, amount: amount,
-      status: paid ? 'pending' : 'cash_wait',                 // paid -> straight to the print queue; unpaid -> "Cash Pending" card (existing behaviour)
-      pay_status: paid ? 'paid' : '',                         // 'paid' = shown as Paid in the counter queue
-      pay_method: pm, pay_ref: paid ? ref : '', paid_at: paid ? (paidAt || Date.now()) : 0,   // fields read by counter.js
-      pay_gateway: paid ? (isRzp ? 'razorpay' : 'upi') : '', rzp_payment_id: paid && isRzp ? rzpPay : '', rzp_order_id: paid && isRzp ? rzpOrd : '',   // NEW (v19)
-      created_at: Date.now(), paper: paper,
-      opts: JSON.stringify({ kind: kind, orient: orient, info: clean(po.info, 160) }), source: 'web', p2p: true, note: note, wa_number: '', files: files
+      color: color, copies: copies, amount: amount, status: 'pending', pay_status: '', pay_method: '', created_at: Date.now(), paper: paper,
+      opts: JSON.stringify({ kind: kind, orient: orient, info: clean(po.info, 160) }), source: 'web', p2p: true, via: 'p2p', note: '', wa_number: '', files: files,
+      pc_deleted: 0, srv_deleted: 0
     };
     var rec = { id: oid, order: order, blobs: blobs };
-    store.set(oid, rec); persist(rec);
-    try { conn.send({ t: 'order', orderId: oid, amount: amount, status: order.status, paymentStatus: paid ? 'paid' : 'pending' }); } catch (e) {}   // ACK -> sender shows "Delivered" (CHANGED v18: + paymentStatus)
-    notify();
-    /* CHANGED (v18): paid -> the existing "payment successful" voice; pay-at-counter -> a different "payment due at counter" voice
-       (previously every P2P order said "payment successful", even unpaid ones) */
-    try {
-      if (window.ShopVoice) { if (paid) ShopVoice.paymentSuccess({ id: oid }); else (ShopVoice.payAtCounter || ShopVoice.paymentSuccess)({ id: oid }); }
-    } catch (e) {}
+    store.set(oid, rec); persist(rec); sub(oid, conn);
+    try { conn.send({ t: 'order', orderId: oid, amount: amount, status: order.status }); } catch (e) {}   // ACK -> sender shows "Delivered"
+    notify();                                                                                              // counter.js: new-job beep + toast; the voice alert follows when the order is paid
   }
+
+  /* ---------------------------------------------------------------- payment */
+  function touch(rec, patch) { Object.keys(patch).forEach(function (k) { rec.order[k] = patch[k]; }); persist(rec); push(rec.order); notify(); }
+  var paidAlready = function (o) { return o.pay_status === 'paid' || o.pay_status === 'cash_received'; };
+  var settled = function (o) { return ['printing', 'printed', 'rejected', 'expired'].indexOf(o.status) >= 0; };
+
+  /* customer pressed "Pay at Counter" */
+  api.choose = function (id, how) {
+    var rec = store.get(String(id)); if (!rec) return false;
+    var o = rec.order;
+    if (how === 'counter' && !paidAlready(o) && !settled(o) && o.status !== 'cash_wait') touch(rec, { status: 'cash_wait', pay_method: 'cash', pay_status: '' });
+    else push(o);
+    return true;
+  };
+  /* customer says "I paid online": ask the Worker (it verified the Razorpay signature) - the browser is never trusted */
+  var checking = {};
+  function checkPaid(rec) {
+    var o = rec.order; if (paidAlready(o) || o.status === 'rejected' || checking[o.id]) return;
+    checking[o.id] = 1;
+    fetch('/api/p2p/pay-status/' + encodeURIComponent(o.id), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j || !j.paid || paidAlready(o)) return;
+      if (Math.abs(Number(j.amount) - Number(o.amount)) > 0.01) { touch(rec, { note: 'Online payment of ₹' + j.amount + ' does not match ₹' + o.amount + ' - check before printing' }); return; }
+      touch(rec, { pay_status: 'paid', pay_method: 'upi', pay_utr: String(j.utr || ''), note: '', status: (o.status === 'pending' || o.status === 'cash_wait') ? 'approved' : o.status });
+    }).catch(function () {}).then(function () { delete checking[o.id]; });
+  }
+  setInterval(function () {                                    // safety net: a lost message must not leave a paid customer waiting
+    store.forEach(function (rec) { var o = rec.order; if (o.payTried && !paidAlready(o) && !settled(o)) checkPaid(rec); });
+  }, PAY_POLL_MS);
 
   /* ---------------------------------------------------------------- what counter.html uses */
   api.orders = function () {
     var now = Date.now(), out = [];
-    store.forEach(function (rec, id) { if (now - rec.order.created_at > KEEP_MS) { store.delete(id); unpersist(id); } else out.push(rec.order); });
+    store.forEach(function (rec, id) {
+      var o = rec.order;
+      if (now - o.created_at > KEEP_MS) { store.delete(id); unpersist(id); return; }
+      if (o.status === 'printed' && !o.pc_deleted && o.done_at && now - o.done_at > PURGE_AFTER_PRINT_MS) {   // privacy wipe: file leaves this PC, nothing was ever on the server
+        rec.blobs = []; persist(rec); touch(rec, { pc_deleted: 1, srv_deleted: 1 });
+      }
+      out.push(o);
+    });
     return out;
   };
   api.count = function () { return store.size; };
@@ -259,7 +292,7 @@
     var idx = parseInt(String(fileId).split('-').pop(), 10);
     return rec.blobs[idx] || null;
   };
-  api.remove = function (id) { var rec = store.get(id); if (!rec) return; store.delete(id); unpersist(id); notify(); };
+  api.remove = function (id) { var rec = store.get(id); if (!rec) return; if (!rec.order.pc_deleted && rec.order.status !== 'printed') { rec.order.status = 'rejected'; } push(rec.order); subs.delete(id); store.delete(id); unpersist(id); notify(); };
   api.clear = function () { Array.from(store.keys()).forEach(api.remove); };
   var json = function (o, st) { return new Response(JSON.stringify(o), { status: st || 200, headers: { 'content-type': 'application/json' } }); };
   /* answers the same calls counter.html makes to /api/admin/... for server orders, so Preview / Print / Download / Delete behave the same */
@@ -271,11 +304,11 @@
     var rec = recOf(id); if (!rec) return json({ error: 'Order not found' }, 404);
     var o = rec.order;
     if (action === 'reject') { api.remove(o.id); return json({ ok: true }); }
-    if (action === 'cash-approve') { o.pay_status = 'cash_received'; o.status = 'printing'; }
+    if (action === 'cash-approve') { o.pay_status = o.pay_status === 'paid' ? 'paid' : 'cash_received'; if (o.pay_status === 'cash_received') o.pay_method = 'cash'; o.status = 'printing'; }
     else if (action === 'approve' || action === 'start') { if (o.status !== 'printed') o.status = 'printing'; }
-    else if (action === 'done') { o.status = 'printed'; }
-    else if (action === 'reprint') { o.status = 'printing'; }
-    persist(rec); notify();
+    else if (action === 'done') { o.status = 'printed'; o.done_at = Date.now(); }
+    else if (action === 'reprint') { o.status = 'printing'; o.done_at = 0; }
+    persist(rec); push(o); notify();
     return json({ ok: true });
   };
   api.start = start; api.paint = paint;

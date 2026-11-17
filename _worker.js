@@ -105,16 +105,18 @@ const mainWorker = {
         const p = await getPrices(env);
         const youpiKey = clean(env.YOUPI_KEY) || YOUPI_PUBLIC_KEY;
         const youpi = (youpiKey && youpiKey !== YOUPI_PUBLIC_KEY) ? { key: youpiKey, base: (clean(env.YOUPI_BASE) || 'https://pay.therajesh.shop').replace(/\/+$/, '') } : null;
-        return jsonPublic({ shop: env.SHOP_NAME || 'Digital Seva Kendra', waNumber: clean(env.WA_NUMBER).replace(/\D/g, '') || null, rate: { bw: p.bw, color: p.color }, a3: p.a3, photo4x6: p.photo4x6, passport: { '4x6': p.passport4x6, A4: p.passportA4 }, youpi, razorpay: rzpPublic(env), razorpayMissing: rzpMissing(env),
-          // CHANGED (v18): UPI id for the P2P "Pay Now" QR (set UPI_ID in Cloudflare, e.g. shop@okhdfcbank). Public by nature: it is what a QR code carries.
-          upi: /^[\w.\-]{2,64}@[A-Za-z0-9.\-]{2,32}$/.test(clean(env.UPI_ID)) ? clean(env.UPI_ID) : null, upiName: clean(env.UPI_NAME) || env.SHOP_NAME || null });
+        return jsonPublic({ shop: env.SHOP_NAME || 'Digital Seva Kendra', waNumber: clean(env.WA_NUMBER).replace(/\D/g, '') || null, rate: { bw: p.bw, color: p.color }, a3: p.a3, photo4x6: p.photo4x6, passport: { '4x6': p.passport4x6, A4: p.passportA4 }, youpi, razorpay: rzpPublic(env), razorpayMissing: rzpMissing(env) });
       });
       if (path === 'youpi/webhook' && method === 'POST') return youpiWebhook(request, env);
       if (path === 'create-order' && method === 'POST') return rzpCreateOrder(request, env);
       if (path === 'verify-payment' && method === 'POST') return rzpVerify(request, env);
       if (path === 'orders' && method === 'POST') return createOrder(request, env);
-      m = path.match(/^orders\/([A-Z0-9]+|P2P-[A-Za-z0-9_-]{3,48})$/);
+      m = path.match(/^orders\/([A-Z0-9]+)$/);
       if (m && method === 'GET') return orderStatus(env, m[1]);
+      m = path.match(/^orders\/([A-Z0-9]+)\/pay-at-counter$/);                          // customer chose "Pay at Counter" (cash) on the token screen
+      if (m && method === 'POST') return orderPayAtCounter(env, m[1]);
+      m = path.match(/^p2p\/pay-status\/(P2P-[A-Z0-9]{4,12})$/);                          // counter asks: was this P2P order paid online?
+      if (m && method === 'GET') return p2pPayStatus(env, m[1]);
 
       if (path === 'admin-config' && method === 'GET') return edgeCached(request, ctx, async () => jsonPublic({ googleClientId: clean(env.GOOGLE_CLIENT_ID) || null, pinLogin: !!(clean(env.ADMIN_PIN) && sessionSecret(env)) }));
       if (path === 'admin-pin-login' && method === 'POST') return adminPinLogin(request, env);
@@ -278,6 +280,8 @@ async function ensureSchema(env) {
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS wa_seen (id TEXT PRIMARY KEY, ts INTEGER)').run();
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS wa_hits (number TEXT, ts INTEGER, kind TEXT)').run();
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS login_fail (ip TEXT, ts INTEGER)').run();
+  // online payments for P2P orders (the files never reach the server, so there is no orders row - this only remembers the Razorpay payment)
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS p2p_pay (id TEXT PRIMARY KEY, rzp_order_id TEXT, amount REAL, paid INTEGER DEFAULT 0, pay_utr TEXT, created_at INTEGER)').run();
   // base tables (no-ops when they already exist) so a fresh database works without manual SQL
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, name TEXT, phone TEXT, color INTEGER, copies INTEGER, amount REAL, status TEXT, created_at INTEGER, note TEXT)').run();
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id TEXT, name TEXT, r2_key TEXT, pages INTEGER)').run();
@@ -372,11 +376,67 @@ async function createOrder(request, env) {
 
 async function orderStatus(env, id) {
   await ensureSchema(env);
-  let o = await env.DB.prepare('SELECT id,status,amount,copies,color,note,pay_status,pay_url,created_at,pc_deleted,srv_deleted FROM orders WHERE id=?').bind(id).first();
+  let o = await env.DB.prepare('SELECT id,status,amount,copies,color,note,pay_status,pay_method,pay_url,created_at,pc_deleted,srv_deleted,(SELECT COALESCE(SUM(pages),0) FROM files WHERE order_id=orders.id) AS pages FROM orders WHERE id=?').bind(id).first();
   if (!o) return json({ error: 'Order not found' }, 404);
   if (o.status === 'pending' && o.pay_status !== 'paid' && Date.now() - Number(o.created_at || 0) > UNPAID_TTL_MS) { await expireStale(env); o = { ...o, status: 'expired' }; }
-  return json({ id: o.id, status: o.status, amount: o.amount, copies: o.copies, color: o.color, note: o.note, pay_status: o.pay_status || '', paying: !!o.pay_url,
-    pc_deleted: Number(o.pc_deleted || 0), srv_deleted: Number(o.srv_deleted || 0) });
+  return json({ id: o.id, status: o.status, amount: o.amount, copies: o.copies, color: o.color, note: o.note, pay_status: o.pay_status || '', pay_method: o.pay_method || '', paying: !!o.pay_url,
+    pages: Number(o.pages || 0), via: 'server', pc_deleted: Number(o.pc_deleted || 0), srv_deleted: Number(o.srv_deleted || 0) });
+}
+
+// ---------------- "Pay at Counter": the customer promises to pay cash, the counter dashboard shows the green "Cash Received" button ----------------
+// POST /api/orders/:id/pay-at-counter  ->  status 'cash_wait' (pay_method 'cash'). Only an unpaid, still-waiting order can switch.
+async function orderPayAtCounter(env, id) {
+  await ensureSchema(env);
+  const o = await env.DB.prepare('SELECT id,status,pay_status FROM orders WHERE id=?').bind(id).first();
+  if (!o) return json({ error: 'Order not found or expired' }, 404);
+  if (o.pay_status === 'paid' || o.pay_status === 'cash_received') return json({ error: 'This order is already paid' }, 409);
+  if (o.status === 'cash_wait') return json({ ok: true, status: 'cash_wait', duplicate: true });
+  if (!['pending', 'error'].includes(o.status)) return json({ error: 'This order is already ' + o.status }, 409);
+  await env.DB.prepare("UPDATE orders SET status='cash_wait', pay_method='cash' WHERE id=? AND status IN ('pending','error') AND (pay_status IS NULL OR pay_status NOT IN ('paid','cash_received'))").bind(id).run();
+  return json({ ok: true, status: 'cash_wait' });
+}
+
+// ---------------- P2P orders: amount is recomputed HERE from the print options (same formula as createOrder), never taken from the browser ----------------
+function p2pAmount(P, meta) {
+  meta = meta || {};
+  const kind = meta.kind === 'passport' ? 'passport' : 'doc';
+  const paper = PAPERS.includes(meta.paper) ? meta.paper : 'A4';
+  const color = (meta.color || paper === '4x6' || kind === 'passport') ? 1 : 0;
+  const copies = Math.min(Math.max(parseInt(meta.copies) || 1, 1), kind === 'passport' ? 20 : 100);
+  const list = (Array.isArray(meta.pages) && meta.pages.length ? meta.pages : [1]).slice(0, MAX_FILES);
+  const totalPages = list.reduce((a, n) => a + Math.min(Math.max(parseInt(n) || 1, 1), 2000), 0);
+  let amount;
+  if (kind === 'passport') amount = copies * (paper === '4x6' ? P.passport4x6 : P.passportA4);
+  else if (paper === '4x6') amount = totalPages * copies * P.photo4x6;
+  else amount = totalPages * copies * (color ? P.color : P.bw) * (paper === 'A3' ? P.a3 : 1);
+  return Math.round(amount * 100) / 100;
+}
+async function p2pCreateOrder(env, keyId, secret, id, meta) {
+  await ensureSchema(env);
+  const old = await env.DB.prepare('SELECT id,rzp_order_id,amount,paid FROM p2p_pay WHERE id=?').bind(id).first();
+  if (old && old.paid) return json({ error: 'This order is already paid' }, 409);
+  const amount = p2pAmount(await getPrices(env), meta), paise = Math.round(amount * 100);
+  if (!Number.isFinite(paise) || paise < 100) return json({ error: 'Amount must be at least ₹1 (100 paise)' }, 400);
+  if (old && old.rzp_order_id && Math.round(Number(old.amount) * 100) === paise) return json({ order_id: old.rzp_order_id, amount: paise, currency: 'INR', key_id: keyId });
+  let r, j;
+  try {
+    r = await fetch('https://api.razorpay.com/v1/orders', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Basic ' + btoa(keyId + ':' + secret) },
+      body: JSON.stringify({ amount: paise, currency: 'INR', receipt: id, notes: { shop_order: id, via: 'p2p' } }),
+    });
+    j = await r.json().catch(() => ({}));
+  } catch { return json({ error: 'Could not reach Razorpay. Please try again.' }, 500); }
+  if (r.status === 401) return json({ error: 'Razorpay authentication failed. Check RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.' }, 401);
+  if (!r.ok || !j.id) return json({ error: (j.error && j.error.description) || 'Razorpay could not create the order.' }, 500);
+  await env.DB.prepare('DELETE FROM p2p_pay WHERE created_at < ?').bind(Date.now() - 86400000).run();     // housekeeping: forget payments older than 1 day
+  await env.DB.prepare('INSERT OR REPLACE INTO p2p_pay (id,rzp_order_id,amount,paid,created_at) VALUES (?,?,?,0,?)').bind(id, j.id, amount, Date.now()).run();
+  return json({ order_id: j.id, amount: j.amount, currency: j.currency, key_id: keyId });
+}
+async function p2pPayStatus(env, id) {
+  await ensureSchema(env);
+  const o = await env.DB.prepare('SELECT amount,paid,pay_utr FROM p2p_pay WHERE id=?').bind(id).first();
+  return json({ paid: !!(o && o.paid), amount: o ? Number(o.amount) : 0, utr: o && o.paid ? (o.pay_utr || '') : '' });
 }
 
 // ---------------- YOUPI PG webhook: automatic payment confirmation ----------------
@@ -434,70 +494,36 @@ const rzpKeys = (env) => ({ id: clean(env.RAZORPAY_KEY_ID), secret: clean(env.RA
 const rzpMissing = (env) => ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET'].filter((n) => !clean(env[n]));
 const rzpPublic = (env) => { const k = rzpKeys(env); return k.id && k.secret ? { keyId: k.id } : null; };   // only the public key id leaves the server
 
-// ---- P2P "Pay Now" support (v19) ----
-// P2P tokens look like "P2P-XXXX" (hyphen), so they can't pass the /^[A-Z0-9]+$/ check used for server orders.
-const P2P_ID = /^P2P-[A-Za-z0-9_-]{3,48}$/;
-const P2P_MAX_RUPEES = 50000;                       // sanity cap, since a P2P amount arrives from the browser
-// Returns the normalised P2P id, or '' when this request is not a P2P payment.
-// p2p:true with an un-prefixed orderId gets "P2P-" added, so it can never collide with a real server order id.
-const p2pIdFrom = (b) => {
-  const raw = String(b.orderId || '').trim();
-  const id = raw.startsWith('P2P-') ? raw : (b.p2p === true && raw ? 'P2P-' + raw : raw);
-  return P2P_ID.test(id) ? id : '';
-};
-// Finds or creates the lightweight payment-tracking row (no files, no KV). An existing row always wins,
-// so the amount can't be changed after the first call.
-async function p2pEnsureRow(env, id, amountRupees) {
-  const sel = 'SELECT id,amount,status,pay_status,rzp_order_id FROM orders WHERE id=?';
-  let o = await env.DB.prepare(sel).bind(id).first();
-  if (o) return o;
-  await env.DB.prepare("INSERT OR IGNORE INTO orders (id,name,phone,color,copies,amount,status,created_at,paper,opts,source,pay_status) VALUES (?,'P2P','',0,1,?,'p2p_pay',?,'A4',?,'p2p','pending')")
-    .bind(id, amountRupees, Date.now(), JSON.stringify({ kind: 'p2p', source: 'p2p' })).run();
-  return await env.DB.prepare(sel).bind(id).first();
-}
-
-// 1) Create a Razorpay order. Server orders: the amount always comes from OUR database order.
-//    P2P orders: the amount is stored once on first call, and later calls reuse the stored value.
+// 1) Create a Razorpay order. The amount always comes from OUR database order, never from the browser.
 async function rzpCreateOrder(request, env) {
   const { id: keyId, secret } = rzpKeys(env);
   if (!keyId || !secret) return json({ error: 'Razorpay is not configured: set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in Cloudflare.' }, 500);
   const b = await request.json().catch(() => ({}));
-  const p2pId = p2pIdFrom(b);
-  const id = p2pId || String(b.orderId || '');
-  if (!p2pId && !/^[A-Z0-9]+$/.test(id)) return json({ error: 'orderId is required' }, 400);
+  const id = String(b.orderId || '');
+  if (/^P2P-[A-Z0-9]{4,12}$/.test(id)) return p2pCreateOrder(env, keyId, secret, id, b.meta);      // P2P order: no database row, the amount comes from the print options
+  if (!/^[A-Z0-9]+$/.test(id)) return json({ error: 'orderId is required' }, 400);
   await ensureSchema(env);
-  let o;
-  if (p2pId) {
-    o = await env.DB.prepare('SELECT id,amount,status,pay_status,rzp_order_id FROM orders WHERE id=?').bind(id).first();
-    if (!o) {
-      const amt = Math.round(Number(b.amount) * 100) / 100;
-      if (!Number.isFinite(amt) || amt < 1 || amt > P2P_MAX_RUPEES) return json({ error: `Amount must be between ₹1 and ₹${P2P_MAX_RUPEES}` }, 400);
-      o = await p2pEnsureRow(env, id, amt);
-      if (!o) return json({ error: 'Could not start this payment. Please try again.' }, 500);
-    }
-  } else {
-    o = await env.DB.prepare('SELECT id,amount,status,pay_status,rzp_order_id FROM orders WHERE id=?').bind(id).first();
-  }
+  const o = await env.DB.prepare('SELECT id,amount,status,pay_status,rzp_order_id FROM orders WHERE id=?').bind(id).first();
   if (!o) return json({ error: 'Order not found or expired' }, 404);
   if (o.pay_status === 'paid') return json({ error: 'This order is already paid' }, 409);
-  if (!(p2pId ? ['p2p_pay'] : ['pending', 'error']).includes(o.status)) return json({ error: 'This order can no longer be paid' }, 409);
+  if (!['pending', 'error', 'cash_wait'].includes(o.status)) return json({ error: 'This order can no longer be paid' }, 409);     // cash_wait: the customer switched from "Pay at Counter" to "Pay Now"
   const paise = Math.round(Number(o.amount) * 100);
   if (!Number.isFinite(paise) || paise < 100) return json({ error: 'Amount must be at least ₹1 (100 paise)' }, 400);
-  if (o.rzp_order_id) return json({ order_id: o.rzp_order_id, amount: paise, currency: 'INR', key_id: keyId, orderId: id });   // retry: reuse the same Razorpay order
+  if (o.rzp_order_id) return json({ order_id: o.rzp_order_id, amount: paise, currency: 'INR', key_id: keyId });   // retry: reuse the same Razorpay order
 
   let r, j;
   try {
     r = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: 'Basic ' + btoa(keyId + ':' + secret) },
-      body: JSON.stringify({ amount: paise, currency: 'INR', receipt: id, notes: { shop_order: id, ...(p2pId ? { p2p: '1' } : {}) } }),
+      body: JSON.stringify({ amount: paise, currency: 'INR', receipt: id, notes: { shop_order: id } }),
     });
     j = await r.json().catch(() => ({}));
   } catch { return json({ error: 'Could not reach Razorpay. Please try again.' }, 500); }
   if (r.status === 401) return json({ error: 'Razorpay authentication failed. Check RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.' }, 401);
   if (!r.ok || !j.id) return json({ error: (j.error && j.error.description) || 'Razorpay could not create the order.' }, 500);
   await env.DB.prepare('UPDATE orders SET rzp_order_id=? WHERE id=?').bind(j.id, id).run();
-  return json({ order_id: j.id, amount: j.amount, currency: j.currency, key_id: keyId, orderId: id });
+  return json({ order_id: j.id, amount: j.amount, currency: j.currency, key_id: keyId });
 }
 
 // 2) Verify the payment signature: HMAC-SHA256(razorpay_order_id + "|" + razorpay_payment_id, KEY_SECRET).
@@ -505,28 +531,28 @@ async function rzpVerify(request, env) {
   const { secret } = rzpKeys(env);
   if (!secret) return json({ error: 'Razorpay is not configured' }, 500);
   const b = await request.json().catch(() => ({}));
-  const p2pId = p2pIdFrom(b);
-  const id = p2pId || String(b.orderId || '');
-  const oid = String(b.razorpay_order_id || ''), pid = String(b.razorpay_payment_id || ''), sig = String(b.razorpay_signature || '');
-  if ((!p2pId && !/^[A-Z0-9]+$/.test(id)) || !/^order_\w+$/.test(oid) || !/^pay_\w+$/.test(pid) || !sig) return json({ error: 'Missing or invalid payment fields' }, 400);
+  const id = String(b.orderId || ''), oid = String(b.razorpay_order_id || ''), pid = String(b.razorpay_payment_id || ''), sig = String(b.razorpay_signature || '');
+  const isP2P = /^P2P-[A-Z0-9]{4,12}$/.test(id);
+  if (!(isP2P || /^[A-Z0-9]+$/.test(id)) || !/^order_\w+$/.test(oid) || !/^pay_\w+$/.test(pid) || !sig) return json({ error: 'Missing or invalid payment fields' }, 400);
   const expected = await hmacHex(secret, new TextEncoder().encode(oid + '|' + pid));
   if (!sameSecret(sig, expected)) return json({ success: false, error: 'Payment signature mismatch' }, 400);   // never mark as paid
 
   await ensureSchema(env);
+  if (isP2P) {   // the counter reads this flag (GET /api/p2p/pay-status/:id) and marks the P2P order as paid
+    const pp = await env.DB.prepare('SELECT id,rzp_order_id,paid FROM p2p_pay WHERE id=?').bind(id).first();
+    if (!pp) return json({ error: 'Order not found or expired' }, 404);
+    if (pp.rzp_order_id !== oid) return json({ success: false, error: 'This payment does not belong to this order' }, 400);
+    if (!pp.paid) await env.DB.prepare('UPDATE p2p_pay SET paid=1, pay_utr=? WHERE id=?').bind(pid.slice(0, 30), id).run();
+    return json({ success: true, p2p: true });
+  }
   const o = await env.DB.prepare('SELECT id,status,pay_status,rzp_order_id FROM orders WHERE id=?').bind(id).first();
   if (!o) return json({ error: 'Order not found or expired' }, 404);
   if (o.rzp_order_id !== oid) return json({ success: false, error: 'This payment does not belong to this order' }, 400);
   if (o.pay_status === 'paid') return json({ success: true, duplicate: true });
-  if (p2pId) {
-    // P2P: only record the payment. Files travel peer-to-peer, so there is nothing to approve or add to the ledger here.
-    await env.DB.prepare("UPDATE orders SET pay_status='paid', pay_method='razorpay', pay_utr=?, paid_at=? WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')")
-      .bind(pid.slice(0, 30), Date.now(), id).run();
-    return json({ success: true, orderId: id });
-  }
   const auto = await autoOn(env, clean(env.RAZORPAY_AUTO_APPROVE) !== '0');
-  await env.DB.prepare("UPDATE orders SET pay_status='paid', pay_utr=?, status=CASE WHEN ? AND status IN ('pending','error') THEN 'approved' ELSE status END WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')")
+  await env.DB.prepare("UPDATE orders SET pay_status='paid', pay_method='upi', pay_utr=?, status=CASE WHEN ? AND status IN ('pending','error','cash_wait') THEN 'approved' WHEN status='cash_wait' THEN 'pending' ELSE status END WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')")
     .bind(pid.slice(0, 30), auto ? 1 : 0, id).run();
-  if (auto && ['pending', 'error'].includes(o.status)) await ledgerAdd(env, id);
+  if (auto && ['pending', 'error', 'cash_wait'].includes(o.status)) await ledgerAdd(env, id);
   return json({ success: true });
 }
 
