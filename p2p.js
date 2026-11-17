@@ -9,8 +9,9 @@
 
    Wire protocol (PeerJS "binary" serialization, one DataConnection per order, counter peer id below):
        sender -> counter   { t:'meta',  orderId, transferId, idx, fileCount, fileName, mimeType, fileSize, totalChunks, customerName, printOptions,
-                             // ---- CHANGED (v18): payment details travel with every meta message ----
-                             paymentMethod:'pay_at_counter'|'pay_now', paymentStatus:'pending'|'paid', amount, upiRef, paidAt }
+                             // ---- CHANGED (v19): payment details travel with every meta message ----
+                             paymentMethod:'pay_at_counter'|'pay_now', paymentStatus:'pending'|'paid', amount, paidAt,
+                             razorpayPaymentId, razorpayOrderId (pay_now only; upiRef kept for older pages) }
                            { t:'chunk', transferId, i, data:ArrayBuffer(<=32768) }
                            { t:'end',   transferId }
        counter -> sender   { t:'ack',   transferId }                      (one file fully received + verified)
@@ -26,6 +27,11 @@
   var CONNECT_MS = 4000;                   // peer + connection must be open within 4 s, otherwise -> server fallback
   var ACK_MS = 30000;                      // after the last chunk the counter must confirm within 30 s
   var HIGH_WATER = 1024 * 1024;            // pause sending while > 1 MB is queued in the DataChannel
+  /* CHANGED (v19): size rules */
+  var MAX_FILE = 100 * 1024 * 1024;        // largest single file accepted over P2P (must match p2p-counter.js)
+  var P2P_MIN = 1024 * 1024;               // any file larger than 1 MB is routed directly via P2P
+  var SERVER_MAX = 25 * 1024 * 1024;       // the server upload (/api/orders) cannot take more than 25 MB (single file OR whole order)
+  var BLOCK = CHUNK * 32;                  // files are read from disk 1 MB at a time instead of loading the whole file into memory
   var ICE = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
   var CDN = [
     'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js',
@@ -107,13 +113,17 @@
 
 
   /* =====================================================================================================================
-     CHANGED (v18) — CHECKOUT PAYMENT CHOICE (shown in P2P mode, after the counter link is up and before any byte is sent)
-       P2P.askPayment({ amount, orderId, cfg }) -> Promise<{ paymentMethod, paymentStatus, amount, upiRef, paidAt }>
-       * "Pay at Counter" -> { paymentMethod:'pay_at_counter', paymentStatus:'pending' }  -> files are sent straight away
-       * "Pay Now"        -> UPI QR / "Open in any UPI app" step; the customer types the UPI reference (UTR) after paying
-                             -> { paymentMethod:'pay_now', paymentStatus:'paid', upiRef }   -> files are sent afterwards
-       Cancelling rejects with an Error whose .cancelled === true (submit() never falls back to the server for that).
-       The UPI id comes from /api/config  ->  cfg.upi (+ cfg.upiName); it is set with the UPI_ID variable in Cloudflare.
+     CHANGED (v19) — UNIFIED CHECKOUT PAYMENT MODAL (P2P mode AND normal server-upload mode share it)
+       P2P.askPayment({ amount, orderId, cfg [, p2p] }) -> Promise<{ paymentMethod, paymentStatus, amount, paidAt, razorpayPaymentId?, razorpayOrderId? }>
+       * "Pay on Counter" -> { paymentMethod:'pay_at_counter', paymentStatus:'pending' }
+       * "Pay Now"        -> Razorpay Checkout (cfg.razorpay + window.Razorpay, checkout.js is loaded on demand)
+                              1. POST /api/create-order   { orderId, amount, p2p:true }  (P2P order)   |   { orderId }  (server order)
+                              2. Razorpay Checkout opens, customer pays
+                              3. POST /api/verify-payment { orderId, razorpay_payment_id, razorpay_order_id, razorpay_signature [, p2p:true] }
+                              -> { paymentMethod:'pay_now', paymentStatus:'paid', razorpayPaymentId, amount, paidAt }
+                             If Razorpay is closed / fails / cannot be verified the modal STAYS OPEN: retry Pay Now or pick Pay on Counter.
+       Cancelling the modal (Cancel / Esc / tap outside) rejects with an Error whose .cancelled === true (submit() never falls back to the server for that).
+       p2p flag: defaults to true when orderId starts with "P2P-", otherwise false (server order).
      ===================================================================================================================== */
   var payCss = false;
   function payStyles() {
@@ -139,78 +149,140 @@
   }
   var inr = function (n) { return '\u20B9' + (Math.round(Number(n) * 100) / 100).toFixed(2); };
   function mk(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
-  function lazyQR() {
-    return new Promise(function (ok) {
-      if (window.QRCode) return ok();
-      var s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'; s.async = true;
-      s.onload = ok; s.onerror = ok; document.head.appendChild(s);
+  function loadRzp() {
+    return new Promise(function (ok, no) {
+      if (window.Razorpay) return ok();
+      var s = document.createElement('script'); s.src = 'https://checkout.razorpay.com/v1/checkout.js'; s.async = true;
+      s.onload = function () { window.Razorpay ? ok() : no(new Error('Razorpay could not be loaded')); };
+      s.onerror = function () { try { s.remove(); } catch (e) {} no(new Error('Payment service is not reachable right now')); };
+      document.head.appendChild(s);
     });
   }
-  function upiLink(cfg, amount, orderId) {
-    var e = encodeURIComponent;
-    return 'upi://pay?pa=' + e(cfg.upi) + '&pn=' + e(cfg.upiName || cfg.shop || 'Print shop') + '&am=' + Number(amount).toFixed(2) +
-           '&cu=INR&tn=' + e('Print ' + orderId) + '&tr=' + e(orderId);
+  function postJSON(url, body) {
+    return fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || 'Request failed'); return j; });
+    });
   }
-  var UTR_RX = /^[A-Za-z0-9]{8,24}$/;
 
   function askPayment(o) {
     o = o || {}; payStyles();
     var cfg = o.cfg || {}, amount = Number(o.amount) || 0, orderId = o.orderId || '';
+    var isP2P = o.p2p != null ? !!o.p2p : /^P2P-/.test(orderId);
     return new Promise(function (res, rej) {
       var ov = mk('div', 'p2pp-ov'), box = mk('div', 'p2pp'); box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true');
       ov.appendChild(box); document.body.appendChild(ov);
-      var prevFocus = document.activeElement;
+      var prevFocus = document.activeElement, busy = false, verifying = false;
       function close() { document.removeEventListener('keydown', onKey, true); try { ov.remove(); } catch (e) {} try { prevFocus && prevFocus.focus && prevFocus.focus(); } catch (e) {} }
-      function cancel() { close(); var e = new Error('Payment cancelled'); e.cancelled = true; rej(e); }
+      function cancel() { if (busy) return; close(); var e = new Error('Payment cancelled'); e.cancelled = true; rej(e); }   // not while Razorpay is open
       function onKey(ev) { if (ev.key === 'Escape') { ev.stopPropagation(); cancel(); } }
       document.addEventListener('keydown', onKey, true);
       ov.addEventListener('click', function (ev) { if (ev.target === ov) cancel(); });
 
-      function viewChoose() {
-        box.textContent = '';
-        box.appendChild(mk('h3', '', 'How would you like to pay?'));
-        box.appendChild(mk('p', 'sub', 'Choose one to send your files to the counter.'));
-        box.appendChild(mk('div', 'amt', inr(amount)));
-        var bc = mk('button', 'opt'); bc.type = 'button';
-        bc.appendChild(mk('b', '', '💵 Pay at Counter')); bc.appendChild(mk('small', '', 'Send now and pay when you collect your prints.'));
-        var bn = mk('button', 'opt pn'); bn.type = 'button';
-        bn.appendChild(mk('b', '', '📲 Pay Now')); bn.appendChild(mk('small', '', 'Pay online with any UPI app (QR shown next).'));
-        var er = mk('div', 'er'); er.setAttribute('role', 'alert');
-        var cx = mk('button', 'lnk', 'Cancel'); cx.type = 'button';
-        bc.onclick = function () { close(); res({ paymentMethod: 'pay_at_counter', paymentStatus: 'pending', amount: amount, upiRef: '', paidAt: 0 }); };
-        bn.onclick = function () {
-          if (!cfg.upi) { er.textContent = 'Online payment is not set up yet. Please choose Pay at Counter.'; return; }   // option stays visible, never hidden
-          viewPay();
-        };
-        cx.onclick = cancel;
-        [bc, bn, er, cx].forEach(function (n) { box.appendChild(n); });
-        try { bc.focus(); } catch (e) {}
+      box.appendChild(mk('h3', '', 'How would you like to pay?'));
+      box.appendChild(mk('p', 'sub', 'Choose one to send your files to the counter.'));
+      box.appendChild(mk('div', 'amt', inr(amount)));
+      var bc = mk('button', 'opt'); bc.type = 'button';
+      bc.appendChild(mk('b', '', '💵 Pay on Counter')); bc.appendChild(mk('small', '', 'Send now and pay when you collect your prints.'));
+      var bn = mk('button', 'opt pn'); bn.type = 'button';
+      var bnT = mk('b', '', '📲 Pay Now'), bnS = mk('small', '', 'Pay online with Razorpay (UPI, cards, netbanking).');
+      bn.appendChild(bnT); bn.appendChild(bnS);
+      var er = mk('div', 'er'); er.setAttribute('role', 'alert');
+      var cx = mk('button', 'lnk', 'Cancel'); cx.type = 'button';
+      [bc, bn, er, cx].forEach(function (n) { box.appendChild(n); });
+
+      function lock(on, label) { busy = on; bc.disabled = bn.disabled = on; cx.disabled = on; bnT.textContent = label || '📲 Pay Now'; }
+      function again(msg) { verifying = false; lock(false); er.textContent = msg || ''; try { bn.focus(); } catch (e) {} }   // modal stays open
+
+      bc.onclick = function () { if (busy) return; close(); res({ paymentMethod: 'pay_at_counter', paymentStatus: 'pending', amount: amount, paidAt: 0 }); };
+      cx.onclick = cancel;
+
+      async function verify(r) {
+        verifying = true; lock(true, 'Verifying payment…'); er.textContent = '';
+        try {
+          var body = { orderId: orderId, razorpay_payment_id: r.razorpay_payment_id, razorpay_order_id: r.razorpay_order_id, razorpay_signature: r.razorpay_signature };
+          if (isP2P) body.p2p = true;
+          var v = await postJSON('/api/verify-payment', body);
+          if (v && v.success === false) throw new Error(v.error || 'Payment could not be verified');
+          close();
+          res({ paymentMethod: 'pay_now', paymentStatus: 'paid', razorpayPaymentId: r.razorpay_payment_id, razorpayOrderId: r.razorpay_order_id, amount: amount, paidAt: Date.now() });
+        } catch (e) {
+          again((e.message || 'Could not verify the payment') + '. If money was deducted, note payment ID ' + (r.razorpay_payment_id || '') + ' and tell the counter, or choose Pay on Counter.');
+        }
       }
 
-      function viewPay() {
-        box.textContent = '';
-        var link = upiLink(cfg, amount, orderId);
-        box.appendChild(mk('h3', '', 'Pay ' + inr(amount)));
-        box.appendChild(mk('p', 'sub', 'Scan the QR, or tap your UPI app, and pay the exact amount.'));
-        var qr = mk('div', 'qr'); box.appendChild(qr);
-        lazyQR().then(function () { try { if (window.QRCode) new QRCode(qr, { text: link, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M }); } catch (e) {} });
-        var a = mk('a', 'go alt', 'Open in any UPI app'); a.href = link; box.appendChild(a);
-        box.appendChild(mk('p', 'hint', 'After paying, type the UPI reference / UTR number from your payment app. The counter checks it before printing.'));
-        var inp = mk('input'); inp.type = 'text'; inp.placeholder = 'UPI reference / UTR (e.g. 412345678901)'; inp.autocomplete = 'off'; inp.autocapitalize = 'off'; inp.spellcheck = false; inp.maxLength = 24;
-        inp.setAttribute('inputmode', 'text'); inp.setAttribute('aria-label', 'UPI reference number');
-        var er = mk('div', 'er'); er.setAttribute('role', 'alert');
-        var ok = mk('button', 'go', "I've paid " + inr(amount)); ok.type = 'button';
-        var bk = mk('button', 'lnk', '← Back'); bk.type = 'button';
-        ok.onclick = function () {
-          var v = String(inp.value || '').replace(/\s+/g, '');
-          if (!UTR_RX.test(v)) { er.textContent = 'Enter the UPI reference number shown in your payment app (letters/digits, 8–24 characters).'; try { inp.focus(); } catch (e) {} return; }
-          close(); res({ paymentMethod: 'pay_now', paymentStatus: 'paid', amount: amount, upiRef: v, paidAt: Date.now() });
-        };
-        bk.onclick = viewChoose;
-        [inp, er, ok, bk].forEach(function (n) { box.appendChild(n); });
-      }
-      viewChoose();
+      bn.onclick = async function () {
+        if (busy) return;
+        if (!cfg.razorpay) { er.textContent = 'Online payment is not set up yet. Please choose Pay on Counter.'; return; }   // option stays visible, never hidden
+        er.textContent = ''; lock(true, 'Opening secure payment…');
+        try {
+          await loadRzp();
+          var h = await postJSON('/api/create-order', isP2P ? { orderId: orderId, amount: amount, p2p: true } : { orderId: orderId });
+          var rz = new window.Razorpay({
+            key: h.key_id, amount: h.amount, currency: h.currency || 'INR', order_id: h.order_id,
+            name: cfg.shop || 'Print shop', description: 'Print order ' + orderId, theme: { color: '#059669' },
+            handler: function (r) { verify(r); },
+            modal: { ondismiss: function () { if (!verifying) again('Payment cancelled. You can try again or choose Pay on Counter.'); } }
+          });
+          rz.on('payment.failed', function (x) { er.textContent = 'Payment failed: ' + ((x && x.error && x.error.description) || 'please try again') + '.'; });   // Razorpay's window stays open for a retry
+          rz.open();
+        } catch (e) { again((e && e.message) || 'Could not start the payment. Try again or choose Pay on Counter.'); }
+      };
+      try { bc.focus(); } catch (e) {}
     });
+  }
+
+  /* =====================================================================================================================
+     CHANGED (v19) — "DIRECT P2P TRANSFER IN PROGRESS" POPUP (same .p2pp-ov / .p2pp look as the payment modal)
+       Shown while files stream to the counter: live progress bar, current file name, transferred MB / total MB.
+       Not dismissable; direct() closes it when the counter's `order` ACK arrives (or when the transfer fails).
+     ===================================================================================================================== */
+  var xferCss = false;
+  function xferStyles() {
+    if (xferCss) return; xferCss = true;
+    var st = document.createElement('style');
+    st.textContent =
+      '.p2pp .pbar{height:10px;border-radius:999px;background:#e2e8f0;overflow:hidden;margin:12px 0 8px}' +
+      '.p2pp .pbar>i{display:block;height:100%;width:0;border-radius:999px;background:#059669;transition:width .12s linear}' +
+      '.p2pp .fn{font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '.p2pp .mb{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:#475569;font-variant-numeric:tabular-nums}' +
+      '@media (prefers-color-scheme:dark){.p2pp .pbar{background:#334155}.p2pp .mb{color:#94a3b8}}';
+    document.head.appendChild(st);
+  }
+  var mbStr = function (n) { return (n / 1048576).toFixed(2) + ' MB'; };
+  function transferPopup() {
+    payStyles(); xferStyles();
+    var ov = mk('div', 'p2pp-ov'), box = mk('div', 'p2pp');
+    box.setAttribute('role', 'alertdialog'); box.setAttribute('aria-live', 'polite'); box.setAttribute('aria-label', 'Direct P2P transfer in progress');
+    var h = mk('h3', '', 'Direct P2P Transfer in progress — sending files directly to counter...'); h.style.fontSize = '17px';
+    var fn = mk('div', 'fn', 'Preparing…'), bar = mk('div', 'pbar'), fill = mk('i'); bar.appendChild(fill);
+    bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', '100');
+    var mb = mk('div', 'mb'), mbL = mk('span', '', '0.00 MB / 0.00 MB'), mbR = mk('span', '', '0%'); mb.appendChild(mbL); mb.appendChild(mbR);
+    var hint = mk('p', 'hint', 'Keep this page open until the counter confirms.'); hint.style.marginTop = '10px';
+    [h, fn, bar, mb, hint].forEach(function (n) { box.appendChild(n); });
+    ov.appendChild(box); document.body.appendChild(ov);
+    return {
+      set: function (sent, total, name, idx, count) {
+        sent = Math.max(0, Math.min(sent, total)); var pc = total ? Math.round(sent / total * 100) : 0;
+        fill.style.width = pc + '%'; bar.setAttribute('aria-valuenow', String(pc));
+        mbL.textContent = mbStr(sent) + ' / ' + mbStr(total); mbR.textContent = pc + '%';
+        if (name != null) fn.textContent = (count > 1 ? 'File ' + (idx + 1) + ' of ' + count + ' · ' : '') + name;
+      },
+      note: function (t) { hint.textContent = t; },
+      close: function () { try { ov.remove(); } catch (e) {} }
+    };
+  }
+
+  /* ---------- CHANGED (v19): routing helpers ---------- */
+  var sumSize = function (files) { var t = 0; (files || []).forEach(function (f) { t += f.size || 0; }); return t; };
+  function p2pEnabled(cfg) { return !(cfg && (cfg.p2p === false || cfg.p2pEnabled === false)); }
+  /* true when P2P is enabled and ANY file is larger than 1 MB -> such orders always go directly over P2P */
+  function shouldUseP2P(files, cfg) {
+    if (!p2pEnabled(cfg)) return false;
+    return (files || []).some(function (f) { return f && f.size > P2P_MIN; });
+  }
+  /* true when the server upload could NOT carry this order (single file or whole order above 25 MB) */
+  function tooBigForServer(files) {
+    return sumSize(files) > SERVER_MAX || (files || []).some(function (f) { return f && f.size > SERVER_MAX; });
   }
 
   /* ---------- open a DataConnection to the counter, or fail within `ms` ---------- */
@@ -238,16 +310,18 @@
   }
 
   /* ---------- stream the order; resolves when the counter has ACKed it, throws on ANY problem ---------- */
-  /* CHANGED (v18): connect -> ask "Pay at Counter / Pay Now" -> (UPI step) -> send files + payment details.
+  /* CHANGED (v19): connect -> ask "Pay on Counter / Pay Now" (Razorpay) -> send files + payment details while a
+     "Direct P2P Transfer in progress" popup shows live progress -> popup closes on the counter's `order` ACK.
      The payment dialog is shown only once the counter link is confirmed open, so a customer is never asked to pay
      for a transfer that then silently moves to the server. If the link drops while the dialog is open, it is re-opened. */
   async function direct(opt) {
     var files = opt.files || [], meta = opt.meta || {};
     if (!files.length) throw new Error('No files');
-    var total = 0; files.forEach(function (f) { total += f.size; });
+    var total = sumSize(files);
+    for (var q = 0; q < files.length; q++) if (files[q].size > MAX_FILE) throw new Error(files[q].name + ' is larger than 100 MB');
     var orderId = newId(), est = estimate(meta, opt.cfg);
     var task = window.Prog ? Prog.start('Connecting to counter…') : null;
-    var link = null, conn = null, dc = null, pay = null;
+    var link = null, conn = null, dc = null, pay = null, pop = null;
     var S = { closed: false, order: null, nack: null };
     function bind(l) {                                   // (re)attach listeners to a fresh counter link
       link = l; conn = l.conn; dc = conn.dataChannel; S.closed = false;
@@ -263,12 +337,12 @@
     try {
       bind(await connect(CONNECT_MS));
 
-      /* ---- CHANGED (v18): payment choice (skipped only if the caller already supplies opt.payment) ---- */
+      /* payment choice (skipped only if the caller already supplies opt.payment) */
       if (opt.payment) pay = opt.payment;
       else {
         if (task) task.fail();                           // hide the progress strip while the customer decides
         task = null;
-        pay = await askPayment({ amount: est, orderId: orderId, cfg: opt.cfg });   // rejects with .cancelled on Cancel
+        pay = await askPayment({ amount: est, orderId: orderId, cfg: opt.cfg, p2p: true });   // rejects with .cancelled on Cancel
         task = window.Prog ? Prog.start('Sending directly to counter…') : null;
         if (S.closed || !conn.open) {                    // link died while the customer was paying -> open it again
           try { conn.close(); } catch (x) {} try { link.peer.destroy(); } catch (x) {}
@@ -284,35 +358,48 @@
       };
 
       if (task) task.label('Sending directly to counter…');
+      pop = transferPopup();                             // CHANGED (v19): visible "Direct P2P Transfer in progress" popup
+      pop.set(0, total, files[0].name, 0, files.length);
       var printOptions = {}; Object.keys(meta).forEach(function (k) { printOptions[k] = meta[k]; }); printOptions.estAmount = est;
-      /* CHANGED (v18): payment fields, mirrored inside printOptions so an older counter build still receives them */
+      var isPaid = pay.paymentMethod === 'pay_now' && pay.paymentStatus === 'paid';
+      /* payment fields, mirrored inside printOptions so an older counter build still receives them */
       var payment = {
-        paymentMethod: pay.paymentMethod === 'pay_now' ? 'pay_now' : 'pay_at_counter',
-        paymentStatus: (pay.paymentMethod === 'pay_now' && pay.paymentStatus === 'paid') ? 'paid' : 'pending',
+        paymentMethod: isPaid ? 'pay_now' : 'pay_at_counter',
+        paymentStatus: isPaid ? 'paid' : 'pending',
         amount: Number(pay.amount) > 0 ? Number(pay.amount) : est,
-        upiRef: String(pay.upiRef || '').slice(0, 24),
+        upiRef: String(pay.upiRef || '').slice(0, 24),                                          // legacy (UPI/UTR) field, kept for older pages
+        razorpayPaymentId: isPaid ? String(pay.razorpayPaymentId || '').slice(0, 40) : '',     // CHANGED (v19)
+        razorpayOrderId: isPaid ? String(pay.razorpayOrderId || '').slice(0, 40) : '',
         paidAt: Number(pay.paidAt) || 0
       };
       Object.keys(payment).forEach(function (k) { printOptions[k] = payment[k]; });
       var sent = 0, lastPaint = 0;
       for (var i = 0; i < files.length; i++) {
-        var f = files[i], buf = await f.arrayBuffer();
-        var n = Math.max(1, Math.ceil(buf.byteLength / CHUNK)), tid = orderId + '-' + i;
+        var f = files[i], size = f.size;
+        var n = Math.max(1, Math.ceil(size / CHUNK)), tid = orderId + '-' + i, ci = 0;
         check();
         var metaMsg = { t: 'meta', orderId: orderId, transferId: tid, idx: i, fileCount: files.length, fileName: f.name, mimeType: f.type || 'application/octet-stream',
-          fileSize: buf.byteLength, totalChunks: n, customerName: String(meta.name || ''), printOptions: printOptions };
-        Object.keys(payment).forEach(function (k) { metaMsg[k] = payment[k]; });          // CHANGED (v18)
+          fileSize: size, totalChunks: n, customerName: String(meta.name || ''), printOptions: printOptions };
+        Object.keys(payment).forEach(function (k) { metaMsg[k] = payment[k]; });
         conn.send(metaMsg);
-        for (var c = 0; c < n; c++) {
-          var part = buf.slice(c * CHUNK, Math.min(buf.byteLength, (c + 1) * CHUNK));
-          conn.send({ t: 'chunk', transferId: tid, i: c, data: part });
-          sent += part.byteLength;
-          await drain();
-          var now = Date.now();
-          if (task && now - lastPaint > 60) { lastPaint = now; task.set(Math.min(99, Math.max(0, (sent - buffered()) / total * 100))); }
+        for (var off = 0; off < size; off += BLOCK) {      // read 1 MB at a time: a 100 MB file never sits fully in memory
+          var blk = await f.slice(off, Math.min(size, off + BLOCK)).arrayBuffer();
+          for (var po = 0; po < blk.byteLength; po += CHUNK) {
+            var part = blk.slice(po, Math.min(blk.byteLength, po + CHUNK));
+            conn.send({ t: 'chunk', transferId: tid, i: ci++, data: part });
+            sent += part.byteLength;
+            await drain();
+            var now = Date.now();
+            if (now - lastPaint > 60) {
+              lastPaint = now; var done = Math.max(0, sent - buffered());
+              pop.set(done, total, f.name, i, files.length);
+              if (task) task.set(Math.min(99, done / total * 100));
+            }
+          }
         }
         conn.send({ t: 'end', transferId: tid });
       }
+      pop.set(total, total, files[files.length - 1].name, files.length - 1, files.length); pop.note('All data sent. Waiting for the counter to confirm…');
       if (task) task.set(99, 'Waiting for counter…');
       var t1 = Date.now();
       while (!S.order) {
@@ -320,47 +407,71 @@
         if (Date.now() - t1 > ACK_MS) throw new Error('Counter did not confirm in time');
         await sleep(40);
       }
+      pop.close(); pop = null;                           // CHANGED (v19): counter sent the `order` ACK -> popup closes automatically
       if (task) (task.ok ? task.ok('Delivered to counter ✓') : task.done());
       var lk = link, cn = conn;
       setTimeout(function () { try { cn.close(); } catch (e) {} try { lk.peer.destroy(); } catch (e) {} }, 600);
       var amt = Number(S.order.amount); if (!(amt > 0)) amt = est;
-      /* CHANGED (v18): the result now carries the payment outcome so the "Order placed" screen can show it */
       return { id: orderId, amount: amt, status: 'pending', p2p: true, via: 'p2p',
-               paymentMethod: payment.paymentMethod, paymentStatus: S.order.paymentStatus || payment.paymentStatus, upiRef: payment.upiRef };
+               paymentMethod: payment.paymentMethod, paymentStatus: S.order.paymentStatus || payment.paymentStatus,
+               upiRef: payment.upiRef, razorpayPaymentId: payment.razorpayPaymentId };
     } catch (e) {
+      if (pop) pop.close();
       if (task) task.fail();
       try { link && link.conn && link.conn.close(); } catch (x) {}
       try { link && link.peer && link.peer.destroy(); } catch (x) {}
-      if (pay && pay.paymentStatus === 'paid') e.paidRef = pay.upiRef;      // CHANGED (v18): remember a payment that was already made
+      if (pay && pay.paymentStatus === 'paid') e.paidRef = pay.razorpayPaymentId || pay.upiRef;      // remember a payment that was already made
       throw e;
     }
   }
 
-  /* ---------- public entry: P2P first, silent automatic fallback to the existing server upload ---------- */
+  /* ---------- public entry ----------
+     CHANGED (v19):
+       * P2P enabled -> always tried first; any file > 1 MB MUST travel this way (see shouldUseP2P).
+       * P2P failed / offline / disabled -> silent fallback to the server upload ONLY when the order fits the server limit
+         (every file AND the whole order <= 25 MB). Otherwise a clear error is thrown and nothing is uploaded. */
   async function submit(opt) {
-    var btn = opt.btn || null;
+    var btn = opt.btn || null, files = opt.files || [];
+    var clearPill = function () { try { btn && btn._p2pPill && btn._p2pPill.remove(); btn && (btn._p2pPill = null); } catch (x) {} };
+    var big = tooBigForServer(files), mbTotal = (sumSize(files) / 1048576).toFixed(1);
+    for (var q = 0; q < files.length; q++) if (files[q].size > MAX_FILE) throw new Error(files[q].name + ' is larger than 100 MB. Please use a smaller file.');
+    if (!p2pEnabled(opt.cfg)) {
+      if (big) throw new Error('This order is ' + mbTotal + ' MB. Direct P2P transfer is turned off and the server upload accepts at most 25 MB. Please reduce the file size.');
+      pill(btn, 'server');
+      var r0 = await opt.fallback(); if (r0 && typeof r0 === 'object') r0.via = 'server'; return r0;
+    }
     pill(btn, 'try');
     try {
+      if (shouldUseP2P(files, opt.cfg)) { try { console.info('[P2P] file(s) larger than 1 MB -> routing directly via P2P'); } catch (x) {} }
       var d = await direct(opt);
       pill(btn, 'p2p');
       return d;
     } catch (e) {
-      /* CHANGED (v18): Cancel in the payment dialog is the customer's decision, NOT a P2P failure -> no server fallback */
-      if (e && e.cancelled) { try { btn && btn._p2pPill && btn._p2pPill.remove(); btn && (btn._p2pPill = null); } catch (x) {} throw new Error('Payment cancelled. Nothing was sent.'); }
-      try { console.warn('[P2P] direct transfer not possible -> server fallback:', e && e.message); } catch (x) {}
+      /* Cancel in the payment dialog is the customer's decision, NOT a P2P failure -> no server fallback */
+      if (e && e.cancelled) { clearPill(); throw new Error('Payment cancelled. Nothing was sent.'); }
+      try { console.warn('[P2P] direct transfer not possible:', e && e.message); } catch (x) {}
+      if (big) {                                         // CHANGED (v19): no server fallback for orders the server cannot take
+        clearPill();
+        var why = (e && e.message) ? ' (' + e.message + ')' : '';
+        var err = new Error('Direct P2P transfer to the counter failed' + why + ', and this order (' + mbTotal + ' MB) is too large for server upload (limit 25 MB). ' +
+          'Please check that the counter is online and try again.' + (e && e.paidRef ? ' Your payment (ID ' + e.paidRef + ') was received — show it at the counter, do not pay again.' : ''));
+        err.paidRef = e && e.paidRef;
+        throw err;
+      }
       pill(btn, 'server');
       var r = await opt.fallback();
       if (r && typeof r === 'object') {
         r.via = 'server';
-        /* CHANGED (v18): customer already paid by UPI but P2P died afterwards -> tell the counter via the done screen */
+        /* customer already paid online but P2P died afterwards -> tell the counter via the done screen */
         if (e && e.paidRef) { r.upiRef = e.paidRef; r.paidRef = e.paidRef; }
       }
       return r;
     }
   }
 
-  window.P2P = { COUNTER_ID: COUNTER_ID, CHUNK: CHUNK, ICE: ICE, CONNECT_MS: CONNECT_MS, loadPeer: loadPeer, warm: warm, estimate: estimate, submit: submit, direct: direct, pill: pill,
-                 askPayment: askPayment /* CHANGED (v18) */ };
+  window.P2P = { COUNTER_ID: COUNTER_ID, CHUNK: CHUNK, ICE: ICE, CONNECT_MS: CONNECT_MS, MAX_FILE: MAX_FILE, SERVER_MAX: SERVER_MAX,
+                 loadPeer: loadPeer, warm: warm, estimate: estimate, submit: submit, direct: direct, pill: pill,
+                 askPayment: askPayment, shouldUseP2P: shouldUseP2P, tooBigForServer: tooBigForServer };
 
   /* start downloading PeerJS once the page is idle (customer pages only; the counter loads it itself) */
   if (!/counter/i.test(location.pathname)) {

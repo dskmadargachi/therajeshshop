@@ -113,7 +113,7 @@ const mainWorker = {
       if (path === 'create-order' && method === 'POST') return rzpCreateOrder(request, env);
       if (path === 'verify-payment' && method === 'POST') return rzpVerify(request, env);
       if (path === 'orders' && method === 'POST') return createOrder(request, env);
-      m = path.match(/^orders\/([A-Z0-9]+)$/);
+      m = path.match(/^orders\/([A-Z0-9]+|P2P-[A-Za-z0-9_-]{3,48})$/);
       if (m && method === 'GET') return orderStatus(env, m[1]);
 
       if (path === 'admin-config' && method === 'GET') return edgeCached(request, ctx, async () => jsonPublic({ googleClientId: clean(env.GOOGLE_CLIENT_ID) || null, pinLogin: !!(clean(env.ADMIN_PIN) && sessionSecret(env)) }));
@@ -434,35 +434,70 @@ const rzpKeys = (env) => ({ id: clean(env.RAZORPAY_KEY_ID), secret: clean(env.RA
 const rzpMissing = (env) => ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET'].filter((n) => !clean(env[n]));
 const rzpPublic = (env) => { const k = rzpKeys(env); return k.id && k.secret ? { keyId: k.id } : null; };   // only the public key id leaves the server
 
-// 1) Create a Razorpay order. The amount always comes from OUR database order, never from the browser.
+// ---- P2P "Pay Now" support (v19) ----
+// P2P tokens look like "P2P-XXXX" (hyphen), so they can't pass the /^[A-Z0-9]+$/ check used for server orders.
+const P2P_ID = /^P2P-[A-Za-z0-9_-]{3,48}$/;
+const P2P_MAX_RUPEES = 50000;                       // sanity cap, since a P2P amount arrives from the browser
+// Returns the normalised P2P id, or '' when this request is not a P2P payment.
+// p2p:true with an un-prefixed orderId gets "P2P-" added, so it can never collide with a real server order id.
+const p2pIdFrom = (b) => {
+  const raw = String(b.orderId || '').trim();
+  const id = raw.startsWith('P2P-') ? raw : (b.p2p === true && raw ? 'P2P-' + raw : raw);
+  return P2P_ID.test(id) ? id : '';
+};
+// Finds or creates the lightweight payment-tracking row (no files, no KV). An existing row always wins,
+// so the amount can't be changed after the first call.
+async function p2pEnsureRow(env, id, amountRupees) {
+  const sel = 'SELECT id,amount,status,pay_status,rzp_order_id FROM orders WHERE id=?';
+  let o = await env.DB.prepare(sel).bind(id).first();
+  if (o) return o;
+  await env.DB.prepare("INSERT OR IGNORE INTO orders (id,name,phone,color,copies,amount,status,created_at,paper,opts,source,pay_status) VALUES (?,'P2P','',0,1,?,'p2p_pay',?,'A4',?,'p2p','pending')")
+    .bind(id, amountRupees, Date.now(), JSON.stringify({ kind: 'p2p', source: 'p2p' })).run();
+  return await env.DB.prepare(sel).bind(id).first();
+}
+
+// 1) Create a Razorpay order. Server orders: the amount always comes from OUR database order.
+//    P2P orders: the amount is stored once on first call, and later calls reuse the stored value.
 async function rzpCreateOrder(request, env) {
   const { id: keyId, secret } = rzpKeys(env);
   if (!keyId || !secret) return json({ error: 'Razorpay is not configured: set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in Cloudflare.' }, 500);
   const b = await request.json().catch(() => ({}));
-  const id = String(b.orderId || '');
-  if (!/^[A-Z0-9]+$/.test(id)) return json({ error: 'orderId is required' }, 400);
+  const p2pId = p2pIdFrom(b);
+  const id = p2pId || String(b.orderId || '');
+  if (!p2pId && !/^[A-Z0-9]+$/.test(id)) return json({ error: 'orderId is required' }, 400);
   await ensureSchema(env);
-  const o = await env.DB.prepare('SELECT id,amount,status,pay_status,rzp_order_id FROM orders WHERE id=?').bind(id).first();
+  let o;
+  if (p2pId) {
+    o = await env.DB.prepare('SELECT id,amount,status,pay_status,rzp_order_id FROM orders WHERE id=?').bind(id).first();
+    if (!o) {
+      const amt = Math.round(Number(b.amount) * 100) / 100;
+      if (!Number.isFinite(amt) || amt < 1 || amt > P2P_MAX_RUPEES) return json({ error: `Amount must be between ₹1 and ₹${P2P_MAX_RUPEES}` }, 400);
+      o = await p2pEnsureRow(env, id, amt);
+      if (!o) return json({ error: 'Could not start this payment. Please try again.' }, 500);
+    }
+  } else {
+    o = await env.DB.prepare('SELECT id,amount,status,pay_status,rzp_order_id FROM orders WHERE id=?').bind(id).first();
+  }
   if (!o) return json({ error: 'Order not found or expired' }, 404);
   if (o.pay_status === 'paid') return json({ error: 'This order is already paid' }, 409);
-  if (!['pending', 'error'].includes(o.status)) return json({ error: 'This order can no longer be paid' }, 409);
+  if (!(p2pId ? ['p2p_pay'] : ['pending', 'error']).includes(o.status)) return json({ error: 'This order can no longer be paid' }, 409);
   const paise = Math.round(Number(o.amount) * 100);
   if (!Number.isFinite(paise) || paise < 100) return json({ error: 'Amount must be at least ₹1 (100 paise)' }, 400);
-  if (o.rzp_order_id) return json({ order_id: o.rzp_order_id, amount: paise, currency: 'INR', key_id: keyId });   // retry: reuse the same Razorpay order
+  if (o.rzp_order_id) return json({ order_id: o.rzp_order_id, amount: paise, currency: 'INR', key_id: keyId, orderId: id });   // retry: reuse the same Razorpay order
 
   let r, j;
   try {
     r = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: 'Basic ' + btoa(keyId + ':' + secret) },
-      body: JSON.stringify({ amount: paise, currency: 'INR', receipt: id, notes: { shop_order: id } }),
+      body: JSON.stringify({ amount: paise, currency: 'INR', receipt: id, notes: { shop_order: id, ...(p2pId ? { p2p: '1' } : {}) } }),
     });
     j = await r.json().catch(() => ({}));
   } catch { return json({ error: 'Could not reach Razorpay. Please try again.' }, 500); }
   if (r.status === 401) return json({ error: 'Razorpay authentication failed. Check RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.' }, 401);
   if (!r.ok || !j.id) return json({ error: (j.error && j.error.description) || 'Razorpay could not create the order.' }, 500);
   await env.DB.prepare('UPDATE orders SET rzp_order_id=? WHERE id=?').bind(j.id, id).run();
-  return json({ order_id: j.id, amount: j.amount, currency: j.currency, key_id: keyId });
+  return json({ order_id: j.id, amount: j.amount, currency: j.currency, key_id: keyId, orderId: id });
 }
 
 // 2) Verify the payment signature: HMAC-SHA256(razorpay_order_id + "|" + razorpay_payment_id, KEY_SECRET).
@@ -470,8 +505,10 @@ async function rzpVerify(request, env) {
   const { secret } = rzpKeys(env);
   if (!secret) return json({ error: 'Razorpay is not configured' }, 500);
   const b = await request.json().catch(() => ({}));
-  const id = String(b.orderId || ''), oid = String(b.razorpay_order_id || ''), pid = String(b.razorpay_payment_id || ''), sig = String(b.razorpay_signature || '');
-  if (!/^[A-Z0-9]+$/.test(id) || !/^order_\w+$/.test(oid) || !/^pay_\w+$/.test(pid) || !sig) return json({ error: 'Missing or invalid payment fields' }, 400);
+  const p2pId = p2pIdFrom(b);
+  const id = p2pId || String(b.orderId || '');
+  const oid = String(b.razorpay_order_id || ''), pid = String(b.razorpay_payment_id || ''), sig = String(b.razorpay_signature || '');
+  if ((!p2pId && !/^[A-Z0-9]+$/.test(id)) || !/^order_\w+$/.test(oid) || !/^pay_\w+$/.test(pid) || !sig) return json({ error: 'Missing or invalid payment fields' }, 400);
   const expected = await hmacHex(secret, new TextEncoder().encode(oid + '|' + pid));
   if (!sameSecret(sig, expected)) return json({ success: false, error: 'Payment signature mismatch' }, 400);   // never mark as paid
 
@@ -480,6 +517,12 @@ async function rzpVerify(request, env) {
   if (!o) return json({ error: 'Order not found or expired' }, 404);
   if (o.rzp_order_id !== oid) return json({ success: false, error: 'This payment does not belong to this order' }, 400);
   if (o.pay_status === 'paid') return json({ success: true, duplicate: true });
+  if (p2pId) {
+    // P2P: only record the payment. Files travel peer-to-peer, so there is nothing to approve or add to the ledger here.
+    await env.DB.prepare("UPDATE orders SET pay_status='paid', pay_method='razorpay', pay_utr=?, paid_at=? WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')")
+      .bind(pid.slice(0, 30), Date.now(), id).run();
+    return json({ success: true, orderId: id });
+  }
   const auto = await autoOn(env, clean(env.RAZORPAY_AUTO_APPROVE) !== '0');
   await env.DB.prepare("UPDATE orders SET pay_status='paid', pay_utr=?, status=CASE WHEN ? AND status IN ('pending','error') THEN 'approved' ELSE status END WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')")
     .bind(pid.slice(0, 30), auto ? 1 : 0, id).run();
