@@ -2,20 +2,28 @@
    p2p-counter.js — counter.html side of the direct WebRTC file transfer (needs /p2p.js and PeerJS).
 
    * Owns the fixed peer id  P2P.COUNTER_ID  and keeps it alive: auto-reconnect with back-off, wake-from-sleep / network-back checks.
+   * CHANGED (v18): every order now carries paymentMethod / paymentStatus / amount / upiRef. finalize() turns that into the same
+     pay_status / status fields the server orders use, so counter.html shows 'Paid' vs 'Pay at Counter' and fires the right alert.
    * Every customer connection has its OWN transfer table keyed by transferId, so many customers can send at the same moment
      without their chunks ever mixing. A file is only accepted when chunk count + byte count + file signature check out.
    * Finished orders are stored locally (memory + IndexedDB so a reload loses nothing) and handed to counter.html through
        P2PCounter.orders()            -> order objects shaped exactly like /api/admin/orders rows (+ p2p:true)
        P2PCounter.handle(action,id)   -> Response-like answers for file/start/approve/cash-approve/done/reject/reprint
        P2PCounter.blob(fileId)        -> the reassembled File
-   * PAYMENT + LIVE STATUS: a new order arrives as status 'pending' ("customer is choosing Pay Now / Pay at Counter"). The customer's page then sends
-       { t:'pay', method:'counter' }  -> status 'cash_wait'  (the counter dashboard shows the green "Cash Received" button)
-       { t:'paying' } / { t:'paid' }  -> this counter asks the Worker  GET /api/p2p/pay-status/:id  and ONLY marks the order paid when the Worker
-                                         confirms a verified Razorpay signature for the same amount (never trusts the browser)
-     Every change is pushed back to the customer as { t:'status', ... }, so the customer sees the same tracker as for a server order.
+
+   v19 — WINDOWS AGENT MODES (selected by window.__AGENT_P2P__, which the Agent's local bridge injects; a normal browser never sets it,
+   so the normal counter in Chrome/Edge behaves exactly as before):
+     'receiver'  hidden, NON-polling page inside the Agent. Owns the PeerJS id, receives the customer's files over WebRTC and hands every
+                 finished order to the Agent over loopback  (POST /__agent/p2p/file + /__agent/p2p/order on 127.0.0.1).
+                 The customer gets the 'order' ACK only AFTER the Agent has saved the files (otherwise a 'nack' -> server fallback).
+                 Nothing here ever touches Cloudflare: signalling = PeerJS cloud, data = WebRTC, hand-over = localhost.
+     'view'      the visible Counter tab inside the Agent. It does NOT open a second PeerJS peer (the id is owned by the receiver);
+                 it shows / acts on the Agent's P2P orders through the same loopback bridge (polled every 2 s, free).
    ===================================================================================================================== */
 (function () {
   if (window.P2PCounter) return;
+  var MODE = (window.__AGENT_P2P__ === 'receiver' || window.__AGENT_P2P__ === 'view') ? window.__AGENT_P2P__ : '';
+  var BRIDGE = '/__agent/p2p/';
   var ID = P2P.COUNTER_ID, CHUNK = P2P.CHUNK;
   var ALLOWED = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', doc: 'application/msword',
     docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xls: 'application/vnd.ms-excel',
@@ -23,20 +31,10 @@
     pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' };
   var MAX_FILES = 10, MAX_FILE = 25 * 1024 * 1024, MAX_ORDER = 100 * 1024 * 1024, MAX_CONNS = 25, MAX_ACTIVE_BYTES = 400 * 1024 * 1024;
   var IDLE_MS = 60000, KEEP_MS = 24 * 3600 * 1000;
-  var PURGE_AFTER_PRINT_MS = 60000;              // after "Printed" the file is wiped from this PC (same privacy promise as for server orders); reprint is possible until then
-  var PAY_POLL_MS = 8000;
 
   var api = { onChange: null };
   var store = new Map();                         // orderId -> { id, order, blobs:[File] }
   var conns = new Set(), activeBytes = 0;
-  var subs = new Map();                          // orderId -> Set(connection)  (customers watching that order)
-  function sub(oid, conn) { var s = subs.get(oid); if (!s) subs.set(oid, s = new Set()); s.add(conn); }
-  function unsub(conn) { subs.forEach(function (s, k) { s.delete(conn); if (!s.size) subs.delete(k); }); }
-  function statusMsg(o) {
-    return { t: 'status', orderId: o.id, status: o.status, pay_status: o.pay_status || '', pay_method: o.pay_method || '', amount: o.amount,
-      pc_deleted: o.pc_deleted ? 1 : 0, srv_deleted: o.srv_deleted ? 1 : 0, note: o.note || '', pages: (o.files || []).reduce(function (a, f) { return a + (f.pages || 0); }, 0) };
-  }
-  function push(o) { var s = subs.get(o.id); if (!s) return; var m = statusMsg(o); s.forEach(function (c) { try { c.send(m); } catch (e) {} }); }
 
   /* ---------------------------------------------------------------- status badge */
   var status = 'connecting';
@@ -49,8 +47,15 @@
     el.textContent = LABEL[s] || LABEL.offline; el.style.background = c[0]; el.style.color = c[1]; el.dataset.state = s;
     el.title = 'Direct WebRTC file transfer · peer id ' + ID;
   }
-  function setStatus(s) { status = s; paint(); }
+  function setStatus(s) { status = s; paint(); report(); }
+  function report() {                                         // receiver mode: tell the Agent whether the PeerJS id is online
+    if (MODE !== 'receiver') return;
+    try { fetch(BRIDGE + 'status', { method: 'POST', headers: { 'content-type': 'application/json' }, cache: 'no-store',
+      body: JSON.stringify({ state: status, id: ID, online: navigator.onLine !== false }) }).catch(function () {}); } catch (e) {}
+  }
   api.status = function () { return status; };
+
+  if (MODE === 'view') { viewMode(); return; }               // visible Counter tab inside the Windows Agent: no peer of its own
 
   /* ---------------------------------------------------------------- peer lifecycle + automatic reconnection */
   var peer = null, backoff = 1000, timer = 0, idTaken = 0;
@@ -99,9 +104,10 @@
       r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); };
     });
   }
-  function persist(rec) { idb().then(function (db) { var tx = db.transaction('orders', 'readwrite'); tx.objectStore('orders').put(rec); tx.oncomplete = function () { db.close(); }; }).catch(function () {}); }
-  function unpersist(id) { idb().then(function (db) { var tx = db.transaction('orders', 'readwrite'); tx.objectStore('orders').delete(id); tx.oncomplete = function () { db.close(); }; }).catch(function () {}); }
+  function persist(rec) { if (MODE === 'receiver') return; idb().then(function (db) { var tx = db.transaction('orders', 'readwrite'); tx.objectStore('orders').put(rec); tx.oncomplete = function () { db.close(); }; }).catch(function () {}); }
+  function unpersist(id) { if (MODE === 'receiver') return; idb().then(function (db) { var tx = db.transaction('orders', 'readwrite'); tx.objectStore('orders').delete(id); tx.oncomplete = function () { db.close(); }; }).catch(function () {}); }
   function restore() {
+    if (MODE === 'receiver') return;
     idb().then(function (db) {
       var q = db.transaction('orders', 'readonly').objectStore('orders').getAll();
       q.onsuccess = function () {
@@ -149,7 +155,7 @@
 
     function drop(tid) { var t = T.get(tid); if (t) { activeBytes -= t.size; T.delete(tid); } }
     function refuse(tid, err) { try { conn.send({ t: 'nack', transferId: tid, error: err }); } catch (e) {} drop(tid); }
-    function cleanup() { T.forEach(function (t, k) { drop(k); }); G.clear(); conns.delete(conn); unsub(conn); clearInterval(sweep); }
+    function cleanup() { T.forEach(function (t, k) { drop(k); }); G.clear(); conns.delete(conn); clearInterval(sweep); }
     var sweep = setInterval(function () { var now = Date.now(); T.forEach(function (t, k) { if (now - t.last > IDLE_MS) refuse(k, 'Transfer timed out'); }); }, 15000);
 
     conn.on('data', function (m) {
@@ -163,24 +169,12 @@
       if (m.t === 'meta') return onMeta(m);
       if (m.t === 'chunk') return onChunk(m);
       if (m.t === 'end') return onEnd(m);
-      if (m.t === 'get' || m.t === 'pay' || m.t === 'paying' || m.t === 'paid') return onOrderMsg(m);
-    }
-
-    /* the customer's page talks about an order it already delivered: status question, payment choice, Razorpay progress */
-    function onOrderMsg(m) {
-      var oid = clean(m.orderId, 24), rec = store.get(oid);
-      if (!rec) { try { conn.send({ t: 'gone', orderId: oid }); } catch (e) {} return; }
-      var o = rec.order; sub(oid, conn);
-      if (m.t === 'pay' && m.method === 'counter') api.choose(o.id, 'counter');
-      else if (m.t === 'paying') { if (!o.payTried) { o.payTried = true; persist(rec); } checkPaid(rec); }
-      else if (m.t === 'paid') { o.payTried = true; checkPaid(rec); }
-      try { conn.send(statusMsg(o)); } catch (e) {}
     }
 
     function onMeta(m) {
       var tid = clean(m.transferId, 40), oid = clean(m.orderId, 24);
       if (!/^P2P-[A-Z0-9]{4,12}$/.test(oid) || tid.indexOf(oid + '-') !== 0) return refuse(tid, 'Bad transfer id');
-      if (store.has(oid)) { var o = store.get(oid).order; return conn.send({ t: 'order', orderId: oid, amount: o.amount, status: o.status }); }   // duplicate -> just re-ACK
+      if (store.has(oid)) { var o = store.get(oid).order; return conn.send({ t: 'order', orderId: oid, amount: o.amount, status: o.status, paymentStatus: o.pay_status === 'paid' ? 'paid' : 'pending' }); }   // duplicate -> just re-ACK
       var name = safeName(m.fileName), ext = extOf(name), size = Number(m.fileSize), tc = Number(m.totalChunks), cnt = Number(m.fileCount), idx = Number(m.idx);
       if (!ALLOWED[ext]) return refuse(tid, 'File type not allowed: ' + name);
       if (!(size > 0) || size > MAX_FILE) return refuse(tid, name + ' is larger than 25 MB');
@@ -215,6 +209,23 @@
     }
   }
 
+  /* ---------------------------------------------------------------- receiver mode: hand an order to the Windows Agent (loopback only) */
+  function bridgePost(path, body, type) {
+    return fetch(BRIDGE + path, { method: 'POST', headers: type ? { 'content-type': type } : {}, body: body, cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('agent bridge ' + r.status); return r.json().catch(function () { return {}; }); });
+  }
+  async function ingest(order, blobs) {
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        for (var i = 0; i < blobs.length; i++)
+          await bridgePost('file?oid=' + encodeURIComponent(order.id) + '&idx=' + i + '&name=' + encodeURIComponent(blobs[i].name), blobs[i], 'application/octet-stream');
+        await bridgePost('order', JSON.stringify(order), 'application/json');
+        return true;
+      } catch (e) { await new Promise(function (r) { setTimeout(r, 1200); }); }
+    }
+    return false;
+  }
+
   async function finalize(conn, oid, g) {
     if (store.has(oid)) return;
     var m = g.meta, po = (m.printOptions && typeof m.printOptions === 'object') ? m.printOptions : {};
@@ -232,57 +243,48 @@
     var cfg = await getCfg();
     var amount = cfg ? P2P.estimate({ kind: kind, paper: paper, color: color, copies: copies, pages: files.map(function (x) { return x.pages; }) }, cfg)
                      : (Number(po.estAmount) > 0 && Number(po.estAmount) < 100000 ? Number(po.estAmount) : 0);
+
+    /* ---- CHANGED (v18): payment details sent by the customer page (top-level meta first, printOptions as backup) ---- */
+    var pm = (m.paymentMethod || po.paymentMethod) === 'pay_now' ? 'pay_now' : 'pay_at_counter';
+    var claimedPaid = pm === 'pay_now' && (m.paymentStatus || po.paymentStatus) === 'paid';
+    var upiRef = clean(m.upiRef || po.upiRef, 24).replace(/[^A-Za-z0-9]/g, '');
+    var paidAmt = Number(m.amount != null ? m.amount : po.amount) || 0;
+    var paidAt = Number(m.paidAt || po.paidAt) || 0;
+    /* the customer's "paid" is only accepted when a UPI reference came with it AND the amount covers our own price calculation;
+       otherwise the order is kept as a cash/pay-at-counter order with a note, so nothing is ever marked paid by mistake */
+    var paid = claimedPaid && upiRef.length >= 8 && (amount <= 0 || paidAmt + 0.5 >= amount);
+    var note = '';
+    if (claimedPaid && !paid) note = 'Customer says paid ₹' + paidAmt + (upiRef ? ' (ref ' + upiRef + ')' : ' (no valid UPI ref)') + ', but the counter price is ₹' + amount + ' — treated as UNPAID, please verify.';
+    else if (paid) note = 'Paid via UPI · ref ' + upiRef + ' (entered by customer — confirm in your UPI app).';
     var order = {
       id: oid, token: '', name: clean(m.customerName || po.name, 60), phone: clean(po.phone, 15).replace(/[^\d+]/g, ''),
-      color: color, copies: copies, amount: amount, status: 'pending', pay_status: '', pay_method: '', created_at: Date.now(), paper: paper,
-      opts: JSON.stringify({ kind: kind, orient: orient, info: clean(po.info, 160) }), source: 'web', p2p: true, via: 'p2p', note: '', wa_number: '', files: files,
-      pc_deleted: 0, srv_deleted: 0
+      color: color, copies: copies, amount: amount,
+      status: paid ? 'pending' : 'cash_wait',                 // paid -> straight to the print queue; unpaid -> "Cash Pending" card (existing behaviour)
+      pay_status: paid ? 'paid' : '',
+      pay_method: pm, pay_ref: paid ? upiRef : '', paid_at: paid ? (paidAt || Date.now()) : 0,   // NEW fields read by counter.js
+      created_at: Date.now(), paper: paper,
+      opts: JSON.stringify({ kind: kind, orient: orient, info: clean(po.info, 160) }), source: 'web', p2p: true, note: note, wa_number: '', files: files
     };
     var rec = { id: oid, order: order, blobs: blobs };
-    store.set(oid, rec); persist(rec); sub(oid, conn);
-    try { conn.send({ t: 'order', orderId: oid, amount: amount, status: order.status }); } catch (e) {}   // ACK -> sender shows "Delivered"
-    notify();                                                                                              // counter.js: new-job beep + toast; the voice alert follows when the order is paid
+    if (MODE === 'receiver') {
+      var stored = await ingest(order, blobs);                // the Agent must have the files BEFORE the customer is told "Delivered"
+      if (!stored) { try { conn.send({ t: 'nack', error: 'The counter PC could not save your file. Please try again.' }); } catch (e) {} return; }
+      rec.blobs = [];                                         // the Agent owns the files now; only the order id stays here so a re-send is just re-ACKed
+    }
+    store.set(oid, rec); persist(rec);
+    try { conn.send({ t: 'order', orderId: oid, amount: amount, status: order.status, paymentStatus: paid ? 'paid' : 'pending' }); } catch (e) {}   // ACK -> sender shows "Delivered" (CHANGED v18: + paymentStatus)
+    notify();
+    /* CHANGED (v18): paid -> the existing "payment successful" voice; pay-at-counter -> a different "payment due at counter" voice
+       (previously every P2P order said "payment successful", even unpaid ones) */
+    try {
+      if (window.ShopVoice) { if (paid) ShopVoice.paymentSuccess({ id: oid }); else (ShopVoice.payAtCounter || ShopVoice.paymentSuccess)({ id: oid }); }
+    } catch (e) {}
   }
-
-  /* ---------------------------------------------------------------- payment */
-  function touch(rec, patch) { Object.keys(patch).forEach(function (k) { rec.order[k] = patch[k]; }); persist(rec); push(rec.order); notify(); }
-  var paidAlready = function (o) { return o.pay_status === 'paid' || o.pay_status === 'cash_received'; };
-  var settled = function (o) { return ['printing', 'printed', 'rejected', 'expired'].indexOf(o.status) >= 0; };
-
-  /* customer pressed "Pay at Counter" */
-  api.choose = function (id, how) {
-    var rec = store.get(String(id)); if (!rec) return false;
-    var o = rec.order;
-    if (how === 'counter' && !paidAlready(o) && !settled(o) && o.status !== 'cash_wait') touch(rec, { status: 'cash_wait', pay_method: 'cash', pay_status: '' });
-    else push(o);
-    return true;
-  };
-  /* customer says "I paid online": ask the Worker (it verified the Razorpay signature) - the browser is never trusted */
-  var checking = {};
-  function checkPaid(rec) {
-    var o = rec.order; if (paidAlready(o) || o.status === 'rejected' || checking[o.id]) return;
-    checking[o.id] = 1;
-    fetch('/api/p2p/pay-status/' + encodeURIComponent(o.id), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
-      if (!j || !j.paid || paidAlready(o)) return;
-      if (Math.abs(Number(j.amount) - Number(o.amount)) > 0.01) { touch(rec, { note: 'Online payment of ₹' + j.amount + ' does not match ₹' + o.amount + ' - check before printing' }); return; }
-      touch(rec, { pay_status: 'paid', pay_method: 'upi', pay_utr: String(j.utr || ''), note: '', status: (o.status === 'pending' || o.status === 'cash_wait') ? 'approved' : o.status });
-    }).catch(function () {}).then(function () { delete checking[o.id]; });
-  }
-  setInterval(function () {                                    // safety net: a lost message must not leave a paid customer waiting
-    store.forEach(function (rec) { var o = rec.order; if (o.payTried && !paidAlready(o) && !settled(o)) checkPaid(rec); });
-  }, PAY_POLL_MS);
 
   /* ---------------------------------------------------------------- what counter.html uses */
   api.orders = function () {
     var now = Date.now(), out = [];
-    store.forEach(function (rec, id) {
-      var o = rec.order;
-      if (now - o.created_at > KEEP_MS) { store.delete(id); unpersist(id); return; }
-      if (o.status === 'printed' && !o.pc_deleted && o.done_at && now - o.done_at > PURGE_AFTER_PRINT_MS) {   // privacy wipe: file leaves this PC, nothing was ever on the server
-        rec.blobs = []; persist(rec); touch(rec, { pc_deleted: 1, srv_deleted: 1 });
-      }
-      out.push(o);
-    });
+    store.forEach(function (rec, id) { if (now - rec.order.created_at > KEEP_MS) { store.delete(id); unpersist(id); } else out.push(rec.order); });
     return out;
   };
   api.count = function () { return store.size; };
@@ -292,7 +294,8 @@
     var idx = parseInt(String(fileId).split('-').pop(), 10);
     return rec.blobs[idx] || null;
   };
-  api.remove = function (id) { var rec = store.get(id); if (!rec) return; if (!rec.order.pc_deleted && rec.order.status !== 'printed') { rec.order.status = 'rejected'; } push(rec.order); subs.delete(id); store.delete(id); unpersist(id); notify(); };
+  api.blobAsync = function (fileId) { return Promise.resolve(api.blob(fileId)); };
+  api.remove = function (id) { var rec = store.get(id); if (!rec) return; store.delete(id); unpersist(id); notify(); };
   api.clear = function () { Array.from(store.keys()).forEach(api.remove); };
   var json = function (o, st) { return new Response(JSON.stringify(o), { status: st || 200, headers: { 'content-type': 'application/json' } }); };
   /* answers the same calls counter.html makes to /api/admin/... for server orders, so Preview / Print / Download / Delete behave the same */
@@ -304,11 +307,11 @@
     var rec = recOf(id); if (!rec) return json({ error: 'Order not found' }, 404);
     var o = rec.order;
     if (action === 'reject') { api.remove(o.id); return json({ ok: true }); }
-    if (action === 'cash-approve') { o.pay_status = o.pay_status === 'paid' ? 'paid' : 'cash_received'; if (o.pay_status === 'cash_received') o.pay_method = 'cash'; o.status = 'printing'; }
+    if (action === 'cash-approve') { o.pay_status = 'cash_received'; o.status = 'printing'; }
     else if (action === 'approve' || action === 'start') { if (o.status !== 'printed') o.status = 'printing'; }
-    else if (action === 'done') { o.status = 'printed'; o.done_at = Date.now(); }
-    else if (action === 'reprint') { o.status = 'printing'; o.done_at = 0; }
-    persist(rec); push(o); notify();
+    else if (action === 'done') { o.status = 'printed'; }
+    else if (action === 'reprint') { o.status = 'printing'; }
+    persist(rec); notify();
     return json({ ok: true });
   };
   api.start = start; api.paint = paint;
@@ -316,5 +319,56 @@
   restore();
   start();
   document.addEventListener('DOMContentLoaded', paint);
+  if (MODE === 'receiver') { setInterval(report, 15000); setInterval(function () { api.orders(); }, 3600000); }   // heartbeat for the Agent + drop old ids from memory
   window.P2PCounter = api;
+
+  /* ---------------------------------------------------------------- view mode (visible Counter tab inside the Windows Agent) */
+  function viewMode() {
+    var cache = [], sig = '', blobs = new Map();
+    var v = { onChange: null, agent: true };
+    var fire = function () { try { v.onChange && v.onChange(); } catch (e) {} };
+    var J = function (path, opt) { return fetch(BRIDGE + path, Object.assign({ cache: 'no-store' }, opt || {})); };
+    function badge() {
+      paint();
+      var el = document.getElementById('p2pBadge');
+      if (el && el.dataset.state === 'online') el.textContent = '⚡ P2P Receiver: Online (Windows Agent)';
+    }
+    function pull() {
+      return J('orders').then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+        if (!d) { status = 'offline'; badge(); return; }
+        status = d.enabled === false ? 'offline' : ((d.status && d.status.state) || 'connecting'); badge();
+        cache = Array.isArray(d.orders) ? d.orders : [];
+        var s = JSON.stringify(cache.map(function (o) { return [o.id, o.status, o.pay_status, o.note, (o.files || []).length]; }));
+        if (s !== sig) { sig = s; fire(); }
+      }).catch(function () { status = 'offline'; badge(); });
+    }
+    var plainId = function (id) { return String(id).replace(/-\d+$/, ''); };
+    v.status = function () { return status; };
+    v.paint = badge; v.start = function () {};
+    v.orders = function () { return cache.slice(); };
+    v.count = function () { return cache.length; };
+    v.blob = function (fileId) { return blobs.get(String(fileId)) || null; };
+    v.blobAsync = function (fileId) {
+      fileId = String(fileId);
+      if (blobs.has(fileId)) return Promise.resolve(blobs.get(fileId));
+      return J('file/' + encodeURIComponent(fileId)).then(function (r) { return r.ok ? r.blob() : null; }).then(function (b) {
+        if (b) { if (blobs.size > 12) blobs.delete(blobs.keys().next().value); blobs.set(fileId, b); }
+        return b;
+      }).catch(function () { return null; });
+    };
+    v.remove = function (id) {
+      cache = cache.filter(function (o) { return o.id !== id; }); fire();
+      J('action?a=reject&id=' + encodeURIComponent(plainId(id)), { method: 'POST' }).then(pull);
+    };
+    v.clear = function () { cache = []; blobs.clear(); fire(); return J('clear', { method: 'POST' }).then(pull); };
+    v.handle = function (action, id) {
+      if (action === 'file') return J('file/' + encodeURIComponent(id));
+      return J('action?a=' + encodeURIComponent(action) + '&id=' + encodeURIComponent(plainId(id)), { method: 'POST' }).then(function (r) { pull(); setTimeout(pull, 1500); return r; });
+    };
+    document.addEventListener('DOMContentLoaded', badge);
+    window.addEventListener('online', pull);
+    setInterval(function () { if (!document.hidden) pull(); }, 2000);   // loopback only: costs Cloudflare nothing
+    pull();
+    window.P2PCounter = v;
+  }
 })();
