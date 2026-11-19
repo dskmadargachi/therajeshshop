@@ -10,8 +10,7 @@ $("mCards").onclick = () => mode("cards"), $("mScan").onclick = () => mode("scan
 
 const T = {
   ration: { n: "Ration Card", bn: "\u09B0\u09C7\u09B6\u09A8 \u0995\u09BE\u09B0\u09CD\u09A1", d: "PDF \xB7 front and back", pdf: 1, F: [.04, .5, .45, .46], B: [.51, .5, .45, .46], det: "green", inset: .004 },
-aadhaar: { n: "Aadhaar Card", bn: "\u0986\u09A7\u09BE\u09B0 \u0995\u09BE\u09B0\u09CD\u09A1", d: "Password PDF \xB7 front and back", pdf: 1, pw: 1, cc: 1, F: [.082, .744, .396, .198], B: [.522, .744, .396, .198], det: "ink", inset: .008, tight: 1, exact: 1 },  voter: { n: "Voter Card", bn: "\u09AD\u09CB\u099F\u09BE\u09B0 \u0995\u09BE\u09B0\u09CD\u09A1", d: "e-EPIC PDF \xB7 front and back", pdf: 1, F: [.03, .03, .47, .3], B: [.5, .03, .47, .3], det: "ink", inset: .004 },
-  abc: { minW: .4, maxW: 1, n: "ABC / APAAR ID", bn: "\u0985\u09CD\u09AF\u09BE\u09AA\u09BE\u09B0", d: "PDF, JPG or PNG \xB7 front only", img: 1, pdf: 1, one: 1, fx: 1, F: [.04, .03, .92, .4], det: "ink", inset: .002 },
+  aadhaar: { n: "Aadhaar Card", bn: "\u0986\u09A7\u09BE\u09B0 \u0995\u09BE\u09B0\u09CD\u09A1", d: "Password PDF \xB7 front and back", pdf: 1, pw: 1, cc: 1, F: [.07, .68, .42, .27], B: [.51, .68, .42, .27], det: "ink", inset: .012, yOff: .012, tight: 1, exact: 1 },  abc: { minW: .4, maxW: 1, n: "ABC / APAAR ID", bn: "\u0985\u09CD\u09AF\u09BE\u09AA\u09BE\u09B0", d: "PDF, JPG or PNG \xB7 front only", img: 1, pdf: 1, one: 1, fx: 1, F: [.04, .03, .92, .4], det: "ink", inset: .002 },
   abha: { n: "ABHA Card", bn: "\u0986\u09AD\u09BE \u0995\u09BE\u09B0\u09CD\u09A1", d: "PDF \xB7 front and back", pdf: 1, F: [.03, .03, .94, .45], B: [.03, .5, .94, .45], det: "cards", inset: .004 },
   eshram: { minW: .3, maxW: 1, n: "e-Shram Card", bn: "\u0987-\u09B6\u09CD\u09B0\u09AE \u0995\u09BE\u09B0\u09CD\u09A1", d: "PDF, JPG or PNG \xB7 front and back", img: 1, pdf: 1, F: [.03, .03, .94, .45], B: [.03, .5, .94, .45], det: "cards", inset: .004 }
 };
