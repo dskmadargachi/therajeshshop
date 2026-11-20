@@ -8,6 +8,11 @@ const A3_MULTIPLIER = 2;                    // A3 page = A4 price x 2
 const PHOTO_4X6 = 20;                       // one 4x6 photo print
 const PASSPORT_SHEET = { '4x6': 30, A4: 50 }; // one sheet of passport photos
 const PAPERS = ['A4', 'A3', '4x6'];
+const PASSPORT_SIZES = {   // WhatsApp option 3: photo sizes (menu order 1-5). per = photos on one 4x6 sheet (must match passport_sheet.py), def = default photo count
+  '35x45': { label: '35×45 mm', per: 8, def: 6 }, '2x2': { label: '2×2 inch', per: 2, def: 2 }, '25x35': { label: '25×35 mm', per: 12, def: 8 },
+  '30x35': { label: '3×3.5 cm', per: 12, def: 8 }, '4x6': { label: '4×6 Full Photo', per: 1, def: 1 },
+};
+const PASSPORT_SIZE_KEYS = ['35x45', '2x2', '25x35', '30x35', '4x6'];
 const PASSPORT_PER_SHEET = 8, PASSPORT_DEFAULT = 6, PASSPORT_MAX = 48;   // WhatsApp option 3: photos on one 4x6 sheet (35x45 mm each) / default count / max per order
 const MAX_FILES = 10;
 const MAX_FILE_BYTES = 25 * 1024 * 1024; // KV value limit is 25 MB
@@ -1176,13 +1181,14 @@ function waStep1Text(files, pages, P, env) {
     `প্রিন্ট করার জন্য নিচের যেকোনো একটি নম্বর লিখে রিপ্লাই দিন:\n` +
     `*1️⃣ সাদাকালো প্রিন্ট (B&W)* — ${rupee(pages * P.bw)}\n` +
     `*2️⃣ রঙিন প্রিন্ট (Color)* — ${rupee(pages * P.color)}\n` +
-    `*3️⃣ পাসপোর্ট সাইজ ফটো প্রিন্ট (Passport Photo)* — ${rupee(P.passport4x6)} / ৪×৬ শিট (${PASSPORT_DEFAULT}টি ছবি; ব্যাকগ্রাউন্ড অটো সাদা)\n\n` +
+    `*3️⃣ পাসপোর্ট সাইজ ফটো প্রিন্ট (Passport Photo)* — ${rupee(P.passport4x6)} / ৪×৬ শিট (সাইজ পরের ধাপে বেছে নিন; ব্যাকগ্রাউন্ড অটো সাদা)\n\n` +
     `💡 *টিপস: একাধিক কপি চাইলে লিখুন \`1x3\` (৩ কপি সাদাকালো), \`2x5\` (৫ কপি কালার) বা \`3x8\` (৮টি পাসপোর্ট ছবি)*\n` +
     `_English: reply 1 for B&W, 2 for Color or 3 for Passport photos (send a clear JPG/PNG photo). Example "2x5" = 5 color copies. Send 0 to cancel._`;
 }
-function waStep2Text(token, color, pages, copies, total, kind) {
+function waStep2Text(token, color, pages, copies, total, kind, sizeKey) {
+  const sz = PASSPORT_SIZES[sizeKey] || PASSPORT_SIZES['35x45'];
   const what = kind === 'passport'
-    ? `পাসপোর্ট সাইজ ফটো (${copies}টি ছবি, ${Math.ceil(copies / PASSPORT_PER_SHEET)} শিট ৪×৬)`
+    ? `পাসপোর্ট ফটো ${sz.label} (${copies}টি ছবি, ${Math.ceil(copies / sz.per)} শিট ৪×৬)`
     : `${color ? 'রঙিন (Color)' : 'সাদাকালো (B&W)'} (${pages} পৃষ্ঠা × ${copies} কপি)`;
   return `🧾 *অর্ডার সামারি (Token: #${token})*\n` +
     `• প্রিন্ট: ${what}\n` +
@@ -1319,18 +1325,32 @@ async function pollPayments(env) {
 }
 
 // ---------- the conversation ----------
-async function waAfterMode(env, o, color, copies, flags, kind = 'doc') {   // mode chosen -> price -> ask UPI or cash
+const orderOpts = (o) => { try { return JSON.parse((o && o.opts) || '{}') || {}; } catch { return {}; } };
+const waSizeMenuText = (P) => `📏 *ফটোর সাইজ বেছে নিন (নম্বর লিখুন):*\n*1️⃣* 35×45 mm (পাসপোর্ট)\n*2️⃣* 2×2 inch\n*3️⃣* 25×35 mm\n*4️⃣* 3×3.5 cm\n*5️⃣* 4×6 Full Photo\n\n💰 প্রতি ৪×৬ শিট ${rupee(P.passport4x6)} · ব্যাকগ্রাউন্ড অটো সাদা, মুখ মাঝখানে সেট হবে\n_English: reply 1-5 to choose the photo size (0 = cancel)._`;
+function parseSizeChoice(text) {   // "1".."5" or "2x2", "35x45", "25x35", "3x3.5", "4x6" / "full"
+  const t = String(text || '').normalize('NFKC').toLowerCase().replace(/[\u09E6-\u09EF]/g, (d) => String(d.charCodeAt(0) - 0x09E6)).replace(/[×✕✖*]/g, 'x').replace(/\s+/g, '');
+  for (const [k, v] of [['35x45', '35x45'], ['2x2', '2x2'], ['25x35', '25x35'], ['3x3.5', '30x35'], ['30x35', '30x35'], ['4x6', '4x6'], ['full', '4x6']]) if (t.startsWith(k)) return { size: v };
+  const m = /^([1-5])$/.exec(t);
+  return m ? { size: PASSPORT_SIZE_KEYS[Number(m[1]) - 1] } : {};
+}
+async function waAskPassportSize(env, o, copies) {   // option 3 chosen: remember it (status stays wa_wait) and ask for the photo size
+  const P = await getPrices(env);
+  await env.DB.prepare("UPDATE orders SET opts=? WHERE id=? AND status='wa_wait'").bind(JSON.stringify({ kind: 'passport', source: 'whatsapp', size_pending: true, copies: copies || 0 }), o.id).run();
+  return waSizeMenuText(P);
+}
+async function waAfterMode(env, o, color, copies, flags, kind = 'doc', sizeKey = '35x45') {   // mode chosen -> price -> ask UPI or cash
   const P = await getPrices(env), { pages } = await orderTotals(env, o.id);
   const passport = kind === 'passport';
   copies = Math.min(Math.max(parseInt(copies) || 1, 1), passport ? PASSPORT_MAX : 100);
-  // passport: priced per 4x6 sheet (8 photos fit one sheet); documents: pages x copies x rate
-  const total = passport ? Math.round(Math.ceil(copies / PASSPORT_PER_SHEET) * P.passport4x6 * 100) / 100
+  // passport: priced per 4x6 sheet (photos per sheet depend on the chosen size); documents: pages x copies x rate
+  const sz = PASSPORT_SIZES[sizeKey] || PASSPORT_SIZES['35x45'];
+  const total = passport ? Math.round(Math.ceil(copies / sz.per) * P.passport4x6 * 100) / 100
     : Math.round(pages * copies * (color ? P.color : P.bw) * 100) / 100;
   const token = o.token || await nextWaToken(env);
   // copies + color + paper + kind are all stored on the order; /api/agent/jobs returns the whole row (copies, color, paper, opts.kind)
   await env.DB.prepare("UPDATE orders SET color=?, copies=?, amount=?, token=?, paper=?, status='pay_choose', opts=? WHERE id=? AND status IN ('wa_wait','pay_choose')")
-    .bind(passport ? 1 : (color ? 1 : 0), copies, total, token, passport ? '4x6' : 'A4', JSON.stringify({ kind: passport ? 'passport' : 'doc', source: 'whatsapp' }), o.id).run();
-  return waStep2Text(token, passport ? 1 : color, passport ? 1 : pages, copies, total, passport ? 'passport' : 'doc');
+    .bind(passport ? 1 : (color ? 1 : 0), copies, total, token, passport ? '4x6' : 'A4', JSON.stringify(passport ? { kind: 'passport', source: 'whatsapp', size: sizeKey, info: 'Passport photo ' + sz.label } : { kind: 'doc', source: 'whatsapp' }), o.id).run();
+  return waStep2Text(token, passport ? 1 : color, passport ? 1 : pages, copies, total, passport ? 'passport' : 'doc', sizeKey);
 }
 async function waCash(env, o) {
   await env.DB.prepare("UPDATE orders SET status='cash_wait', pay_method='cash' WHERE id=? AND status IN ('pay_choose','pay_wait')").bind(o.id).run();
@@ -1356,12 +1376,18 @@ async function waHandleReply(env, o, text, flags) {
     return ['❌ বাতিল হয়েছে, ফাইল মুছে ফেলা হয়েছে।\n_Cancelled — your file was deleted._'];
   }
   if (o.status === 'wa_wait') {
+    const op = orderOpts(o);
+    if (op.size_pending) {   // option 3 was chosen: this reply is the photo size
+      const sc = parseSizeChoice(text);
+      if (sc.size) return [await waAfterMode(env, o, true, op.copies || PASSPORT_SIZES[sc.size].def, flags, 'passport', sc.size)];
+      return ['🙏 অনুগ্রহ করে ফটোর সাইজের জন্য *1* থেকে *5* এর মধ্যে একটি নম্বর লিখুন।\n_Please reply 1-5 to choose the photo size (0 to cancel)._\n\n' + waSizeMenuText(await getPrices(env))];
+    }
     const ch = parseChoice(text);
     if (ch.opt === 1 || ch.opt === 2) return [await waAfterMode(env, o, ch.opt === 2, ch.copies || o.copies || 1, flags)];
     if (ch.opt === 3) {      // passport photos: needs an image; the PC agent removes the background and lays out the 4x6 sheet(s)
       const f = await env.DB.prepare('SELECT name FROM files WHERE order_id=? ORDER BY id LIMIT 1').bind(o.id).first();
       if (!f || !['jpg', 'jpeg', 'png', 'webp'].includes(ext(f.name || ''))) return ['📷 পাসপোর্ট ফটোর জন্য একটি পরিষ্কার *ছবি (JPG/PNG)* পাঠান, তারপর আবার *3* লিখুন।\n_Passport photos need a clear JPG/PNG photo — send it, then reply 3 again._'];
-      return [await waAfterMode(env, o, true, ch.copies || (o.copies > 1 ? o.copies : PASSPORT_DEFAULT), flags, 'passport')];
+      return [await waAskPassportSize(env, o, ch.copies || (o.copies > 1 ? o.copies : 0))];
     }
     return ['🙏 অনুগ্রহ করে *1* (সাদাকালো), *2* (রঙিন) বা *3* (পাসপোর্ট ফটো) লিখে রিপ্লাই দিন। উদাহরণ: `2x5`\n_Please reply 1 for B&W, 2 for Color or 3 for Passport photos (0 to cancel)._'];
   }
@@ -1413,7 +1439,10 @@ async function waIncoming2(env, m) {
 
   const open = active && active.status === 'wa_wait' ? active : null;   // more files before choosing B&W/Color join the same order
   let id, have = 0;
-  if (open) { id = open.id; have = (await orderTotals(env, id)).n; }
+  if (open) {
+    id = open.id; have = (await orderTotals(env, id)).n;
+    if (orderOpts(open).size_pending) await env.DB.prepare("UPDATE orders SET opts=? WHERE id=? AND status='wa_wait'").bind(JSON.stringify({ kind: 'doc', source: 'whatsapp' }), id).run();   // more files arrived: back to the 1/2/3 menu
+  }
   if (have + ok.length > MAX_FILES) return replies.concat([`⚠️ একসাথে সর্বোচ্চ ${MAX_FILES}টি ফাইল। / Max ${MAX_FILES} files per order.`]);
   if (!open) {
     id = newId();
