@@ -4,7 +4,7 @@
 
    ► On every deploy that changes one of these files, bump VERSION below (old caches are deleted on activate).
      As a safety net, a cached file older than MAX_AGE_MS is re-fetched even if VERSION was forgotten. */
-const VERSION = 'v3';   // CHANGED (v18): p2p.js / p2p-counter.js / voice-alerts.js changed
+const VERSION = 'v4';   // CHANGED (v20): wizard.js / p2p.js / p2p-counter.js changed (duplex, pay buttons, P2P status channel)
 const CACHE = 'rajesh-static-' + VERSION;
 const MAX_AGE_MS = 7 * 24 * 3600 * 1000;
 const STATIC = /^\/(site-theme\.css|wizard\.css|site-ui\.js|wizard\.js|scan-wizard\.js|voice-alerts\.js|p2p\.js|p2p-counter\.js|icon-192\.png|icon-512\.png|apple-touch-icon\.png|favicon(-32)?\.(png|ico)|sounds\/.+)$/;

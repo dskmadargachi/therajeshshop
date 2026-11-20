@@ -300,3 +300,297 @@
 
   window.Prog = { start: start, readBuffer: readBuffer, upload: upload };
 })();
+
+
+/* =====================================================================================================================
+   OrderUI — everything on the customer's order screens that is not the wizard frame itself.
+     1. Print sides      OrderUI.state.duplex (false = Single-Sided, true = Duplex (Both Sides)); wires #sidesSeg in step 2
+     2. Step-3 summary   OrderUI.recap(ul, info)  ->  Files · Pages · Paper · Mode · Sides · Copies (· Name)
+     3. Order placed     OrderUI.show(order, ctx) ->  token, exact amount, summary, "Transferred via P2P" badge, step tracker
+                         and the two payment buttons:
+                           Pay Now         -> Razorpay checkout for the exact order amount
+                           Pay at Counter  -> POST /api/pay-mode {orderId, paymentMode:"counter"}, closes any open Razorpay popup
+     The SAME code path draws a normal upload and a P2P transfer. A normal order is followed by polling /api/orders/:id; a P2P order
+     is followed through the open WebRTC link to the counter (order.channel, see p2p.js) and fed through the same renderer, so the
+     tracker (Upload -> Pay -> Print -> Delete from PC -> Delete from server), the animation and the status texts are identical.
+   ===================================================================================================================== */
+(function () {
+  'use strict';
+  if (window.OrderUI) return;
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { duplex: false };
+  var SIDES = { single: 'Single-Sided', duplex: 'Duplex (Both Sides)' };
+  var sidesLabel = function () { return state.duplex ? SIDES.duplex : SIDES.single; };
+  var inr = function (n) { return '\u20B9' + (Math.round(Number(n) * 100) / 100).toFixed(2); };
+
+  /* ---------- 1. Print sides selector (step 2) ---------- */
+  function initSides() {
+    var seg = $('sidesSeg'); if (!seg || seg._ready) return;
+    seg._ready = true;
+    var btns = [].slice.call(seg.querySelectorAll('button'));
+    function paint() {
+      btns.forEach(function (b) {
+        var on = (b.dataset.v === 'duplex') === state.duplex;
+        b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+    }
+    function set(v) {
+      state.duplex = !!v; paint();
+      try { document.dispatchEvent(new CustomEvent('orderui:sides', { detail: { duplex: state.duplex } })); } catch (e) {}
+    }
+    btns.forEach(function (b) { b.addEventListener('click', function () { if (!b.disabled) set(b.dataset.v === 'duplex'); }); });
+    /* 4x6 photo paper is never printed on both sides: lock the selector to Single-Sided there */
+    var paper = $('paperSeg');
+    function syncPaper() {
+      var on = paper && paper.querySelector('.on'), photo = !!(on && on.dataset.v === '4x6');
+      var d = seg.querySelector('[data-v="duplex"]');
+      if (d) { d.disabled = photo; d.title = photo ? 'Not available for 4\u00D76 photo paper' : ''; }
+      if (photo && state.duplex) set(false);
+    }
+    if (paper) { try { new MutationObserver(syncPaper).observe(paper, { subtree: true, attributes: true, attributeFilter: ['class'] }); } catch (e) {} syncPaper(); }
+    paint();
+  }
+
+  /* ---------- 2. Step-3 summary rows ---------- */
+  function row(ul, label, value) {
+    var li = document.createElement('li'), s = document.createElement('span'), b = document.createElement('b');
+    s.textContent = label; b.textContent = value; li.appendChild(s); li.appendChild(b); ul.appendChild(li);
+  }
+  function recap(ul, info) {
+    if (!ul) return; info = info || {}; ul.textContent = '';
+    row(ul, 'Files', String(info.files));
+    row(ul, 'Pages', String(info.pages));
+    row(ul, 'Paper', String(info.paper));
+    row(ul, 'Mode', String(info.mode));
+    row(ul, 'Sides', sidesLabel());
+    row(ul, 'Copies', String(info.copies));
+    if (info.name) row(ul, 'Name', String(info.name));
+  }
+
+  /* ---------- 3. Order placed ---------- */
+  var session = null;
+  var STATUS_TEXT = {
+    expired: 'Not paid within 60 minutes, so the upload was deleted.',
+    pending: 'Waiting for counter approval\u2026',
+    cash_wait: 'Pay at Counter: waiting for the counter to take your cash\u2026',
+    approved: 'Approved. Sending to printer\u2026',
+    printing: 'Printing now',
+    printed: 'Printed. Please collect from the counter.',
+    rejected: 'Rejected by counter',
+    error: 'Printer problem. Please tell the counter.'
+  };
+
+  function post(url, body) {
+    return fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) { var e = new Error(j.error || 'Request failed'); e.status = r.status; e.body = j; throw e; }
+        return j;
+      });
+    });
+  }
+  function loadScript(src, attrs, test) {
+    return new Promise(function (ok, no) {
+      if (test()) return ok();
+      var s = document.createElement('script'); s.src = src; s.async = true;
+      Object.keys(attrs || {}).forEach(function (k) { s.setAttribute(k, attrs[k]); });
+      s.onload = function () { test() ? ok() : no(new Error('script')); }; s.onerror = function () { no(new Error('script')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function show(order, ctx) {
+    ctx = ctx || {};
+    if (session) session.stop();
+    var cfg = ctx.cfg || {}, isP2P = !!order.p2p, amount = Number(order.amount) || 0;
+    var S = session = {
+      id: order.id, p2p: isP2P, ch: isP2P ? (order.channel || null) : null, meta: order.meta || {},
+      paid: false, counter: false, busy: false, cbusy: false, verifying: false, registered: false, rzp: null, cancelled: false,
+      stopped: false, timer: 0, last: null,
+      online: !!(cfg.razorpay && cfg.razorpay.keyId) || (!isP2P && !!(cfg.youpi && cfg.youpi.key))
+    };
+    S.stop = function () { S.stopped = true; clearTimeout(S.timer); try { S.ch && S.ch.close(); } catch (e) {} };
+
+    var msg = function (t) { var m = $('payMsg'); if (m) m.textContent = t; };
+    var amountLine = function (a) { $('oamt').textContent = 'Exact amount to pay: ' + inr(a); };
+
+    /* ----- screen frame: token, amount, summary, P2P badge ----- */
+    if (window.Wiz) Wiz.showDone(ctx.flow || 'doc');
+    $('done').classList.remove('hidden');
+    $('oid').textContent = order.id;
+    amountLine(amount);
+    var badge = $('p2pViaBadge'); if (badge) badge.classList.toggle('hidden', !isP2P);
+    var sum = $('rcDone'), src = $('rcDoc');
+    if (sum) { sum.innerHTML = src && (ctx.flow || 'doc') === 'doc' ? src.innerHTML : ''; sum.classList.toggle('hidden', !sum.children.length); }
+    var sl = $('rcDoneWrap'); if (sl) sl.classList.toggle('hidden', !(sum && sum.children.length));
+
+    /* ----- buttons ----- */
+    var bNow = $('payNow'), bCnt = $('payCounter'), acts = $('payActs'), paidBox = $('payPaid'), hint = $('payHint2');
+    function paint() {
+      if (paidBox) paidBox.classList.toggle('hidden', !S.paid);
+      if (acts) acts.classList.toggle('hidden', S.paid);
+      if (hint) hint.classList.toggle('hidden', S.paid);
+      if (bNow) {
+        bNow.disabled = S.busy || S.cbusy || S.verifying || !S.online;
+        bNow.querySelector('.pb-t').textContent = (S.counter ? 'Pay online instead ' : 'Pay Now ') + inr(amount);
+      }
+      if (bCnt) {
+        bCnt.disabled = S.cbusy || S.verifying || S.counter;     // stays usable while the Razorpay window is open: it closes that window
+        bCnt.classList.toggle('sel', S.counter);
+        bCnt.querySelector('.pb-t').textContent = S.counter ? '\u2713 Pay at Counter selected' : 'Pay at Counter';
+      }
+    }
+    function markPaid(text) {
+      S.paid = true; S.busy = false; S.cbusy = false; S.verifying = false;
+      if (paidBox) paidBox.querySelector('.pp-t').textContent = text || 'Payment received. Thank you!';
+      paint();
+    }
+
+    /* ----- status renderer (shared by server polling and the P2P link) ----- */
+    function statusText(v) {
+      var st = v.status;
+      if (st === 'pending' || st === 'cash_wait') {
+        if (v.pay_status === 'paid') return 'Payment received. Waiting in the print queue\u2026';
+        if (S.counter) return STATUS_TEXT.cash_wait;
+        return 'Waiting for your payment. Choose Pay Now or Pay at Counter.';
+      }
+      if (st === 'approved' && v.pay_status === 'paid') return 'Payment received. Sending to printer\u2026';
+      return STATUS_TEXT[st] || st;
+    }
+    function apply(v) {
+      if (!v || S.stopped) return;
+      S.last = v;
+      var st = v.status, cls = (st === 'cash_wait' ? 'pending' : st);
+      var o = $('ost'); o.className = 'status s-' + cls; o.textContent = statusText(v);
+      if ((v.pay_method === 'cash' || v.pay_method === 'pay_at_counter') && v.pay_status !== 'paid') { if (!S.counter && !S.paid) { S.counter = true; paint(); } }
+      if (v.pay_status === 'paid' && !S.paid) markPaid();
+      if (Number(v.amount) > 0 && Math.abs(Number(v.amount) - amount) > 0.01 && !isP2P) { amount = Number(v.amount); amountLine(amount); paint(); }
+      try { ctx.track && ctx.track(v); } catch (e) {}
+      try { window.ShopVoice && ShopVoice.trackOrder && ShopVoice.trackOrder(S.id, v); } catch (e) {}
+    }
+    function finished(v) {
+      return v.status === 'rejected' || v.status === 'expired' || (v.status === 'printed' && Number(v.srv_deleted) > 0 && Number(v.pc_deleted) > 0);
+    }
+
+    /* ----- Pay at Counter ----- */
+    function payCounter() {
+      if (S.paid || S.counter || S.verifying) return;
+      S.cancelled = true;                                          // an open Razorpay window is closed on purpose, not "cancelled by the customer"
+      try { S.rzp && S.rzp.close && S.rzp.close(); } catch (e) {}
+      S.rzp = null; S.busy = false; S.cbusy = true; paint(); msg('Confirming pay at counter\u2026');
+      var step = (!S.p2p || S.registered) ? post('/api/pay-mode', { orderId: S.id, paymentMode: 'counter' }) : Promise.resolve({ ok: true });
+      step.then(function () {
+        return S.p2p && S.ch ? S.ch.pay({ paymentMode: 'counter' }).catch(function () { /* counter already holds it as a cash order */ }) : null;
+      }).then(function () {
+        S.counter = true; S.cbusy = false; paint();
+        msg('Pay at Counter confirmed. Please pay ' + inr(amount) + ' in cash at the counter and show token ' + S.id + '.');
+        apply({ status: (S.last && S.last.status === 'pending' && S.last.pay_status !== 'paid') ? 'cash_wait' : (S.last ? S.last.status : 'cash_wait'),
+          pay_status: S.last ? S.last.pay_status : '', pay_method: 'cash', pc_deleted: S.last ? S.last.pc_deleted : 0, srv_deleted: S.last ? S.last.srv_deleted : 0 });
+      }).catch(function (e) {
+        S.cbusy = false;
+        if (e && e.body && e.body.paid) { markPaid(); msg('This order was already paid online. Thank you!'); return; }
+        paint(); msg((e && e.message ? e.message : 'Could not confirm') + '. Please try again, or just show this token at the counter.');
+      });
+    }
+
+    /* ----- Pay Now (Razorpay) ----- */
+    function razorpay() {
+      var name = cfg.shop || 'Digital Seva Kendra';
+      S.cancelled = false; S.busy = true; paint(); msg('Opening secure payment\u2026');
+      var prep = S.p2p && !S.registered
+        ? post('/api/p2p-order', { id: S.id, meta: S.meta }).then(function (r) { S.registered = true; if (Number(r.amount) > 0 && Math.abs(Number(r.amount) - amount) > 0.01) { amount = Number(r.amount); amountLine(amount); } })
+        : Promise.resolve();
+      return prep.then(function () {
+        return loadScript('https://checkout.razorpay.com/v1/checkout.js', {}, function () { return !!window.Razorpay; });
+      }).then(function () { return post('/api/create-order', { orderId: S.id }); }).then(function (w) {
+        if (S.cancelled || S.paid) { S.busy = false; paint(); return; }
+        var rz = new window.Razorpay({
+          key: w.key_id, amount: w.amount, currency: w.currency, order_id: w.order_id, name: name, description: 'Print order ' + S.id, theme: { color: '#4f5bff' },
+          handler: function (g) {
+            S.verifying = true; S.rzp = null; paint(); msg('Verifying your payment\u2026');
+            $('ost').textContent = 'Confirming your payment\u2026';
+            post('/api/verify-payment', { orderId: S.id, razorpay_payment_id: g.razorpay_payment_id, razorpay_order_id: g.razorpay_order_id, razorpay_signature: g.razorpay_signature })
+              .then(function () {
+                S.counter = false;
+                markPaid(); msg('Payment verified. Printing starts automatically.');
+                try { window.ShopVoice && ShopVoice.paymentSuccess({ id: S.id }); } catch (e) {}
+                if (S.p2p) {
+                  var base = S.last || { status: 'pending', pc_deleted: 0, srv_deleted: 0 };
+                  apply({ status: base.status === 'cash_wait' ? 'pending' : base.status, pay_status: 'paid', pay_method: 'pay_now', pc_deleted: base.pc_deleted, srv_deleted: base.srv_deleted });
+                  if (S.ch) S.ch.pay({ paymentMode: 'online' }).catch(function () { msg('Payment received. The counter link dropped, so please show this token at the counter.'); });
+                }
+              })
+              .catch(function (e) {
+                S.verifying = false; S.busy = false; paint();
+                msg((e.message || 'Could not verify the payment') + '. If money was deducted, show this token at the counter.');
+              });
+          },
+          modal: { ondismiss: function () {
+            S.rzp = null;
+            if (S.cancelled || S.verifying || S.paid) return;
+            S.busy = false; paint(); msg('Payment cancelled. Tap Pay Now to try again, or choose Pay at Counter.');
+          } }
+        });
+        rz.on('payment.failed', function (g) { S.busy = false; S.rzp = null; paint(); msg('Payment failed: ' + ((g.error && g.error.description) || 'please try again') + '.'); });
+        S.rzp = rz; rz.open();
+      }).catch(function (e) {
+        S.busy = false; paint();
+        if (e && e.status === 409) { if (/already paid/i.test(e.message)) { markPaid(); return; } }
+        msg((e && e.message && e.message !== 'script' ? e.message : 'Payment service is not reachable right now') + '. Try again, or choose Pay at Counter.');
+      });
+    }
+    /* optional second gateway (Youpi) for normal uploads only, exactly as before */
+    function youpi() {
+      S.cancelled = false; S.busy = true; paint(); msg('Opening secure payment\u2026');
+      return loadScript(cfg.youpi.base + '/youpi.js', { 'data-youpi-key': cfg.youpi.key, 'data-currency': 'INR' }, function () { return !!window.Youpi; }).then(function () {
+        window.Youpi.pay({ order_id: S.id, amount: amount, currency: 'INR', name: cfg.shop || 'Digital Seva Kendra', description: 'Print order ' + S.id,
+          handler: function () { $('ost').textContent = 'Confirming your payment\u2026'; msg('Complete the payment. Printing starts automatically.'); },
+          onClose: function () { if (S.cancelled || S.paid) return; S.busy = false; paint(); msg('Payment window closed.'); } });
+      }).catch(function () { S.busy = false; paint(); msg('Could not open the payment window. Try again, or choose Pay at Counter.'); });
+    }
+    function payNow() {
+      if (S.paid || S.busy || !S.online) return;
+      var useRzp = !!(cfg.razorpay && cfg.razorpay.keyId);
+      (useRzp ? razorpay() : youpi());
+    }
+
+    if (bNow) bNow.onclick = payNow;
+    if (bCnt) bCnt.onclick = payCounter;
+
+    /* ----- first paint ----- */
+    var first = { status: order.status || (isP2P ? 'cash_wait' : 'pending'), pay_status: order.paymentStatus === 'paid' ? 'paid' : '', pay_method: '', pc_deleted: 0, srv_deleted: 0 };
+    paint();
+    if (!(amount > 0)) { msg('Invalid payment amount'); if (bNow) bNow.disabled = true; if (bCnt) bCnt.disabled = true; }
+    else if (!S.online) { msg('Online payment is not available right now. Please choose Pay at Counter.'); try { console.warn('Online payment off. Missing server variables:', (cfg.razorpayMissing || []).join(', ') || 'none reported'); } catch (e) {} }
+    else msg('Choose how to pay: Pay Now (online) or Pay at Counter (cash).');
+    if (first.pay_status === 'paid') markPaid();
+    apply(first);
+
+    /* ----- live updates ----- */
+    if (isP2P) {
+      if (S.ch) S.ch.onStatus(function (v) { apply(v); if (finished(v)) setTimeout(function () { try { S.ch.close(); } catch (e) {} }, 2000); });
+    } else {
+      var n = 0, doneAt = 0;
+      (function poll() {
+        if (S.stopped) return;
+        if (document.hidden) {
+          var again = function () { if (!document.hidden) { document.removeEventListener('visibilitychange', again); poll(); } };
+          document.addEventListener('visibilitychange', again); return;
+        }
+        var wait = 3000;
+        fetch('/api/orders/' + encodeURIComponent(S.id)).then(function (r) { return r.json(); }).then(function (v) {
+          if (S.stopped || !v || v.error) return;
+          apply(v);
+          if (['approved', 'printing'].indexOf(v.status) >= 0 || (v.status === 'printed' && !v.srv_deleted)) wait = 1200;
+          if (v.status === 'rejected' || v.status === 'expired') return 'stop';
+          if (v.status === 'printed') { doneAt = doneAt || Date.now(); if ((v.srv_deleted && v.pc_deleted) || Date.now() - doneAt > 120000) return 'stop'; }
+        }).catch(function () {}).then(function (stop) {
+          if (stop === 'stop' || S.stopped || ++n > 1500) return;
+          S.timer = setTimeout(poll, wait);
+        });
+      })();
+    }
+  }
+
+  window.OrderUI = { state: state, sidesLabel: sidesLabel, recap: recap, show: show, initSides: initSides };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initSides); else initSides();
+})();

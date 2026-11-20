@@ -11,6 +11,10 @@
        P2PCounter.handle(action,id)   -> Response-like answers for file/start/approve/cash-approve/done/reject/reprint
        P2PCounter.blob(fileId)        -> the reassembled File
 
+   v20 (status channel): after the ACK a customer page stays connected and sends  {t:'watch'}  /  {t:'pay', paymentMode:'counter'|'online'}.
+     The counter answers with {t:'status', ...} whenever an order changes (cash-approve / print / done / delete / reject) in the same shape
+     /api/orders/:id uses, so the customer's tracker works for P2P orders. 'online' is only accepted after /api/orders/:id says paid.
+
    v19 — WINDOWS AGENT MODES (selected by window.__AGENT_P2P__, which the Agent's local bridge injects; a normal browser never sets it,
    so the normal counter in Chrome/Edge behaves exactly as before):
      'receiver'  hidden, NON-polling page inside the Agent. Owns the PeerJS id, receives the customer's files over WebRTC and hands every
@@ -35,6 +39,20 @@
   var api = { onChange: null };
   var store = new Map();                         // orderId -> { id, order, blobs:[File] }
   var conns = new Set(), activeBytes = 0;
+  var watchers = new Map();                      // orderId -> Set(customer connections that want status updates)
+
+  /* what the customer's tracker needs, in the shape /api/orders/:id returns */
+  function statusOf(o) {
+    var paidOnline = o.pay_status === 'paid', cash = o.pay_status === 'cash_received';
+    return { t: 'status', orderId: o.id, status: o.status, amount: o.amount,
+      pay_status: (paidOnline || cash) ? 'paid' : '',
+      pay_method: paidOnline ? 'pay_now' : cash ? 'cash' : (o.cust_counter ? 'pay_at_counter' : ''),
+      pc_deleted: Number(o.pc_deleted) || 0, srv_deleted: Number(o.srv_deleted) || 0 };
+  }
+  function pushStatus(o) {
+    var set = watchers.get(o.id); if (!set) return;
+    var m = statusOf(o); set.forEach(function (c) { try { c.send(m); } catch (e) {} });
+  }
 
   /* ---------------------------------------------------------------- status badge */
   var status = 'connecting';
@@ -151,11 +169,12 @@
     if (conns.size >= MAX_CONNS) { try { conn.on('open', function () { conn.send({ t: 'nack', error: 'Counter is busy, please try again' }); conn.close(); }); } catch (e) {} return; }
     conns.add(conn);
     var T = new Map();                                        // transferId -> transfer  (private to THIS customer connection)
+    var mine = new Set();                                     // orderIds this connection watches
     var G = new Map();                                        // orderId    -> { fileCount, done:{idx:File}, meta, bytes }
 
     function drop(tid) { var t = T.get(tid); if (t) { activeBytes -= t.size; T.delete(tid); } }
     function refuse(tid, err) { try { conn.send({ t: 'nack', transferId: tid, error: err }); } catch (e) {} drop(tid); }
-    function cleanup() { T.forEach(function (t, k) { drop(k); }); G.clear(); conns.delete(conn); clearInterval(sweep); }
+    function cleanup() { T.forEach(function (t, k) { drop(k); }); G.clear(); conns.delete(conn); clearInterval(sweep); mine.forEach(function (oid) { var w = watchers.get(oid); if (w) { w.delete(conn); if (!w.size) watchers.delete(oid); } }); mine.clear(); }
     var sweep = setInterval(function () { var now = Date.now(); T.forEach(function (t, k) { if (now - t.last > IDLE_MS) refuse(k, 'Transfer timed out'); }); }, 15000);
 
     conn.on('data', function (m) {
@@ -169,6 +188,43 @@
       if (m.t === 'meta') return onMeta(m);
       if (m.t === 'chunk') return onChunk(m);
       if (m.t === 'end') return onEnd(m);
+      if (m.t === 'watch') return onWatch(m);
+      if (m.t === 'pay') return onPay(m);
+    }
+
+    /* ---- v20: customer asks for live status of its order ---- */
+    function onWatch(m) {
+      var oid = clean(m.orderId, 24);
+      if (!/^P2P-[A-Z0-9]{4,12}$/.test(oid)) return;
+      var w = watchers.get(oid); if (!w) watchers.set(oid, w = new Set());
+      w.add(conn); mine.add(oid);
+      var rec = store.get(oid); if (rec) { try { conn.send(statusOf(rec.order)); } catch (e) {} }
+    }
+
+    /* ---- v20: customer chose how to pay on the Order-placed screen ---- */
+    function onPay(m) {
+      var oid = clean(m.orderId, 24), mode = m.paymentMode === 'online' ? 'online' : 'counter';
+      var ack = function (ok, err) { try { conn.send({ t: 'pay-ack', orderId: oid, paymentMode: mode, ok: !!ok, error: err || '' }); } catch (e) {} };
+      var rec = store.get(oid); if (!rec) return ack(false, 'Order not found at the counter');
+      var o = rec.order, done = function () { persist(rec); resync(o); notify(); pushStatus(o); };
+      if (mode === 'counter') {
+        if (o.pay_status !== 'paid' && o.pay_status !== 'cash_received') { o.cust_counter = true; o.pay_method = 'pay_at_counter'; o.paymentMode = 'counter'; o.note = 'Customer chose Pay at Counter: collect the cash.'; }
+        done(); return ack(true);
+      }
+      var tries = 0;                                         // 'online': never trust the browser, ask the server whether Razorpay really paid
+      (function verify() {
+        fetch('/api/orders/' + encodeURIComponent(oid), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(function (j) {
+          if (j && j.pay_status === 'paid' && Number(j.amount) + 0.5 >= Number(o.amount)) {
+            o.pay_status = 'paid'; o.pay_method = 'pay_now'; o.paymentMode = 'online'; o.cust_counter = false; o.pay_ref = ''; o.paid_at = Date.now();
+            o.note = 'Paid online via Razorpay (checked with the server).';
+            if (o.status === 'cash_wait') o.status = 'pending';          // paid -> straight into the print queue
+            done();
+            try { window.ShopVoice && ShopVoice.paymentSuccess({ id: oid }); } catch (e) {}
+            ack(true);
+          } else if (++tries < 4) setTimeout(verify, 1500);
+          else ack(false, 'Online payment is not confirmed yet. Please show this token at the counter.');
+        });
+      })();
     }
 
     function onMeta(m) {
@@ -226,6 +282,24 @@
     return false;
   }
 
+  /* receiver mode: the Agent owns the order, so a payment change is handed over again (same id -> the Agent should treat it as an update) */
+  function resync(o) { if (MODE === 'receiver') { try { bridgePost('order', JSON.stringify(o), 'application/json').catch(function () {}); } catch (e) {} } }
+  /* receiver mode: the Agent prints / deletes, this page only sees it through the loopback bridge -> poll it while a customer is watching */
+  if (MODE === 'receiver') setInterval(function () {
+    if (!watchers.size) return;
+    fetch(BRIDGE + 'orders', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d || !Array.isArray(d.orders)) return;
+      var by = {}; d.orders.forEach(function (x) { by[String(x.id).replace(/-\d+$/, '')] = x; });
+      Array.from(watchers.keys()).forEach(function (oid) {
+        var rec = store.get(oid); if (!rec) return; var o = rec.order, a = by[oid], before = JSON.stringify(statusOf(o));
+        if (a) { o.status = a.status || o.status; if (a.pay_status) o.pay_status = a.pay_status; o.pc_deleted = Number(a.pc_deleted) || 0; o.srv_deleted = Number(a.srv_deleted) || 0; }
+        else if (o.status === 'printed') { o.pc_deleted = 1; o.srv_deleted = 1; }
+        else if (o.status !== 'rejected') o.status = 'rejected';
+        if (JSON.stringify(statusOf(o)) !== before) pushStatus(o);
+      });
+    }).catch(function () {});
+  }, 2000);
+
   async function finalize(conn, oid, g) {
     if (store.has(oid)) return;
     var m = g.meta, po = (m.printOptions && typeof m.printOptions === 'object') ? m.printOptions : {};
@@ -235,11 +309,18 @@
     var copies = Math.min(Math.max(parseInt(po.copies) || 1, 1), kind === 'passport' ? 20 : 100);
     var orient = (Array.isArray(po.orient) ? po.orient : []).map(function (x) { return x === 'landscape' ? 'landscape' : 'portrait'; });
     var pages = Array.isArray(po.pages) ? po.pages : [];
+    var sidesIn = String(m.sides != null ? m.sides : (po.sides != null ? po.sides : '')).toLowerCase();
+    var dupIn = m.duplex != null ? m.duplex : po.duplex;
+    var duplex = (dupIn === true || dupIn === 1 || dupIn === '1' || dupIn === 'true' || dupIn === 'duplex' || sidesIn === 'duplex' || sidesIn === 'double') && kind !== 'passport' && paper !== '4x6';
     var blobs = [], files = [];
     for (var i = 0; i < g.fileCount; i++) {
       var f = g.done[i]; blobs.push(f);
       files.push({ id: oid + '-' + i, name: f.name, pages: Math.min(Math.max(parseInt(pages[i]) || 1, 1), 2000), size: f.size });
     }
+    var pagesSum = files.reduce(function (a, x) { return a + x.pages; }, 0);
+    var sentTotal = parseInt(m.totalPages != null ? m.totalPages : po.totalPages, 10);
+    var allCounted = pages.length >= files.length && files.every(function (x, i) { return parseInt(pages[i], 10) > 0; });
+    var totalPages = allCounted ? pagesSum : (sentTotal > 0 ? Math.min(sentTotal, 2000) : pagesSum);
     var cfg = await getCfg();
     var amount = cfg ? P2P.estimate({ kind: kind, paper: paper, color: color, copies: copies, pages: files.map(function (x) { return x.pages; }) }, cfg)
                      : (Number(po.estAmount) > 0 && Number(po.estAmount) < 100000 ? Number(po.estAmount) : 0);
@@ -259,11 +340,16 @@
     var order = {
       id: oid, token: '', name: clean(m.customerName || po.name, 60), phone: clean(po.phone, 15).replace(/[^\d+]/g, ''),
       color: color, copies: copies, amount: amount,
+      isP2P: true, transferMethod: 'p2p',
+      duplex: duplex, sides: duplex ? 'duplex' : 'single',
+      totalPages: totalPages,
+      paymentMode: paid ? 'online' : 'counter',
       status: paid ? 'pending' : 'cash_wait',                 // paid -> straight to the print queue; unpaid -> "Cash Pending" card (existing behaviour)
       pay_status: paid ? 'paid' : '',
       pay_method: pm, pay_ref: paid ? upiRef : '', paid_at: paid ? (paidAt || Date.now()) : 0,   // NEW fields read by counter.js
       created_at: Date.now(), paper: paper,
-      opts: JSON.stringify({ kind: kind, orient: orient, info: clean(po.info, 160) }), source: 'web', p2p: true, note: note, wa_number: '', files: files
+      opts: JSON.stringify({ kind: kind, orient: orient, info: clean(po.info, 160), duplex: duplex, sides: duplex ? 'duplex' : 'single', totalPages: totalPages, isP2P: true, paymentMode: paid ? 'online' : 'counter' }),
+      pc_deleted: 0, srv_deleted: 0, source: 'web', p2p: true, note: note, wa_number: '', files: files
     };
     var rec = { id: oid, order: order, blobs: blobs };
     if (MODE === 'receiver') {
@@ -295,7 +381,14 @@
     return rec.blobs[idx] || null;
   };
   api.blobAsync = function (fileId) { return Promise.resolve(api.blob(fileId)); };
-  api.remove = function (id) { var rec = store.get(id); if (!rec) return; store.delete(id); unpersist(id); notify(); };
+  api.remove = function (id) {
+    var rec = store.get(id); if (!rec) return;
+    var o = rec.order;
+    if (o.status === 'printed') { o.pc_deleted = 1; o.srv_deleted = 1; }   // printed + removed here: gone from this PC, and a P2P order never touched the server
+    else o.status = 'rejected';
+    pushStatus(o); watchers.delete(id);
+    store.delete(id); unpersist(id); notify();
+  };
   api.clear = function () { Array.from(store.keys()).forEach(api.remove); };
   var json = function (o, st) { return new Response(JSON.stringify(o), { status: st || 200, headers: { 'content-type': 'application/json' } }); };
   /* answers the same calls counter.html makes to /api/admin/... for server orders, so Preview / Print / Download / Delete behave the same */
@@ -307,11 +400,11 @@
     var rec = recOf(id); if (!rec) return json({ error: 'Order not found' }, 404);
     var o = rec.order;
     if (action === 'reject') { api.remove(o.id); return json({ ok: true }); }
-    if (action === 'cash-approve') { o.pay_status = 'cash_received'; o.status = 'printing'; }
+    if (action === 'cash-approve') { o.pay_status = 'cash_received'; o.paymentMode = 'counter'; o.status = 'printing'; }
     else if (action === 'approve' || action === 'start') { if (o.status !== 'printed') o.status = 'printing'; }
     else if (action === 'done') { o.status = 'printed'; }
     else if (action === 'reprint') { o.status = 'printing'; }
-    persist(rec); notify();
+    persist(rec); notify(); pushStatus(o);
     return json({ ok: true });
   };
   api.start = start; api.paint = paint;
@@ -338,7 +431,7 @@
         if (!d) { status = 'offline'; badge(); return; }
         status = d.enabled === false ? 'offline' : ((d.status && d.status.state) || 'connecting'); badge();
         cache = Array.isArray(d.orders) ? d.orders : [];
-        var s = JSON.stringify(cache.map(function (o) { return [o.id, o.status, o.pay_status, o.note, (o.files || []).length]; }));
+        var s = JSON.stringify(cache.map(function (o) { return [o.id, o.status, o.pay_status, o.note, (o.files || []).length, o.duplex, o.totalPages, o.paymentMode]; }));
         if (s !== sig) { sig = s; fire(); }
       }).catch(function () { status = 'offline'; badge(); });
     }
@@ -361,9 +454,17 @@
       J('action?a=reject&id=' + encodeURIComponent(plainId(id)), { method: 'POST' }).then(pull);
     };
     v.clear = function () { cache = []; blobs.clear(); fire(); return J('clear', { method: 'POST' }).then(pull); };
+    function jobQuery(id) {
+      var o = cache.filter(function (x) { return x.id === plainId(id); })[0];
+      if (!o) return '';
+      var dup = o.duplex === true || o.duplex === 1 || String(o.sides || '').toLowerCase() === 'duplex';
+      return '&duplex=' + (dup ? 1 : 0) + '&sides=' + (dup ? 'duplex' : 'single') + '&totalPages=' + (parseInt(o.totalPages, 10) || 0) +
+        '&isP2P=1&paymentMode=' + encodeURIComponent(o.paymentMode || (o.pay_status === 'paid' ? 'online' : 'counter'));
+    }
     v.handle = function (action, id) {
       if (action === 'file') return J('file/' + encodeURIComponent(id));
-      return J('action?a=' + encodeURIComponent(action) + '&id=' + encodeURIComponent(plainId(id)), { method: 'POST' }).then(function (r) { pull(); setTimeout(pull, 1500); return r; });
+      var q = /^(approve|start|reprint|cash-approve)$/.test(action) ? jobQuery(id) : '';
+      return J('action?a=' + encodeURIComponent(action) + '&id=' + encodeURIComponent(plainId(id)) + q, { method: 'POST' }).then(function (r) { pull(); setTimeout(pull, 1500); return r; });
     };
     document.addEventListener('DOMContentLoaded', badge);
     window.addEventListener('online', pull);

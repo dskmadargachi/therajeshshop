@@ -113,7 +113,11 @@ const mainWorker = {
       if (path === 'create-order' && method === 'POST') return rzpCreateOrder(request, env);
       if (path === 'verify-payment' && method === 'POST') return rzpVerify(request, env);
       if (path === 'orders' && method === 'POST') return createOrder(request, env);
-      m = path.match(/^orders\/([A-Z0-9]+)$/);
+      if (path === 'p2p-order' && method === 'POST') return registerP2pOrder(request, env);
+      if ((path === 'pay-at-counter' || path === 'pay-mode' || path === 'pay-counter') && method === 'POST') return orderPayAtCounter(request, env, '');
+      m = path.match(/^orders\/([A-Z0-9][A-Z0-9-]*)\/(?:pay-at-counter|payment-mode)$/);
+      if (m && method === 'POST') return orderPayAtCounter(request, env, m[1]);
+      m = path.match(/^orders\/([A-Z0-9][A-Z0-9-]*)$/);
       if (m && method === 'GET') return orderStatus(env, m[1]);
 
       if (path === 'admin-config' && method === 'GET') return edgeCached(request, ctx, async () => jsonPublic({ googleClientId: clean(env.GOOGLE_CLIENT_ID) || null, pinLogin: !!(clean(env.ADMIN_PIN) && sessionSecret(env)) }));
@@ -265,6 +269,54 @@ async function adminVisitors(env) {
 }
 
 // Adds the new columns automatically the first time (no manual SQL needed).
+// ---------------- Order metadata: totalPages / P2P / duplex / payment mode ----------------
+// Accepted (all optional) in the order "meta" JSON sent by the website / manual upload:
+//   totalPages (int) | isP2P (bool) or transferMethod: "p2p"|"upload" | duplex (bool) or sides: "single"|"duplex"
+//   paymentMode: "online" (Razorpay/UPI) | "counter" (Pay at Counter, cash)
+const truthy = (v) => v === true || v === 1 || (typeof v === 'string' && ['1', 'true', 'yes', 'on', 'duplex', 'double'].includes(v.trim().toLowerCase()));
+function parseOrderFlags(meta) {
+  meta = meta && typeof meta === 'object' ? meta : {};
+  const tm = clean(meta.transferMethod).toLowerCase(), sides = clean(meta.sides).toLowerCase();
+  const isP2P = meta.isP2P !== undefined ? truthy(meta.isP2P) : tm === 'p2p';
+  const duplex = meta.duplex !== undefined ? truthy(meta.duplex) : ['duplex', 'double', 'both'].includes(sides);
+  const pm = clean(meta.paymentMode !== undefined ? meta.paymentMode : meta.paymentMethod).toLowerCase();
+  const paymentMode = ['counter', 'cash', 'pay_at_counter', 'pay-at-counter'].includes(pm) ? 'counter'
+    : ['online', 'razorpay', 'upi', 'pay_now', 'pay-now'].includes(pm) ? 'online' : '';
+  return { isP2P, duplex, paymentMode };
+}
+// The same metadata, read back from a database row (files = the order's file rows, when they are known).
+function orderMetaOut(o, files) {
+  const sum = Array.isArray(files) ? files.reduce((a, f) => a + (Number(f.pages) || 0), 0) : 0;
+  const stored = Math.round(Number(o.total_pages));
+  const totalPages = stored > 0 ? stored : sum;
+  const isP2P = Number(o.is_p2p) === 1;
+  const duplex = Number(o.is_duplex) === 1;
+  let mode = clean(o.payment_mode);
+  if (mode !== 'counter' && mode !== 'online') {
+    mode = (o.pay_method === 'cash' || o.pay_status === 'cash_received' || o.status === 'cash_wait') ? 'counter'
+      : (o.pay_status === 'paid' || o.pay_method === 'upi') ? 'online' : '';
+  }
+  const confirmed = o.pay_status === 'paid' || o.pay_status === 'cash_received' || o.pay_status === 'free';
+  return {
+    totalPages, isP2P, transferMethod: isP2P ? 'p2p' : 'upload', duplex, sides: duplex ? 'duplex' : 'single', paymentMode: mode,
+    paymentLabel: mode === 'counter' ? (o.pay_status === 'cash_received' ? 'Pay at Counter (Cash received)' : 'Pay at Counter (Cash)') : mode === 'online' ? (o.pay_status === 'paid' ? 'Paid Online (Razorpay)' : 'Online payment (not confirmed yet)') : '',
+    paymentConfirmed: confirmed,
+  };
+}
+// Order row -> API object. The print agent receives printOptions, so "duplex" always travels with the job.
+function shapeOrder(o) {
+  if (!o) return o;
+  const meta = orderMetaOut(o, o.files);
+  let opt = {}; try { opt = JSON.parse(o.opts || '{}') || {}; } catch {}
+  return {
+    ...o, ...meta,
+    printOptions: {
+      duplex: meta.duplex, sides: meta.sides, color: !!o.color, copies: o.copies || 1, paper: o.paper || 'A4', kind: opt.kind || 'doc',
+      orient: Array.isArray(opt.orient) ? opt.orient : [], totalPages: meta.totalPages, isP2P: meta.isP2P, paymentMode: meta.paymentMode,
+    },
+  };
+}
+
 let schemaChecked = false;
 async function ensureSchema(env) {
   if (schemaChecked) return;
@@ -292,7 +344,8 @@ async function ensureSchema(env) {
   if (!have.has('pay_utr')) await env.DB.prepare('ALTER TABLE orders ADD COLUMN pay_utr TEXT').run();
   if (!have.has('pc_deleted')) await env.DB.prepare('ALTER TABLE orders ADD COLUMN pc_deleted INTEGER DEFAULT 0').run();
   if (!have.has('srv_deleted')) await env.DB.prepare('ALTER TABLE orders ADD COLUMN srv_deleted INTEGER DEFAULT 0').run();
-  for (const [col, ddl] of [['source', "TEXT DEFAULT 'web'"], ['token', 'TEXT'], ['wa_number', 'TEXT'], ['wa_name', 'TEXT'], ['wa_chat', 'TEXT'], ['printed_at', 'INTEGER'], ['wa_notified', 'INTEGER DEFAULT 0'], ['pay_method', 'TEXT'], ['pay_ref', 'TEXT'], ['paid_at', 'INTEGER']])
+  for (const [col, ddl] of [['source', "TEXT DEFAULT 'web'"], ['token', 'TEXT'], ['wa_number', 'TEXT'], ['wa_name', 'TEXT'], ['wa_chat', 'TEXT'], ['printed_at', 'INTEGER'], ['wa_notified', 'INTEGER DEFAULT 0'], ['pay_method', 'TEXT'], ['pay_ref', 'TEXT'], ['paid_at', 'INTEGER'],
+    ['total_pages', 'INTEGER'], ['is_p2p', 'INTEGER DEFAULT 0'], ['is_duplex', 'INTEGER DEFAULT 0'], ['payment_mode', 'TEXT']])
     if (!have.has(col)) await env.DB.prepare(`ALTER TABLE orders ADD COLUMN ${col} ${ddl}`).run();
   const lg = (await env.DB.prepare('PRAGMA table_info(ledger)').all()).results.map((r) => r.name);
   if (!lg.includes('pay_method')) await env.DB.prepare('ALTER TABLE ledger ADD COLUMN pay_method TEXT').run();
@@ -315,6 +368,9 @@ async function createOrder(request, env) {
   const orient = (Array.isArray(meta.orient) ? meta.orient : []).map((o) => (o === 'landscape' ? 'landscape' : 'portrait'));
   const info = String(meta.info || '').slice(0, 160);
   const pagesList = Array.isArray(meta.pages) ? meta.pages : [];
+  const fl = parseOrderFlags(meta);
+  const duplex = fl.duplex && kind !== 'passport' && paper !== '4x6';   // both-sides only makes sense for document sheets
+  const sentTotal = parseInt(meta.totalPages) > 0 ? Math.min(parseInt(meta.totalPages), 2000) : 0;
   const id = newId();
   const now = Date.now();
 
@@ -333,7 +389,7 @@ async function createOrder(request, env) {
     const f = files[i];
     if (!ALLOWED.includes(ext(f.name))) return json({ error: `File type not allowed: ${f.name}` }, 400);
     if (f.size > MAX_FILE_BYTES) return json({ error: `${f.name} is larger than 25 MB` }, 400);
-    const pages = Math.min(Math.max(parseInt(pagesList[i]) || 1, 1), 2000);
+    const pages = Math.min(Math.max(parseInt(pagesList[i]) || (files.length === 1 && sentTotal ? sentTotal : 1), 1), 2000);
     totalPages += pages;
     const key = `${id}/${i}-${safeName(f.name)}`;
     await env.FILES.put(key, await f.arrayBuffer(), {
@@ -350,7 +406,8 @@ async function createOrder(request, env) {
   else amount = totalPages * copies * (color ? P.color : P.bw) * (paper === 'A3' ? P.a3 : 1);
   amount = Math.round(amount * 100) / 100;
   // AUTO_APPROVE = "1" (variable in Cloudflare) -> print immediately, no counter approval
-  const startStatus = clean(env.AUTO_APPROVE) === '1' ? 'approved' : 'pending';
+  let startStatus = clean(env.AUTO_APPROVE) === '1' ? 'approved' : 'pending';
+  if (fl.paymentMode === 'counter') startStatus = 'cash_wait';   // Pay at Counter: never auto-prints, waits for "Cash received" on the counter dashboard
   await expireStale(env);   // unpaid uploads older than 60 minutes are deleted
   // housekeeping: forget orders older than 1 day
   await env.DB.batch([
@@ -358,25 +415,86 @@ async function createOrder(request, env) {
     env.DB.prepare('DELETE FROM orders WHERE created_at < ?').bind(now - 86400000),
   ]);
   const stmts = [
-    env.DB.prepare('INSERT INTO orders (id,name,phone,color,copies,amount,status,created_at,paper,opts) VALUES (?,?,?,?,?,?,?,?,?,?)')
+    env.DB.prepare('INSERT INTO orders (id,name,phone,color,copies,amount,status,created_at,paper,opts,total_pages,is_p2p,is_duplex,payment_mode,pay_method) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
       .bind(id, String(meta.name || '').slice(0, 60), String(meta.phone || '').slice(0, 15), color, copies, amount, startStatus, now,
-        paper, JSON.stringify({ kind, orient, info })),
+        paper, JSON.stringify({ kind, orient, info, totalPages, duplex, sides: duplex ? 'duplex' : 'single', isP2P: fl.isP2P, paymentMode: fl.paymentMode }),
+        totalPages, fl.isP2P ? 1 : 0, duplex ? 1 : 0, fl.paymentMode, fl.paymentMode === 'counter' ? 'cash' : null),
     ...rows.map((r) =>
       env.DB.prepare('INSERT INTO files (order_id,name,r2_key,pages) VALUES (?,?,?,?)').bind(id, r.name, r.key, r.pages)
     ),
   ];
   await env.DB.batch(stmts);
   if (startStatus === 'approved') await ledgerAdd(env, id);
-  return json({ id, amount, status: startStatus });
+  return json({ id, amount, status: startStatus, totalPages, isP2P: fl.isP2P, transferMethod: fl.isP2P ? 'p2p' : 'upload', duplex, sides: duplex ? 'duplex' : 'single', paymentMode: fl.paymentMode });
+}
+
+// POST /api/orders/:id/pay-at-counter   (or POST /api/pay-at-counter  { orderId })
+// The customer picked "Pay at Counter" instead of Razorpay: the order moves to "cash_wait" (the counter's "WAITING CASH APPROVAL" card with
+// the green "Cash Received & Print Now" button) and is stored as paymentMode "counter". Nothing prints and nothing is marked paid until the
+// operator confirms the cash. The customer may still switch back to online payment (create-order accepts cash_wait orders).
+async function orderPayAtCounter(request, env, pathId) {
+  await ensureSchema(env);
+  const b = pathId ? {} : await request.json().catch(() => ({}));
+  const id = String(pathId || b.orderId || b.id || '');
+  if (!/^[A-Z0-9][A-Z0-9-]*$/.test(id)) return json({ error: 'orderId is required' }, 400);
+  const o = await env.DB.prepare('SELECT id,status,amount,pay_status FROM orders WHERE id=?').bind(id).first();
+  if (!o) return json({ error: 'Order not found or expired' }, 404);
+  if (o.pay_status === 'paid') return json({ error: 'This order is already paid online', paid: true }, 409);
+  const out = (status, extra = {}) => json({ ok: true, id, status, amount: o.amount, pay_status: '', paymentMode: 'counter', paymentLabel: 'Pay at Counter (Cash)', ...extra });
+  if (o.status === 'p2p_pay') {
+    await env.DB.prepare("UPDATE orders SET pay_method='cash', payment_mode='counter' WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')").bind(id).run();
+    return out('p2p_pay');
+  }
+  if (o.status === 'cash_wait') return out('cash_wait', { duplicate: true });
+  if (['pending', 'error', 'pay_choose'].includes(o.status)) {
+    await env.DB.prepare("UPDATE orders SET status='cash_wait', pay_method='cash', payment_mode='counter' WHERE id=? AND status IN ('pending','error','pay_choose') AND (pay_status IS NULL OR pay_status<>'paid')").bind(id).run();
+    return out('cash_wait');
+  }
+  if (['approved', 'printing', 'printed'].includes(o.status)) {   // already released to the printer (AUTO_APPROVE): only record how the customer will pay
+    await env.DB.prepare("UPDATE orders SET pay_method='cash', payment_mode='counter' WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')").bind(id).run();
+    return out(o.status, { note: 'Already sent to the printer - please pay cash at the counter.' });
+  }
+  return json({ error: 'This order can no longer be changed' }, 409);
+}
+
+// POST /api/p2p-order { id:"P2P-XXXXXX", meta:{kind,paper,color,copies,pages,duplex} }
+// Stores a lightweight payment record for a P2P order (no files uploaded) so Razorpay Pay Now works seamlessly.
+async function registerP2pOrder(request, env) {
+  const b = await request.json().catch(() => ({}));
+  const id = String(b.id || '');
+  if (!/^P2P-[A-Z0-9]{4,12}$/.test(id)) return json({ error: 'Bad order id' }, 400);
+  const meta = b.meta && typeof b.meta === 'object' ? b.meta : {};
+  await ensureSchema(env);
+  const old = await env.DB.prepare('SELECT id,amount,status,pay_status,total_pages,is_duplex FROM orders WHERE id=?').bind(id).first();
+  if (old) return json({ id, amount: old.amount, status: old.status, pay_status: old.pay_status || '', totalPages: Number(old.total_pages) || 1, duplex: Number(old.is_duplex) === 1, isP2P: true });
+  const kind = meta.kind === 'passport' ? 'passport' : 'doc';
+  const paper = PAPERS.includes(meta.paper) ? meta.paper : 'A4';
+  const color = (meta.color || paper === '4x6' || kind === 'passport') ? 1 : 0;
+  const copies = Math.min(Math.max(parseInt(meta.copies) || 1, 1), kind === 'passport' ? 20 : 100);
+  const pages = (Array.isArray(meta.pages) && meta.pages.length ? meta.pages : [1]).slice(0, MAX_FILES).reduce((t, n) => t + Math.min(Math.max(parseInt(n) || 1, 1), 2000), 0);
+  const fl = parseOrderFlags(meta);
+  const duplex = fl.duplex && kind !== 'passport' && paper !== '4x6';
+  const P = await getPrices(env);
+  let amount;
+  if (kind === 'passport') amount = copies * (paper === '4x6' ? P.passport4x6 : P.passportA4);
+  else if (paper === '4x6') amount = pages * copies * P.photo4x6;
+  else amount = pages * copies * (color ? P.color : P.bw) * (paper === 'A3' ? P.a3 : 1);
+  amount = Math.round(amount * 100) / 100;
+  await env.DB.prepare("INSERT OR IGNORE INTO orders (id,name,phone,color,copies,amount,status,created_at,paper,opts,source,total_pages,is_p2p,is_duplex,payment_mode) VALUES (?,?,?,?,?,?,?,?,?,?,'p2p',?,1,?,?)")
+    .bind(id, '', '', color, copies, amount, 'p2p_pay', Date.now(), paper, JSON.stringify({ kind, p2p: true, isP2P: true, duplex, sides: duplex ? 'duplex' : 'single', totalPages: pages }), pages, duplex ? 1 : 0, fl.paymentMode).run();
+  return json({ id, amount, status: 'p2p_pay', pay_status: '', totalPages: pages, duplex, sides: duplex ? 'duplex' : 'single', isP2P: true });
 }
 
 async function orderStatus(env, id) {
   await ensureSchema(env);
-  let o = await env.DB.prepare('SELECT id,status,amount,copies,color,note,pay_status,pay_url,created_at,pc_deleted,srv_deleted FROM orders WHERE id=?').bind(id).first();
+  let o = await env.DB.prepare('SELECT id,status,amount,copies,color,note,pay_status,pay_url,created_at,pc_deleted,srv_deleted,total_pages,is_p2p,is_duplex,payment_mode,pay_method FROM orders WHERE id=?').bind(id).first();
   if (!o) return json({ error: 'Order not found' }, 404);
+  let fileRows = null;
+  if (!(Number(o.total_pages) > 0)) fileRows = (await env.DB.prepare('SELECT pages FROM files WHERE order_id=?').bind(id).all()).results;
   if (o.status === 'pending' && o.pay_status !== 'paid' && Date.now() - Number(o.created_at || 0) > UNPAID_TTL_MS) { await expireStale(env); o = { ...o, status: 'expired' }; }
-  return json({ id: o.id, status: o.status, amount: o.amount, copies: o.copies, color: o.color, note: o.note, pay_status: o.pay_status || '', paying: !!o.pay_url,
-    pc_deleted: Number(o.pc_deleted || 0), srv_deleted: Number(o.srv_deleted || 0) });
+  const metaOut = orderMetaOut(o, fileRows);
+  return json({ id: o.id, status: o.status, amount: o.amount, copies: o.copies, color: o.color, note: o.note, pay_status: o.pay_status || '', pay_method: o.pay_method || '', pay_mode: metaOut.paymentMode, paying: !!o.pay_url,
+    total_pages: metaOut.totalPages, pc_deleted: Number(o.pc_deleted || 0), srv_deleted: Number(o.srv_deleted || 0), ...metaOut });
 }
 
 // ---------------- YOUPI PG webhook: automatic payment confirmation ----------------
@@ -419,9 +537,9 @@ async function youpiWebhook(request, env) {
 
   const utr = String(p.utr || '').slice(0, 30);
   const auto = await autoOn(env, clean(env.YOUPI_AUTO_APPROVE) !== '0');
-  await env.DB.prepare("UPDATE orders SET pay_status='paid', pay_utr=?, status=CASE WHEN ? AND status IN ('pending','error') THEN 'approved' ELSE status END WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')")
+  await env.DB.prepare("UPDATE orders SET pay_status='paid', payment_mode='online', pay_utr=?, status=CASE WHEN ? AND status IN ('pending','error','cash_wait') THEN 'approved' WHEN status='cash_wait' THEN 'pending' ELSE status END WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')")
     .bind(utr, auto ? 1 : 0, id).run();
-  if (auto && ['pending', 'error'].includes(o.status)) await ledgerAdd(env, id);
+  if (auto && ['pending', 'error', 'cash_wait'].includes(o.status)) await ledgerAdd(env, id);
   return json({ received: true });
 }
 
@@ -440,12 +558,12 @@ async function rzpCreateOrder(request, env) {
   if (!keyId || !secret) return json({ error: 'Razorpay is not configured: set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in Cloudflare.' }, 500);
   const b = await request.json().catch(() => ({}));
   const id = String(b.orderId || '');
-  if (!/^[A-Z0-9]+$/.test(id)) return json({ error: 'orderId is required' }, 400);
+  if (!/^[A-Z0-9][A-Z0-9-]*$/.test(id)) return json({ error: 'orderId is required' }, 400);
   await ensureSchema(env);
   const o = await env.DB.prepare('SELECT id,amount,status,pay_status,rzp_order_id FROM orders WHERE id=?').bind(id).first();
   if (!o) return json({ error: 'Order not found or expired' }, 404);
   if (o.pay_status === 'paid') return json({ error: 'This order is already paid' }, 409);
-  if (!['pending', 'error'].includes(o.status)) return json({ error: 'This order can no longer be paid' }, 409);
+  if (!['pending', 'error', 'cash_wait', 'p2p_pay'].includes(o.status)) return json({ error: 'This order can no longer be paid' }, 409);
   const paise = Math.round(Number(o.amount) * 100);
   if (!Number.isFinite(paise) || paise < 100) return json({ error: 'Amount must be at least ₹1 (100 paise)' }, 400);
   if (o.rzp_order_id) return json({ order_id: o.rzp_order_id, amount: paise, currency: 'INR', key_id: keyId });   // retry: reuse the same Razorpay order
@@ -471,7 +589,7 @@ async function rzpVerify(request, env) {
   if (!secret) return json({ error: 'Razorpay is not configured' }, 500);
   const b = await request.json().catch(() => ({}));
   const id = String(b.orderId || ''), oid = String(b.razorpay_order_id || ''), pid = String(b.razorpay_payment_id || ''), sig = String(b.razorpay_signature || '');
-  if (!/^[A-Z0-9]+$/.test(id) || !/^order_\w+$/.test(oid) || !/^pay_\w+$/.test(pid) || !sig) return json({ error: 'Missing or invalid payment fields' }, 400);
+  if (!/^[A-Z0-9][A-Z0-9-]*$/.test(id) || !/^order_\w+$/.test(oid) || !/^pay_\w+$/.test(pid) || !sig) return json({ error: 'Missing or invalid payment fields' }, 400);
   const expected = await hmacHex(secret, new TextEncoder().encode(oid + '|' + pid));
   if (!sameSecret(sig, expected)) return json({ success: false, error: 'Payment signature mismatch' }, 400);   // never mark as paid
 
@@ -481,9 +599,9 @@ async function rzpVerify(request, env) {
   if (o.rzp_order_id !== oid) return json({ success: false, error: 'This payment does not belong to this order' }, 400);
   if (o.pay_status === 'paid') return json({ success: true, duplicate: true });
   const auto = await autoOn(env, clean(env.RAZORPAY_AUTO_APPROVE) !== '0');
-  await env.DB.prepare("UPDATE orders SET pay_status='paid', pay_utr=?, status=CASE WHEN ? AND status IN ('pending','error') THEN 'approved' ELSE status END WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')")
-    .bind(pid.slice(0, 30), auto ? 1 : 0, id).run();
-  if (auto && ['pending', 'error'].includes(o.status)) await ledgerAdd(env, id);
+  await env.DB.prepare("UPDATE orders SET pay_status='paid', payment_mode='online', pay_method=CASE WHEN status='p2p_pay' OR pay_method IS NULL OR pay_method IN ('','cash') THEN 'upi' ELSE pay_method END, pay_utr=?, paid_at=?, status=CASE WHEN ? AND status IN ('pending','error','cash_wait') THEN 'approved' WHEN status='cash_wait' THEN 'pending' ELSE status END WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')")
+    .bind(pid.slice(0, 30), Date.now(), auto ? 1 : 0, id).run();
+  if (auto && ['pending', 'error', 'cash_wait'].includes(o.status)) await ledgerAdd(env, id);
   return json({ success: true });
 }
 
@@ -497,7 +615,11 @@ async function ordersWithFiles(env, statuses, limit = 50) {
   const { results: files } = await env.DB.prepare(
     `SELECT id,order_id,name,pages FROM files WHERE order_id IN (${ids.map(() => '?').join(',')}) AND r2_key IS NOT NULL`
   ).bind(...ids).all();
-  return orders.map((o) => ({ ...o, files: files.filter((f) => f.order_id === o.id) }));
+  const shaped = orders.map((o) => shapeOrder({ ...o, files: files.filter((f) => f.order_id === o.id) }));
+  for (const o of shaped) {   // orders created before total_pages existed (WhatsApp etc.): remember the count once, before the files are wiped
+    if (!(Number(o.total_pages) > 0) && o.totalPages > 0) { try { await env.DB.prepare('UPDATE orders SET total_pages=? WHERE id=? AND total_pages IS NULL').bind(o.totalPages, o.id).run(); } catch {} }
+  }
+  return shaped;
 }
 
 async function ledgerAdd(env, id) {
@@ -1151,7 +1273,7 @@ async function markPaid(env, id, info) {
   const wa = o.source === 'whatsapp';
   const auto = await autoOn(env, true);
   const next = auto ? 'approved' : 'pending';   // paid online: print at once when Auto-Print is ON, otherwise wait for the counter
-  const r = await env.DB.prepare("UPDATE orders SET pay_status='paid', pay_method='upi', pay_utr=?, paid_at=?, status=? WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')").bind(String(info.utr || '').slice(0, 40), Date.now(), next, id).run();
+  const r = await env.DB.prepare("UPDATE orders SET pay_status='paid', pay_method='upi', payment_mode='online', pay_utr=?, paid_at=?, status=? WHERE id=? AND (pay_status IS NULL OR pay_status<>'paid')").bind(String(info.utr || '').slice(0, 40), Date.now(), next, id).run();
   if (!((r.meta && r.meta.changes) > 0)) return { ok: false, reason: 'duplicate' };
   if (next === 'approved') await ledgerAdd(env, id);
   if (wa && o.wa_number) await waSend(env, o.wa_number, o.wa_chat, waPaidText(o.amount, next === 'approved'));
@@ -1330,7 +1452,7 @@ async function adminCashApprove(env, id) {
     await env.DB.prepare('UPDATE orders SET amount=?, token=? WHERE id=?').bind(Math.round(pages * copies * P.bw * 100) / 100, o.token || await nextWaToken(env), id).run();
   }
   if (o.status === 'pay_wait') await razorpayCancel(env, o);
-  const r = await env.DB.prepare("UPDATE orders SET status='approved', pay_method=CASE WHEN pay_status='paid' THEN pay_method ELSE 'cash' END, pay_status=CASE WHEN pay_status='paid' THEN pay_status ELSE 'cash_received' END, paid_at=? WHERE id=? AND status IN ('cash_wait','pay_wait','pay_choose','wa_wait','pending','error')").bind(Date.now(), id).run();
+  const r = await env.DB.prepare("UPDATE orders SET status='approved', payment_mode=CASE WHEN pay_status='paid' THEN COALESCE(payment_mode,'online') ELSE 'counter' END, pay_method=CASE WHEN pay_status='paid' THEN pay_method ELSE 'cash' END, pay_status=CASE WHEN pay_status='paid' THEN pay_status ELSE 'cash_received' END, paid_at=? WHERE id=? AND status IN ('cash_wait','pay_wait','pay_choose','wa_wait','pending','error')").bind(Date.now(), id).run();
   if ((r.meta && r.meta.changes) > 0) {
     await ledgerAdd(env, id);
     if (o.source === 'whatsapp' && o.wa_number) await waSend(env, o.wa_number, o.wa_chat, WA_CASH_OK);
@@ -1353,6 +1475,8 @@ async function adminManualUpload(request, env) {
   const color = (meta.color || paper === '4x6') ? 1 : 0;
   const copies = Math.min(Math.max(parseInt(meta.copies) || 1, 1), 100);
   const payMethod = ['cash', 'upi', 'free'].includes(meta.pay) ? meta.pay : 'cash';
+  const fl = parseOrderFlags(meta);
+  const duplex = fl.duplex && paper !== '4x6';
   const id = newId(), now = Date.now(), pagesList = Array.isArray(meta.pages) ? meta.pages : [];
   let total = 0; const rows = [];
   for (let i = 0; i < files.length; i++) {
@@ -1370,13 +1494,14 @@ async function adminManualUpload(request, env) {
   amount = Math.round(amount * 100) / 100;
   const status = meta.hold ? 'pending' : 'approved';
   await env.DB.batch([
-    env.DB.prepare("INSERT INTO orders (id,name,phone,color,copies,amount,status,created_at,paper,opts,source,pay_method,pay_status,paid_at) VALUES (?,?,?,?,?,?,?,?,?,?,'counter',?,?,?)")
+    env.DB.prepare("INSERT INTO orders (id,name,phone,color,copies,amount,status,created_at,paper,opts,source,pay_method,pay_status,paid_at,total_pages,is_p2p,is_duplex,payment_mode) VALUES (?,?,?,?,?,?,?,?,?,?,'counter',?,?,?,?,0,?,?)")
       .bind(id, String(meta.name || 'Counter customer').slice(0, 60), String(meta.phone || '').slice(0, 15), color, copies, amount, status, now, paper,
-        JSON.stringify({ kind: 'doc', source: 'counter', info: 'Added at the counter' }), payMethod, payMethod === 'upi' ? 'paid' : payMethod === 'cash' ? 'cash_received' : 'free', now),
+        JSON.stringify({ kind: 'doc', source: 'counter', info: 'Added at the counter', totalPages: total, duplex, sides: duplex ? 'duplex' : 'single' }), payMethod, payMethod === 'upi' ? 'paid' : payMethod === 'cash' ? 'cash_received' : 'free', now,
+        total, duplex ? 1 : 0, payMethod === 'cash' ? 'counter' : payMethod === 'upi' ? 'online' : ''),
     ...rows.map((r) => env.DB.prepare('INSERT INTO files (order_id,name,r2_key,pages) VALUES (?,?,?,?)').bind(id, r.name, r.key, r.pages)),
   ]);
   if (status === 'approved') await ledgerAdd(env, id);
-  return json({ ok: true, id, amount, status });
+  return json({ ok: true, id, amount, status, totalPages: total, duplex, sides: duplex ? 'duplex' : 'single', paymentMode: payMethod === 'cash' ? 'counter' : payMethod === 'upi' ? 'online' : '' });
 }
 // today's collections for the counter dashboard (India time)
 async function adminStats(env) {
