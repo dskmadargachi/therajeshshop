@@ -9,10 +9,10 @@ const PHOTO_4X6 = 20;                       // one 4x6 photo print
 const PASSPORT_SHEET = { '4x6': 30, A4: 50 }; // one sheet of passport photos
 const PAPERS = ['A4', 'A3', '4x6'];
 const PASSPORT_SIZES = {   // WhatsApp option 3: photo sizes (menu order 1-5). per = photos on one 4x6 sheet (must match passport_sheet.py), def = default photo count
-  '35x45': { label: '35×45 mm', per: 8, def: 6 }, '2x2': { label: '2×2 inch', per: 2, def: 2 }, '25x35': { label: '25×35 mm', per: 12, def: 8 },
-  '30x35': { label: '3×3.5 cm', per: 12, def: 8 }, '4x6': { label: '4×6 Full Photo', per: 1, def: 1 },
+  '35x45': { label: '35×45 mm', per: 8, def: 8 }, '2x2': { label: '2×2 inch', per: 2, def: 2 }, '25x35': { label: '25×35 mm', per: 12, def: 12 },
+  '30x35': { label: '3×3.5 cm', per: 12, def: 12 }, '4x6': { label: '4×6 Full Photo', per: 1, def: 1 },
 };
-const PASSPORT_SIZE_KEYS = ['35x45', '2x2', '25x35', '30x35', '4x6'];
+const PASSPORT_SIZE_KEYS = ['30x35', '35x45', '2x2', '25x35', '4x6'];   // menu order 1-5
 const PASSPORT_PER_SHEET = 8, PASSPORT_DEFAULT = 6, PASSPORT_MAX = 48;   // WhatsApp option 3: photos on one 4x6 sheet (35x45 mm each) / default count / max per order
 const MAX_FILES = 10;
 const MAX_FILE_BYTES = 25 * 1024 * 1024; // KV value limit is 25 MB
@@ -665,10 +665,10 @@ async function adminDecide(env, id, action) {
     const r = await env.DB.prepare("UPDATE orders SET status='approved' WHERE id=? AND status IN ('pending','error')").bind(id).run();
     if ((r.meta && r.meta.changes) > 0) {
       await ledgerAdd(env, id);
-      if (wa) await waSend(env, o.wa_number, o.wa_chat, `✅ টোকেন #${o.token || o.id}: আপনার ফাইলটি প্রিন্ট হচ্ছে!\nYour file is printing.`);
+      if (wa) await waSend(env, o.wa_number, o.wa_chat, `🖨️ *টোকেন #${o.token || o.id}: আপনার ফাইল প্রিন্ট হচ্ছে!*\nপ্রিন্ট হলেই জানিয়ে দেব।\n_Your file is printing._`);
     }
   } else {
-    if (wa && ['wa_wait', 'pay_choose', 'pay_wait', 'cash_wait', 'pending', 'approved', 'printing', 'error'].includes(o.status)) await waSend(env, o.wa_number, o.wa_chat, `❌ ${o.token ? '#' + o.token + ': ' : ''}আপনার প্রিন্ট অর্ডারটি বাতিল করা হয়েছে।\nYour print order was cancelled by the shop.`);
+    if (wa && ['wa_wait', 'pay_choose', 'pay_wait', 'cash_wait', 'pending', 'approved', 'printing', 'error'].includes(o.status)) await waSend(env, o.wa_number, o.wa_chat, `❌ *${o.token ? 'টোকেন #' + o.token + ': ' : ''}অর্ডার বাতিল হয়েছে*\nদোকান থেকে আপনার অর্ডারটি বাতিল করা হয়েছে। কোনো প্রশ্ন থাকলে কাউন্টারে যোগাযোগ করুন।\n_Your print order was cancelled by the shop._`);
     if (o.status === 'pay_wait') await razorpayCancel(env, o);
     await env.DB.prepare("UPDATE orders SET status='rejected', name='', phone='', wa_number='', wa_chat='' WHERE id=? AND status IN ('wa_wait','pay_choose','pay_wait','cash_wait','pending','approved','printing','error')").bind(id).run();
     await purgeFiles(env, id);
@@ -906,7 +906,15 @@ function waMenuText(pages, P, copies) {
     `Your file is received (${pages} page${pages > 1 ? 's' : ''}). Reply 1, 2 or 3.\n` +
     `কপি / copies: "1 x3" = B&W × 3${copies > 1 ? `\n(এখন ${copies} কপি সেট আছে / ${copies} copies set)` : ''}\n❌ বাতিল / cancel: 0`;
 }
-const WA_WELCOME = '👋 নমস্কার! Digital Seva Kendra-তে স্বাগতম।\nপ্রিন্ট করতে আপনার PDF / ছবি / ডকুমেন্ট এখানেই পাঠান।\nক্যাপশনে লিখতে পারেন: "2 bw" (২ কপি সাদাকালো) বা "1 color".\n\nSend your PDF / photo / document here to print it. Caption example: "2 bw" or "1 color".';
+const bn = (n) => String(n).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[d]);          // 12 -> ১২ (counts shown to customers)
+const WA_LINE = '━━━━━━━━━━━━━━━';
+const isImgName = (n) => ['jpg', 'jpeg', 'png', 'webp'].includes(ext(n || ''));
+const WA_WELCOME = '👋 *নমস্কার! Digital Seva Kendra-তে স্বাগতম* 🌟\n\n' +
+  'আপনার *PDF / ছবি / ডকুমেন্ট* এখানেই পাঠিয়ে দিন — আমরা প্রিন্ট করে রাখব! 🖨️\n\n' +
+  '✨ *আমাদের সেবা*\n📄 সাদাকালো ও রঙিন প্রিন্ট\n🪪 পাসপোর্ট সাইজ ফটো — ৫টি সাইজ, ব্যাকগ্রাউন্ড অটো সাদা\n⚡ UPI-তে পেমেন্ট করলেই অটো প্রিন্ট\n\n' +
+  '💡 *টিপস:* ছবির সাথে ক্যাপশনে লিখুন `2 bw` (২ কপি সাদাকালো) বা `1 color`\n' +
+  '_English: Send your PDF / photo / document here and we will print it. Caption example: "2 bw" or "1 color"._';
+const WA_NUDGE = '📎 *ছবি বা ফাইল পাঠান* — আমি প্রিন্টের জন্য তৈরি! 😊\n_Please send the file or photo you want to print._';
 
 // ---------- sending ----------
 async function waCloudSend(env, to, text) {
@@ -928,8 +936,9 @@ async function waSend(env, number, chat, text) {
 }
 async function waNotifyPrinted(env, o) {
   if (!o || o.source !== 'whatsapp' || !o.wa_number || o.wa_notified) return;
-  await env.DB.prepare('UPDATE orders SET wa_notified=1 WHERE id=?').bind(o.id).run();
-  await waSend(env, o.wa_number, o.wa_chat, `🖨️ টোকেন #${o.token || o.id}: আপনার প্রিন্ট হয়ে গেছে! কাউন্টার থেকে নিয়ে নিন${Number(o.amount) ? ` (মোট ${rupee(o.amount)})` : ''}। ধন্যবাদ! 🙏\nYour print is ready — please collect it at the counter.`);
+  const claim = await env.DB.prepare('UPDATE orders SET wa_notified=1 WHERE id=? AND (wa_notified IS NULL OR wa_notified=0)').bind(o.id).run();   // atomic: two racing calls can never both send
+  if (!((claim.meta && claim.meta.changes) > 0)) return;
+  await waSend(env, o.wa_number, o.wa_chat, `🎉 *আপনার প্রিন্ট রেডি!* · টোকেন *#${o.token || o.id}*\n👉 কাউন্টার থেকে নিয়ে নিন${Number(o.amount) ? ` · মোট *${rupee(o.amount)}*` : ''}\n\n🙏 *ধন্যবাদ!* আবার দরকার হলে ছবি বা ফাইল পাঠিয়ে দিন।\n_Your print is ready — please collect it at the counter._`);
 }
 
 // ---------- the bot ----------
@@ -1173,40 +1182,42 @@ async function adminReplaceFile(request, env, fileId) {
 const WA_ACTIVE = ['wa_wait', 'pay_choose', 'pay_wait', 'cash_wait'];
 const shopName = (env) => clean(env.SHOP_NAME) || 'Digital Seva Kendra';
 
-function waStep1Text(files, pages, P, env) {
+function waStep1Text(files, pages, P, env, returning) {
+  const imgs = files.length > 0 && files.every((f) => isImgName(f.name));
   const first = files[0] ? files[0].name : 'file';
-  const label = files.length > 1 ? `${first} +${files.length - 1}` : first;
-  return `🌟 *স্বাগতম ${shopName(env)} (therajesh.shop)!*\n` +
-    `📄 *ফাইল পাওয়া গেছে:* \`${label}\` (${pages} Pages)\n\n` +
-    `প্রিন্ট করার জন্য নিচের যেকোনো একটি নম্বর লিখে রিপ্লাই দিন:\n` +
-    `*1️⃣ সাদাকালো প্রিন্ট (B&W)* — ${rupee(pages * P.bw)}\n` +
-    `*2️⃣ রঙিন প্রিন্ট (Color)* — ${rupee(pages * P.color)}\n` +
-    `*3️⃣ পাসপোর্ট সাইজ ফটো প্রিন্ট (Passport Photo)* — ${rupee(P.passport4x6)} / ৪×৬ শিট (সাইজ পরের ধাপে বেছে নিন; ব্যাকগ্রাউন্ড অটো সাদা)\n\n` +
-    `💡 *টিপস: একাধিক কপি চাইলে লিখুন \`1x3\` (৩ কপি সাদাকালো), \`2x5\` (৫ কপি কালার) বা \`3x8\` (৮টি পাসপোর্ট ছবি)*\n` +
-    `_English: reply 1 for B&W, 2 for Color or 3 for Passport photos (send a clear JPG/PNG photo). Example "2x5" = 5 color copies. Send 0 to cancel._`;
+  const got = imgs ? `📷 *${bn(files.length)}টি ছবি পাওয়া গেছে*`
+    : `📄 *ফাইল পাওয়া গেছে:* \`${files.length > 1 ? first + ' +' + (files.length - 1) : first}\` (${bn(pages)} পৃষ্ঠা)`;
+  return `${returning ? '😊 *আবার স্বাগতম!*' : `🌟 *স্বাগতম ${shopName(env)}!*`}\n${got}\n\n` +
+    `${WA_LINE}\n*কোনটি করতে চান? নম্বর লিখে রিপ্লাই দিন* 👇\n${WA_LINE}\n` +
+    `*1️⃣ সাদাকালো প্রিন্ট* — ${rupee(pages * P.bw)}\n` +
+    `*2️⃣ রঙিন প্রিন্ট* — ${rupee(pages * P.color)}\n` +
+    `*3️⃣ পাসপোর্ট সাইজ ফটো* 🪪 — ${rupee(P.passport4x6)} / ৪×৬ শিট\n   _৫টি সাইজ · ব্যাকগ্রাউন্ড অটো সাদা · মুখ ঠিক মাঝখানে_\n` +
+    `${imgs && files.length > 1 ? '   _⚠️ পাসপোর্ট ফটোর জন্য প্রথম ছবিটি ব্যবহার হবে_\n' : ''}` +
+    `${WA_LINE}\n\n` +
+    `💡 *একাধিক কপি?* লিখুন \`1x3\` (৩ কপি সাদাকালো) · \`2x5\` (৫ কপি রঙিন) · \`3x8\` (৮টি পাসপোর্ট ছবি)\n` +
+    `❌ বাতিল করতে *0* লিখুন\n` +
+    `_English: reply 1 = B&W, 2 = Color, 3 = Passport photos. "2x5" = 5 color copies. 0 = cancel._`;
 }
 function waStep2Text(token, color, pages, copies, total, kind, sizeKey) {
   const sz = PASSPORT_SIZES[sizeKey] || PASSPORT_SIZES['35x45'];
   const what = kind === 'passport'
-    ? `পাসপোর্ট ফটো ${sz.label} (${copies}টি ছবি, ${Math.ceil(copies / sz.per)} শিট ৪×৬)`
-    : `${color ? 'রঙিন (Color)' : 'সাদাকালো (B&W)'} (${pages} পৃষ্ঠা × ${copies} কপি)`;
-  return `🧾 *অর্ডার সামারি (Token: #${token})*\n` +
-    `• প্রিন্ট: ${what}\n` +
-    `• মোট বিল: *${rupee(total)}*\n\n` +
-    `পেমেন্ট কীভাবে করতে চান? নিচের নম্বর রিপ্লাই দিন:\n` +
-    `*1️⃣ Online UPI / QR Code* *(পেমেন্ট করলেই অটোমেটিক প্রিন্ট বের হবে ⚡)*\n` +
-    `*2️⃣ Cash at Counter* *(কাউন্টারে নগদ টাকা দিয়ে প্রিন্ট নিন 💵)*\n` +
-    `_English: reply 1 to pay by UPI now, or 2 to pay cash at the counter._`;
+    ? `🪪 পাসপোর্ট ফটো · ${sz.label}\n   ${bn(copies)}টি ছবি · ${bn(Math.ceil(copies / sz.per))} শিট (৪×৬)`
+    : `${color ? '🎨 রঙিন (Color)' : '⚫ সাদাকালো (B&W)'}\n   ${bn(pages)} পৃষ্ঠা × ${bn(copies)} কপি`;
+  return `🧾 *আপনার অর্ডার* · টোকেন *#${token}*\n${WA_LINE}\n${what}\n💰 *মোট বিল: ${rupee(total)}*\n${WA_LINE}\n\n` +
+    `*পেমেন্ট কীভাবে করবেন?* 👇\n` +
+    `*1️⃣ UPI / QR কোড* ⚡ _পেমেন্ট হতেই অটো প্রিন্ট_\n` +
+    `*2️⃣ কাউন্টারে ক্যাশ* 💵 _টোকেন বলে টাকা দিন_\n\n` +
+    `_English: reply 1 to pay by UPI now, 2 to pay cash at the counter. 0 = cancel._`;
 }
 const waPayText = (total, url) =>
-  `📲 *উপরের QR কোডটি স্ক্যান করুন অথবা নিচের লিঙ্কে ক্লিক করে ${rupee(total)} পেমেন্ট করুন:*\n🔗 ${url}\n\n⚡ *পেমেন্ট সম্পূর্ণ হতেই আপনার প্রিন্ট অটোমেটিক বের হয়ে আসবে!*\n_English: scan the QR or open the link and pay ${rupee(total)}. Printing starts automatically. Reply 2 to pay cash instead._`;
+  `📲 *${rupee(total)} পেমেন্ট করুন*\nউপরের QR কোড স্ক্যান করুন _(GPay · PhonePe · Paytm)_ অথবা নিচের লিঙ্কে ক্লিক করুন 👇\n🔗 ${url}\n\n⚡ *পেমেন্ট হতেই প্রিন্ট অটো শুরু হবে!*\n💵 ক্যাশে দিতে চাইলে *2* লিখুন\n_English: scan the QR or open the link to pay ${rupee(total)}. Printing starts automatically. Reply 2 to pay cash instead._`;
 const waPaidText = (total, printing) =>
-  `✅ *পেমেন্ট সফল হয়েছে (${rupee(total)})!*\n` + (printing
-    ? `🖨️ *আপনার ফাইলটি এখন প্রিন্টার থেকে প্রিন্ট হচ্ছে... অনুগ্রহ করে কাউন্টার থেকে সংগ্রহ করুন।*`
-    : `⏳ *দোকান থেকে অনুমোদন হলেই প্রিন্ট শুরু হবে — একটু অপেক্ষা করুন।*`);
+  `✅ *পেমেন্ট সফল! ${rupee(total)} পেয়েছি* 🎉\n` + (printing
+    ? `🖨️ আপনার প্রিন্ট এখন বের হচ্ছে — কাউন্টার থেকে সংগ্রহ করুন।`
+    : `⏳ দোকান থেকে অনুমোদন হলেই প্রিন্ট শুরু হবে — একটু অপেক্ষা করুন।`);
 const waCashText = (token, total) =>
-  `💵 *ক্যাশ পেমেন্ট সিলেক্ট করা হয়েছে (Token: #${token})*\nকাউন্টারে এসে টোকেন নম্বর *#${token}* বলুন এবং *${rupee(total)}* পেমেন্ট করুন। পেমেন্ট অনুমোদন করলেই প্রিন্ট বের হবে।\n_English: please come to the counter, tell token #${token} and pay ${rupee(total)} — printing starts after the shop confirms._`;
-const WA_CASH_OK = '✅ ক্যাশ পেমেন্ট গৃহীত হয়েছে! আপনার প্রিন্ট বের হচ্ছে।\n_Cash received — your print is coming out._';
+  `💵 *ক্যাশ পেমেন্ট বেছে নিয়েছেন* · টোকেন *#${token}*\n${WA_LINE}\n👉 কাউন্টারে এসে টোকেন *#${token}* বলুন\n💰 দিতে হবে: *${rupee(total)}*\n${WA_LINE}\nটাকা নেওয়ার পরেই প্রিন্ট বের হবে।\n_English: come to the counter, tell token #${token} and pay ${rupee(total)} — printing starts after the shop confirms._`;
+const WA_CASH_OK = '✅ *ক্যাশ পেয়েছি, ধন্যবাদ!* 💵\n🖨️ আপনার প্রিন্ট এখন বের হচ্ছে...\n_Cash received — your print is coming out._';
 
 const orderTotals = async (env, id) => {
   const r = await env.DB.prepare('SELECT COALESCE(SUM(pages),0) AS p, COUNT(*) AS n FROM files WHERE order_id=?').bind(id).first();
@@ -1326,7 +1337,11 @@ async function pollPayments(env) {
 
 // ---------- the conversation ----------
 const orderOpts = (o) => { try { return JSON.parse((o && o.opts) || '{}') || {}; } catch { return {}; } };
-const waSizeMenuText = (P) => `📏 *ফটোর সাইজ বেছে নিন (নম্বর লিখুন):*\n*1️⃣* 35×45 mm (পাসপোর্ট)\n*2️⃣* 2×2 inch\n*3️⃣* 25×35 mm\n*4️⃣* 3×3.5 cm\n*5️⃣* 4×6 Full Photo\n\n💰 প্রতি ৪×৬ শিট ${rupee(P.passport4x6)} · ব্যাকগ্রাউন্ড অটো সাদা, মুখ মাঝখানে সেট হবে\n_English: reply 1-5 to choose the photo size (0 = cancel)._`;
+const waSizeMenuText = (P) => {
+  const row = (i, k, extra) => `*${i}️⃣* ${PASSPORT_SIZES[k].label}${extra || ''} _(${k === '4x6' ? 'পুরো ফটো' : '১ শিটে ' + bn(PASSPORT_SIZES[k].per) + 'টি'})_`;
+  return `📏 *ছবির সাইজ বেছে নিন* 👇\n${WA_LINE}\n${row(1, '30x35')}\n${row(2, '35x45', ' — পাসপোর্ট ✅')}\n${row(3, '2x2')}\n${row(4, '25x35')}\n*5️⃣* 4×6 Full Photo 🖼️ _(পুরো ফটো)_\n${WA_LINE}\n` +
+    `💰 প্রতি ৪×৬ শিট *${rupee(P.passport4x6)}*\n✨ ব্যাকগ্রাউন্ড অটো সাদা · মুখ ঠিক মাঝখানে সেট হবে\n📄 *পুরো শিট ভরে* প্রিন্ট হবে (সংখ্যা আলাদা লিখে থাকলে সেটাই)\n\n_English: reply 1-5 to choose the photo size · 0 = cancel._`;
+};
 function parseSizeChoice(text) {   // "1".."5" or "2x2", "35x45", "25x35", "3x3.5", "4x6" / "full"
   const t = String(text || '').normalize('NFKC').toLowerCase().replace(/[\u09E6-\u09EF]/g, (d) => String(d.charCodeAt(0) - 0x09E6)).replace(/[×✕✖*]/g, 'x').replace(/\s+/g, '');
   for (const [k, v] of [['35x45', '35x45'], ['2x2', '2x2'], ['25x35', '25x35'], ['3x3.5', '30x35'], ['30x35', '30x35'], ['4x6', '4x6'], ['full', '4x6']]) if (t.startsWith(k)) return { size: v };
@@ -1360,7 +1375,7 @@ async function waCash(env, o) {
 async function waUpi(env, o) {
   let p;
   try { p = await razorpayCreate(env, o); } catch (e) { p = null; var err = e.message; }
-  if (!p) return [`⚠️ অনলাইন পেমেন্ট এখন চালু নেই${err ? ' (' + err.slice(0, 80) + ')' : ''}। দয়া করে *2* লিখে কাউন্টারে ক্যাশ দিন।\n_Online payment is unavailable right now — reply 2 to pay cash at the counter._`];
+  if (!p) return [`⚠️ অনলাইন পেমেন্ট এখন চালু নেই। দয়া করে *2* লিখে কাউন্টারে ক্যাশ দিন 💵\n_Online payment is unavailable right now — reply 2 to pay cash at the counter._`];
   await env.DB.prepare("UPDATE orders SET status='pay_wait', pay_method='upi', pay_ref=?, pay_url=? WHERE id=? AND status='pay_choose'").bind(p.ref, p.url, o.id).run();
   return [{ text: waPayText(o.amount, p.url), card: { shop: 'therajesh.shop', token: o.token, amount: Number(o.amount), url: p.url, qrImage: p.qrImage || '' } }];
 }
@@ -1373,35 +1388,35 @@ async function waHandleReply(env, o, text, flags) {
     if (o.pay_ref) await razorpayCancel(env, o);
     await env.DB.prepare("UPDATE orders SET status='rejected', name='', phone='', wa_number='', wa_chat='' WHERE id=? AND status IN ('wa_wait','pay_choose','pay_wait','cash_wait')").bind(o.id).run();
     await purgeFiles(env, o.id); await env.DB.prepare('DELETE FROM files WHERE order_id=?').bind(o.id).run();
-    return ['❌ বাতিল হয়েছে, ফাইল মুছে ফেলা হয়েছে।\n_Cancelled — your file was deleted._'];
+    return ['❌ *অর্ডার বাতিল হয়েছে।* আপনার ফাইল মুছে ফেলা হয়েছে 🗑️\nআবার প্রিন্ট করতে চাইলে ছবি বা ফাইল পাঠিয়ে দিন।\n_Cancelled — your file was deleted._'];
   }
   if (o.status === 'wa_wait') {
     const op = orderOpts(o);
     if (op.size_pending) {   // option 3 was chosen: this reply is the photo size
       const sc = parseSizeChoice(text);
       if (sc.size) return [await waAfterMode(env, o, true, op.copies || PASSPORT_SIZES[sc.size].def, flags, 'passport', sc.size)];
-      return ['🙏 অনুগ্রহ করে ফটোর সাইজের জন্য *1* থেকে *5* এর মধ্যে একটি নম্বর লিখুন।\n_Please reply 1-5 to choose the photo size (0 to cancel)._\n\n' + waSizeMenuText(await getPrices(env))];
+      return ['🙏 ছবির সাইজের জন্য *1* থেকে *5* এর মধ্যে একটি নম্বর লিখুন।\n\n' + waSizeMenuText(await getPrices(env))];
     }
     const ch = parseChoice(text);
     if (ch.opt === 1 || ch.opt === 2) return [await waAfterMode(env, o, ch.opt === 2, ch.copies || o.copies || 1, flags)];
     if (ch.opt === 3) {      // passport photos: needs an image; the PC agent removes the background and lays out the 4x6 sheet(s)
       const f = await env.DB.prepare('SELECT name FROM files WHERE order_id=? ORDER BY id LIMIT 1').bind(o.id).first();
-      if (!f || !['jpg', 'jpeg', 'png', 'webp'].includes(ext(f.name || ''))) return ['📷 পাসপোর্ট ফটোর জন্য একটি পরিষ্কার *ছবি (JPG/PNG)* পাঠান, তারপর আবার *3* লিখুন।\n_Passport photos need a clear JPG/PNG photo — send it, then reply 3 again._'];
+      if (!f || !['jpg', 'jpeg', 'png', 'webp'].includes(ext(f.name || ''))) return ['📷 পাসপোর্ট ফটোর জন্য একটি *পরিষ্কার ছবি (JPG/PNG)* পাঠান, তারপর আবার *3* লিখুন।\n💡 _সামনে তাকিয়ে, ভালো আলোয় তোলা ছবি সবচেয়ে সুন্দর আসে।_\n_Passport photos need a clear JPG/PNG photo — send it, then reply 3 again._'];
       return [await waAskPassportSize(env, o, ch.copies || (o.copies > 1 ? o.copies : 0))];
     }
-    return ['🙏 অনুগ্রহ করে *1* (সাদাকালো), *2* (রঙিন) বা *3* (পাসপোর্ট ফটো) লিখে রিপ্লাই দিন। উদাহরণ: `2x5`\n_Please reply 1 for B&W, 2 for Color or 3 for Passport photos (0 to cancel)._'];
+    return ['🙏 দয়া করে *1* (সাদাকালো), *2* (রঙিন) বা *3* (পাসপোর্ট ফটো) লিখে রিপ্লাই দিন।\n💡 যেমন: `2x5` = ৫ কপি রঙিন · `0` = বাতিল\n_Please reply 1, 2 or 3 (0 to cancel)._'];
   }
   if (o.status === 'pay_choose') {
     const upi = /^(1|upi|online|qr)$/.test(t), cash = /^(2|cash|counter|নগদ|ক্যাশ)$/.test(t);
     if (upi) return await waUpi(env, o);
     if (cash) return [await waCash(env, o)];
-    return ['🙏 অনুগ্রহ করে *1* (Online UPI) বা *2* (Cash) লিখে রিপ্লাই দিন।\n_Please reply 1 for UPI or 2 for Cash._'];
+    return ['🙏 *1* (UPI / QR) অথবা *2* (কাউন্টারে ক্যাশ) লিখে রিপ্লাই দিন।\n_Please reply 1 for UPI or 2 for Cash._'];
   }
   if (o.status === 'pay_wait') {
     if (/^(2|cash|counter|নগদ|ক্যাশ)$/.test(t)) return [await waCash(env, o)];
-    return [`⏳ *টোকেন #${o.token}:* পেমেন্টের অপেক্ষায় আছি।\n🔗 ${o.pay_url || ''}\n_Waiting for your UPI payment of ${rupee(o.amount)}. Reply 2 to pay cash instead, 0 to cancel._`];
+    return [`⏳ *টোকেন #${o.token}* — ${rupee(o.amount)} পেমেন্টের অপেক্ষায় আছি।\n🔗 ${o.pay_url || ''}\n💵 ক্যাশে দিতে *2* · বাতিল করতে *0*\n_Waiting for your UPI payment of ${rupee(o.amount)}. Reply 2 for cash, 0 to cancel._`];
   }
-  return [`💵 *টোকেন #${o.token}:* কাউন্টারে এসে *${rupee(o.amount)}* দিন — তারপর প্রিন্ট বের হবে।\n_Token #${o.token}: please pay ${rupee(o.amount)} cash at the counter. Reply 0 to cancel._`];
+  return [`💵 *টোকেন #${o.token}:* কাউন্টারে এসে *${rupee(o.amount)}* দিন — তারপরই প্রিন্ট বের হবে।\nবাতিল করতে *0* লিখুন।\n_Token #${o.token}: please pay ${rupee(o.amount)} cash at the counter. Reply 0 to cancel._`];
 }
 
 async function waIncoming2(env, m) {
@@ -1417,8 +1432,20 @@ async function waIncoming2(env, m) {
 
   if (!files.length) {
     if (active) return await waHandleReply(env, active, text, flags);
+    const tt = text.normalize('NFKC').trim().toLowerCase();
+    if (/^(0|cancel|stop|বাতিল)$/.test(tt) || /^[1-5](\s*[x×*]\s*\d{1,3})?$/.test(tt)) {   // a menu reply, but no order is waiting for it
+      const rec = await env.DB.prepare("SELECT token FROM orders WHERE source='whatsapp' AND wa_number=? AND created_at>? AND status IN ('pending','approved','printing') ORDER BY created_at DESC LIMIT 1").bind(number, now - 30 * 60000).first();
+      return [rec
+        ? `🖨️ আপনার অর্ডার *#${rec.token || ''}* ইতিমধ্যে প্রিন্টের জন্য পাঠানো হয়েছে — নতুন করে কিছু লিখতে হবে না ✅\n_Your order is already on its way to the printer._`
+        : '🤔 এই মুহূর্তে আপনার কোনো চলমান অর্ডার নেই।\n📎 প্রিন্ট করতে ছবি বা ফাইল পাঠিয়ে দিন।\n_No open order right now — send a file or photo to start._'];
+    }
     const seen = await env.DB.prepare("SELECT 1 AS x FROM wa_hits WHERE number=? AND kind='welcome' AND ts>? LIMIT 1").bind(number, now - 30 * 60000).first();
-    if (seen) return [];
+    if (seen) {   // welcome already sent: one short reminder every few minutes instead of silence
+      const nudged = await env.DB.prepare("SELECT 1 AS x FROM wa_hits WHERE number=? AND kind='nudge' AND ts>? LIMIT 1").bind(number, now - 3 * 60000).first();
+      if (nudged) return [];
+      await env.DB.prepare("INSERT INTO wa_hits (number, ts, kind) VALUES (?,?,'nudge')").bind(number, now).run();
+      return [WA_NUDGE];
+    }
     await env.DB.prepare("INSERT INTO wa_hits (number, ts, kind) VALUES (?,?,'welcome')").bind(number, now).run();
     return [WA_WELCOME];
   }
@@ -1426,7 +1453,7 @@ async function waIncoming2(env, m) {
   // ---- file(s) arrived ----
   const limit = Number(env.WA_MAX_PER_HOUR) || 10, replies = [];
   const hits = await env.DB.prepare("SELECT COUNT(*) AS n FROM wa_hits WHERE number=? AND kind='file' AND ts>?").bind(number, now - 3600000).first();
-  if (Number(hits.n) >= limit) return ['⏳ একসাথে অনেক ফাইল পাঠানো হয়েছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।\n_Too many files in a short time — please try again later._'];
+  if (Number(hits.n) >= limit) return ['⏳ অল্প সময়ে অনেক ফাইল এসেছে — কিছুক্ষণ পরে আবার পাঠান।\n_Too many files in a short time — please try again later._'];
   await env.DB.prepare("INSERT INTO wa_hits (number, ts, kind) VALUES (?,?,'file')").bind(number, now).run();
   const ok = [], bad = [];
   for (const f of files) {
@@ -1434,7 +1461,7 @@ async function waIncoming2(env, m) {
     else if (!f.bytes || !f.bytes.byteLength || f.bytes.byteLength > MAX_FILE_BYTES) bad.push((f.name || 'file') + ' (25 MB+)');
     else ok.push(f);
   }
-  if (bad.length) replies.push(`⚠️ এই ফাইল নেওয়া যায়নি / not accepted: ${bad.join(', ')}\nসাপোর্টেড: PDF, JPG, PNG, Word, Excel, PowerPoint (২৫ MB পর্যন্ত)`);
+  if (bad.length) replies.push(`⚠️ এই ফাইল নেওয়া যায়নি: ${bad.join(', ')}\n✅ সাপোর্টেড: PDF, JPG, PNG, Word, Excel, PowerPoint (২৫ MB পর্যন্ত)\n_Not accepted — supported: PDF, JPG, PNG, Word, Excel, PowerPoint (up to 25 MB)._`);
   if (!ok.length) return replies;
 
   const open = active && active.status === 'wa_wait' ? active : null;   // more files before choosing B&W/Color join the same order
@@ -1443,7 +1470,7 @@ async function waIncoming2(env, m) {
     id = open.id; have = (await orderTotals(env, id)).n;
     if (orderOpts(open).size_pending) await env.DB.prepare("UPDATE orders SET opts=? WHERE id=? AND status='wa_wait'").bind(JSON.stringify({ kind: 'doc', source: 'whatsapp' }), id).run();   // more files arrived: back to the 1/2/3 menu
   }
-  if (have + ok.length > MAX_FILES) return replies.concat([`⚠️ একসাথে সর্বোচ্চ ${MAX_FILES}টি ফাইল। / Max ${MAX_FILES} files per order.`]);
+  if (have + ok.length > MAX_FILES) return replies.concat([`⚠️ একসাথে সর্বোচ্চ ${bn(MAX_FILES)}টি ফাইল পাঠানো যায়।\n_Max ${MAX_FILES} files per order._`]);
   if (!open) {
     id = newId();
     await env.DB.prepare("INSERT INTO orders (id,name,phone,color,copies,amount,status,created_at,paper,opts,source,wa_number,wa_name,wa_chat) VALUES (?,?,?,0,1,0,'wa_wait',?,'A4',?,'whatsapp',?,?,?)")
@@ -1466,7 +1493,7 @@ async function waIncoming2(env, m) {
   if (mode) replies.push(await waAfterMode(env, fresh, mode === 'color', copies, flags));
   else {
     if (pc.onlyNumber && pc.copies > 1) await env.DB.prepare('UPDATE orders SET copies=? WHERE id=?').bind(pc.copies, id).run();
-    replies.push(open ? `➕ ফাইল যোগ হয়েছে (মোট ${pages} Pages)। এবার *1* (সাদাকালো), *2* (রঙিন) বা *3* (পাসপোর্ট ফটো) লিখুন।\n_File added (total ${pages} pages). Reply 1 for B&W, 2 for Color or 3 for Passport._` : waStep1Text(rows, pages, P, env));
+    replies.push(open ? `➕ *ফাইল যোগ হয়েছে!* এখন মোট ${bn(rows.length)}টি ফাইল (${bn(pages)} পৃষ্ঠা)।\nএবার *1* (সাদাকালো), *2* (রঙিন) বা *3* (পাসপোর্ট ফটো) লিখুন 👇\n_File added (${rows.length} files, ${pages} pages). Reply 1, 2 or 3._` : waStep1Text(rows, pages, P, env, Number(hits.n) > 0));
   }
   return replies;
 }
